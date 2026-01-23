@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, ArrowRight, Star, Shield, Clock, Users, Award, Leaf, Sparkles, ShieldCheck, Zap } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Star, Shield, Clock, Users, Award, Leaf, Sparkles, ShieldCheck, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, useTransform, useMotionValue, useSpring, useScroll } from 'framer-motion'
 import { useRef, useEffect, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
@@ -11,6 +11,7 @@ const CustomCursor = dynamic(() => import('@/components/CustomCursor').then(mod 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
+  const sliderRef = useRef<HTMLDivElement>(null)
   
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
@@ -20,6 +21,23 @@ export default function Home() {
   const springY = useSpring(mouseY, { stiffness: 50, damping: 20 })
 
   const [isClient, setIsClient] = useState(false)
+  const [sliderIndex, setSliderIndex] = useState(0)
+
+  // Services data
+  const services = [
+    { title: "Residential Cleaning", href: "/services/residential-cleaning", description: "Regular hourly cleaning for homes", image: "https://images.unsplash.com/photo-1581578731548-c64695cc6958?auto=format&fit=crop&q=80&w=800", tag: "Regular" },
+    { title: "Villa Deep Cleaning", href: "/services/villa-deep-cleaning", description: "Complete interior and exterior sanitization", image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
+    { title: "AC Duct Cleaning", href: "/services/ac-duct-cleaning", description: "Professional air duct sterilization", image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=800", tag: "Technical" },
+    { title: "Office Deep Cleaning", href: "/services/office-deep-cleaning", description: "Corporate space sanitization", image: "https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
+    { title: "Kitchen Deep Cleaning", href: "/services/kitchen-deep-cleaning", description: "Heavy-duty degreasing and hood cleaning", image: "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
+    { title: "Apartment Deep Cleaning", href: "/services/apartment-deep-cleaning", description: "Move-in or move-out cleaning", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
+    { title: "Post Construction Cleaning", href: "/services/post-construction-cleaning", description: "Remove dust and construction residue", image: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&q=80&w=800", tag: "Specialist" },
+    { title: "Sofa Deep Cleaning", href: "/services/sofa-deep-cleaning", description: "Professional upholstery cleaning", image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=800", tag: "Specialist" },
+    { title: "Window Cleaning", href: "/services/window-cleaning", description: "Interior and exterior window service", image: "https://images.unsplash.com/photo-1584775524340-3fb88cd59b13?auto=format&fit=crop&q=80&w=800", tag: "Regular" },
+    { title: "Carpet Deep Cleaning", href: "/services/carpets-deep-cleaning", description: "Professional carpet and rug cleaning", image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
+    { title: "Water Tank Cleaning", href: "/services/water-tank-cleaning", description: "Safe water tank sanitization", image: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&q=80&w=800", tag: "Technical" },
+    { title: "Gym Deep Cleaning", href: "/services/gym-deep-cleaning", description: "Equipment and facility sanitization", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", tag: "Deep" }
+  ]
 
   useEffect(() => {
     setIsClient(true)
@@ -265,7 +283,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* Services Section - Slider */}
       <section className="py-32 bg-white overflow-hidden relative">
         {/* Background Text Decor with Parallax */}
         <motion.div 
@@ -287,72 +305,94 @@ export default function Home() {
                 From luxury villas to corporate headquarters, we deploy specialized teams equipped with industrial-grade technology and medical-grade disinfectants.
               </p>
             </div>
-            <motion.a 
-              href="/services" 
-              className="inline-flex items-center gap-4 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-primary transition-colors shadow-lg shadow-slate-200"
-              whileHover={{ x: 10 }}
-            >
-              All Services <ArrowRight className="h-5 w-5" />
-            </motion.a>
+            
+            {/* Slider Navigation */}
+            <div className="flex items-center gap-4">
+              <motion.button 
+                onClick={() => setSliderIndex(Math.max(0, sliderIndex - 1))}
+                disabled={sliderIndex === 0}
+                className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 hover:bg-primary hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </motion.button>
+              <motion.button 
+                onClick={() => setSliderIndex(Math.min(services.length - 4, sliderIndex + 1))}
+                disabled={sliderIndex >= services.length - 4}
+                className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-white hover:bg-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </motion.button>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {[
-              { title: "Residential Cleaning", href: "/services/residential-cleaning", description: "Regular hourly cleaning for homes", image: "https://images.unsplash.com/photo-1581578731548-c64695cc6958?auto=format&fit=crop&q=80&w=800", tag: "Regular" },
-              { title: "Villa Deep Cleaning", href: "/services/villa-deep-cleaning", description: "Complete interior and exterior sanitization", image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
-              { title: "AC Duct Cleaning", href: "/services/ac-duct-cleaning", description: "Professional air duct sterilization", image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=800", tag: "Technical" },
-              { title: "Office Deep Cleaning", href: "/services/office-deep-cleaning", description: "Corporate space sanitization", image: "https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
-              { title: "Kitchen Deep Cleaning", href: "/services/kitchen-deep-cleaning", description: "Heavy-duty degreasing and hood cleaning", image: "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
-              { title: "Apartment Deep Cleaning", href: "/services/apartment-deep-cleaning", description: "Move-in or move-out cleaning", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
-              { title: "Post Construction Cleaning", href: "/services/post-construction-cleaning", description: "Remove dust and construction residue", image: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&q=80&w=800", tag: "Specialist" },
-              { title: "Sofa Deep Cleaning", href: "/services/sofa-deep-cleaning", description: "Professional upholstery cleaning", image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=800", tag: "Specialist" },
-              { title: "Window Cleaning", href: "/services/window-cleaning", description: "Interior and exterior window service", image: "https://images.unsplash.com/photo-1584775524340-3fb88cd59b13?auto=format&fit=crop&q=80&w=800", tag: "Regular" },
-              { title: "Carpet Deep Cleaning", href: "/services/carpets-deep-cleaning", description: "Professional carpet and rug cleaning", image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800", tag: "Deep" },
-              { title: "Water Tank Cleaning", href: "/services/water-tank-cleaning", description: "Safe water tank sanitization", image: "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&q=80&w=800", tag: "Technical" },
-              { title: "Gym Deep Cleaning", href: "/services/gym-deep-cleaning", description: "Equipment and facility sanitization", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", tag: "Deep" }
-            ].map((service, i) => (
-              <motion.a 
-                key={i} 
-                href={service.href}
-                className="group relative h-125 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-100 cursor-none animate-hanging"
-                style={{ animationDelay: `${i * 0.15}s` }}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -15, transition: { duration: 0.4, ease: "easeOut" } }}
-              >
-                {/* Image Background */}
+          {/* Services Slider */}
+          <div className="relative overflow-hidden">
+            <motion.div 
+              ref={sliderRef}
+              className="flex gap-10"
+              animate={{ x: -sliderIndex * 360 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              {services.map((service, i) => (
                 <motion.div
-                  className="absolute inset-0 z-0"
+                  key={i} 
+                  className="relative h-96 w-80 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-100 animate-hanging flex-shrink-0"
+                  style={{ animationDelay: `${(i % 4) * 0.15}s` }}
+                  whileHover={{ y: -15, transition: { duration: 0.4, ease: "easeOut" } }}
                 >
-                  <img 
-                    src={service.image} 
-                    alt={service.title} 
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-                </motion.div>
-                
-                <div className="absolute top-8 left-8 z-10">
-                  <span className="px-4 py-1.5 rounded-full bg-primary/90 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg">
-                    {service.tag}
-                  </span>
-                </div>
-
-                <div className="absolute bottom-10 left-10 right-10 z-10">
-                  <h3 className="text-3xl font-black text-white mb-4 leading-tight">{service.title}</h3>
-                  <p className="text-slate-300 font-medium mb-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-4 group-hover:translate-y-0 text-sm">
-                    {service.description}
-                  </p>
-                  <motion.div 
-                    className="inline-flex items-center gap-3 text-white font-black uppercase tracking-widest text-sm"
-                    whileHover={{ gap: "1.5rem" }}
+                  <a 
+                    href={service.href}
+                    className="group relative block h-full w-full cursor-pointer"
                   >
-                    View Service <ArrowRight className="h-5 w-5 text-primary" />
+                  {/* Image Background */}
+                  <motion.div
+                    className="absolute inset-0 z-0"
+                  >
+                    <img 
+                      src={service.image} 
+                      alt={service.title} 
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
                   </motion.div>
-                </div>
-              </motion.a>
+                  
+                  <div className="absolute top-8 left-8 z-10">
+                    <span className="px-4 py-1.5 rounded-full bg-primary/90 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg">
+                      {service.tag}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-10 left-10 right-10 z-10">
+                    <h3 className="text-3xl font-black text-white mb-4 leading-tight">{service.title}</h3>
+                    <p className="text-slate-300 font-medium mb-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-4 group-hover:translate-y-0 text-sm">
+                      {service.description}
+                    </p>
+                    <motion.div 
+                      className="inline-flex items-center gap-3 text-white font-black uppercase tracking-widest text-sm"
+                      whileHover={{ gap: "1.5rem" }}
+                    >
+                      View Service <ArrowRight className="h-5 w-5 text-primary" />
+                    </motion.div>
+                  </div>
+                  </a>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Slider Indicators */}
+          <div className="flex items-center justify-center gap-2 mt-12">
+            {Array.from({ length: Math.ceil(services.length / 4) }).map((_, i) => (
+              <motion.button
+                key={i}
+                onClick={() => setSliderIndex(i * 4)}
+                className={`h-2 rounded-full transition-all ${i * 4 === sliderIndex ? 'w-8 bg-primary' : 'w-2 bg-slate-300 hover:bg-slate-400'}`}
+                whileHover={{ scale: 1.2 }}
+              />
             ))}
           </div>
         </div>
