@@ -14,7 +14,15 @@ import dynamic from 'next/dynamic'
 const CustomCursor = dynamic(() => import('@/components/CustomCursor').then(mod => ({ default: mod.default })), { ssr: false })
 
 // Reusable CTA Button Component
-const CTAButton = ({ text, href, variant = "primary", icon: Icon = null, className = "" }: any) => {
+interface CTAButtonProps {
+  text: string
+  href: string
+  variant?: "primary" | "secondary" | "dark"
+  icon?: React.ComponentType<{ className?: string }> | null
+  className?: string
+}
+
+const CTAButton = ({ text, href, variant = "primary", icon: Icon = null, className = "" }: CTAButtonProps) => {
   const baseStyles = "px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl duration-300"
   const variants = {
     primary: "bg-primary text-white hover:bg-pink-700 shadow-primary/40 hover:shadow-primary/60",
