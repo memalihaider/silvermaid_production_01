@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { motion, useTransform, useMotionValue, useSpring, useScroll } from 'framer-motion'
 import { useRef, useEffect, useState, useMemo } from 'react'
+import { INITIAL_BLOG_POSTS } from '@/lib/blog-data'
 
 // Reusable CTA Button Component
 interface CTAButtonProps {
@@ -85,63 +86,16 @@ export default function HomePage() {
     { title: "Gym Deep Cleaning", href: "/services/gym-deep-cleaning", icon: <Dumbbell className="h-7 w-7" />, description: "Equipment and facility sanitization", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", tag: "Deep" }
   ]
 
-  // Blog posts data
-  const blogs = [
-    {
-      title: "10 Essential Tips for Maintaining a Clean Home in Dubai's Climate",
-      excerpt: "Discover expert strategies to keep your home spotless despite the desert dust and humidity challenges unique to the UAE.",
-      image: "https://images.unsplash.com/photo-1527515862127-a4fc05baf7a5?auto=format&fit=crop&q=80&w=800",
-      category: "Home Care",
-      date: "January 15, 2026",
-      readTime: "5 min read",
-      href: "/blog/maintaining-clean-home-dubai"
-    },
-    {
-      title: "The Ultimate Guide to Deep Cleaning Your Villa Before Ramadan",
-      excerpt: "Prepare your home for the holy month with our comprehensive deep cleaning checklist tailored for UAE residents.",
-      image: "https://images.unsplash.com/photo-1581578731548-c64695cc6958?auto=format&fit=crop&q=80&w=800",
-      category: "Deep Cleaning",
-      date: "January 10, 2026",
-      readTime: "7 min read",
-      href: "/blog/villa-deep-cleaning-ramadan"
-    },
-    {
-      title: "Why Regular AC Duct Cleaning is Crucial in the UAE",
-      excerpt: "Learn how proper AC maintenance can improve air quality, reduce energy bills, and protect your family's health.",
-      image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=800",
-      category: "Air Quality",
-      date: "January 5, 2026",
-      readTime: "6 min read",
-      href: "/blog/ac-duct-cleaning-importance"
-    },
-    {
-      title: "Eco-Friendly Cleaning Solutions: Safe for Pets and Kids",
-      excerpt: "Explore natural cleaning alternatives that are effective, safe, and environmentally responsible for your home.",
-      image: "https://images.unsplash.com/photo-1563453392212-326f5e854473?auto=format&fit=crop&q=80&w=800",
-      category: "Green Living",
-      date: "December 28, 2025",
-      readTime: "5 min read",
-      href: "/blog/eco-friendly-cleaning-solutions"
-    },
-    {
-      title: "Office Cleaning Best Practices for Post-Pandemic Workspaces",
-      excerpt: "Implement professional sanitization protocols to create a safe and productive work environment for your team.",
-      image: "https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&q=80&w=800",
-      category: "Commercial",
-      date: "December 20, 2025",
-      readTime: "8 min read",
-      href: "/blog/office-cleaning-best-practices"
-    },
-    {
-      title: "How to Remove Stubborn Stains from Your Sofa and Carpets",
-      excerpt: "Professional tips and tricks to tackle tough stains and restore your upholstery to its original beauty.",
-      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=800",
-      category: "Tips & Tricks",
-      date: "December 15, 2025",
-      readTime: "6 min read",
-      href: "/blog/remove-stubborn-stains"
-    }
-  ]
+  // Blog posts data - using actual blog posts from database
+  const blogs = INITIAL_BLOG_POSTS.slice(0, 6).map(post => ({
+    title: post.title,
+    excerpt: post.excerpt,
+    image: post.image,
+    category: post.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    date: new Date(post.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: `${post.readTime} min read`,
+    href: `/blog/${post.slug}`
+  }))
 
   const getAirQualityStatus = (aqi: number) => {
     if (aqi <= 50) return { status: "Good", color: "text-green-500" }
