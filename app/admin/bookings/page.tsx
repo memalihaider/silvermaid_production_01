@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Search,
   Filter,
@@ -27,28 +27,59 @@ import {
   X,
   Edit2,
   Save,
-  Plus
+  Ban,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react'
-import { MOCK_BOOKINGS, Booking, MOCK_SERVICES } from '@/lib/bookings-services-data'
 
+// Aapka firebase.ts file se import
+import { db } from '@/lib/firebase'
+import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore'
+
+interface Booking {
+  id: string;
+  bookingId: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  clientAddress: string;
+  serviceName: string;
+  bookingDate: string;
+  bookingTime: string;
+  bookingNumber: string;
+  duration: number;
+  estimatedPrice: number;
+  status: 'pending' | 'accepted' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Updated status icons with rejected and accepted
 const statusIcons = {
   pending: AlertCircle,
+  accepted: ThumbsUp,
   confirmed: CheckCircle,
   'in-progress': ClockIcon,
   completed: CheckCircle,
-  cancelled: XCircle
+  cancelled: XCircle,
+  rejected: ThumbsDown
 }
 
+// Updated status colors with rejected and accepted
 const statusColors = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300',
+  accepted: 'bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300',
   confirmed: 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300',
   'in-progress': 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300',
   completed: 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+  cancelled: 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-300',
+  rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
 }
 
 export default function AdminBookings() {
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS)
+  // Dummy data ki jagah empty array
+  const [bookings, setBookings] = useState<Booking[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -56,6 +87,81 @@ export default function AdminBookings() {
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [editFormData, setEditFormData] = useState<Booking | null>(null)
   const [sortBy, setSortBy] = useState<string>('date-desc')
+
+  // Firebase se data fetch
+  useEffect(() => {
+    fetchBookings()
+  }, [])
+
+  const fetchBookings = async () => {
+    try {
+      const bookingsRef = collection(db, 'bookings')
+      const q = query(bookingsRef, orderBy('createdAt', 'desc'))
+      const querySnapshot = await getDocs(q)
+      
+      const bookingsData: Booking[] = []
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        
+        // Firebase data ko aapke Booking type mein convert karna
+        const booking: Booking = {
+          id: doc.id,
+          bookingId: data.bookingId || `BK${Date.now()}`,
+          clientName: data.name || 'N/A',
+          clientEmail: data.email || 'N/A',
+          clientPhone: data.phone || 'N/A',
+          clientAddress: data.area || 'N/A',
+          serviceName: data.service || 'N/A',
+          bookingDate: data.date || new Date().toISOString().split('T')[0],
+          bookingTime: data.time || '00:00',
+          bookingNumber: data.bookingId || `BK${Date.now()}`,
+          duration: 2, // Default value
+          estimatedPrice: calculatePrice(data.service, data.propertyType),
+          status: (data.status || 'pending') as Booking['status'],
+          notes: data.message || '',
+          createdAt: formatFirebaseTimestamp(data.createdAt),
+          updatedAt: formatFirebaseTimestamp(data.updatedAt)
+        }
+        
+        bookingsData.push(booking)
+      })
+      
+      setBookings(bookingsData)
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+    }
+  }
+
+  // Firebase timestamp ko format karna
+  const formatFirebaseTimestamp = (timestamp: any): string => {
+    if (!timestamp) return new Date().toISOString().split('T')[0]
+    
+    if (timestamp.toDate) {
+      return timestamp.toDate().toISOString().split('T')[0]
+    }
+    
+    if (timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toISOString().split('T')[0]
+    }
+    
+    return timestamp
+  }
+
+  // Price calculation
+  const calculatePrice = (service: string = '', propertyType: string = ''): number => {
+    const serviceLower = service.toLowerCase()
+    const propertyLower = propertyType.toLowerCase()
+    
+    if (serviceLower.includes('deep') && propertyLower.includes('villa')) return 500
+    if (serviceLower.includes('deep') && propertyLower.includes('office')) return 250
+    if (serviceLower.includes('deep') && propertyLower.includes('apartment')) return 350
+    if (serviceLower.includes('normal') && propertyLower.includes('villa')) return 300
+    if (serviceLower.includes('normal') && propertyLower.includes('office')) return 150
+    if (serviceLower.includes('normal') && propertyLower.includes('apartment')) return 200
+    
+    return 200 // Default price
+  }
 
   const filteredAndSortedBookings = useMemo(() => {
     let filtered = bookings.filter(booking => {
@@ -96,30 +202,60 @@ export default function AdminBookings() {
   const stats = {
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'pending').length,
+    accepted: bookings.filter(b => b.status === 'accepted').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
     inProgress: bookings.filter(b => b.status === 'in-progress').length,
     completed: bookings.filter(b => b.status === 'completed').length,
+    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    rejected: bookings.filter(b => b.status === 'rejected').length,
     revenue: bookings
       .filter(b => b.status === 'completed')
       .reduce((sum, b) => sum + b.estimatedPrice, 0)
   }
 
-  const handleStatusChange = (bookingId: string, newStatus: Booking['status']) => {
-    setBookings(bookings.map(b =>
-      b.id === bookingId
-        ? { ...b, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] }
-        : b
-    ))
-    if (selectedBooking?.id === bookingId) {
-      setSelectedBooking({ ...selectedBooking, status: newStatus })
+  const handleStatusChange = async (bookingId: string, newStatus: Booking['status']) => {
+    try {
+      // Firebase mein update
+      const bookingRef = doc(db, 'bookings', bookingId)
+      await updateDoc(bookingRef, {
+        status: newStatus,
+        updatedAt: new Date()
+      })
+      
+      // Local state update
+      setBookings(bookings.map(b =>
+        b.id === bookingId
+          ? { 
+              ...b, 
+              status: newStatus, 
+              updatedAt: new Date().toISOString().split('T')[0] 
+            }
+          : b
+      ))
+      
+      if (selectedBooking?.id === bookingId) {
+        setSelectedBooking({ ...selectedBooking, status: newStatus })
+      }
+    } catch (error) {
+      console.error('Error updating status:', error)
+      alert('Status update failed!')
     }
   }
 
-  const handleDeleteBooking = (bookingId: string) => {
+  const handleDeleteBooking = async (bookingId: string) => {
     if (confirm('Are you sure you want to delete this booking?')) {
-      setBookings(bookings.filter(b => b.id !== bookingId))
-      setShowDetailsModal(false)
-      setSelectedBooking(null)
+      try {
+        // Firebase se delete
+        await deleteDoc(doc(db, 'bookings', bookingId))
+        
+        // Local state se remove
+        setBookings(bookings.filter(b => b.id !== bookingId))
+        setShowDetailsModal(false)
+        setSelectedBooking(null)
+      } catch (error) {
+        console.error('Error deleting booking:', error)
+        alert('Delete failed!')
+      }
     }
   }
 
@@ -130,22 +266,48 @@ export default function AdminBookings() {
     setIsEditingDetails(false)
   }
 
-  const handleSaveEdits = () => {
-    if (editFormData) {
+  const handleSaveEdits = async () => {
+    if (!editFormData) return
+    
+    try {
+      // Firebase mein update
+      const bookingRef = doc(db, 'bookings', editFormData.id)
+      await updateDoc(bookingRef, {
+        name: editFormData.clientName,
+        email: editFormData.clientEmail,
+        phone: editFormData.clientPhone,
+        area: editFormData.clientAddress,
+        service: editFormData.serviceName,
+        date: editFormData.bookingDate,
+        time: editFormData.bookingTime,
+        status: editFormData.status,
+        message: editFormData.notes || '',
+        updatedAt: new Date()
+      })
+      
+      // Local state update
       setBookings(bookings.map(b => b.id === editFormData.id ? editFormData : b))
       setSelectedBooking(editFormData)
       setIsEditingDetails(false)
+      
+      // Refresh data
+      await fetchBookings()
+    } catch (error) {
+      console.error('Error updating booking:', error)
+      alert('Update failed!')
     }
   }
 
-  const statuses = ['all', 'pending', 'confirmed', 'in-progress', 'completed', 'cancelled']
+  const statuses = ['all', 'pending', 'accepted', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rejected']
   const statusLabels = {
     all: 'All Bookings',
     pending: 'Pending',
+    accepted: 'Accepted',
     confirmed: 'Confirmed',
     'in-progress': 'In Progress',
     completed: 'Completed',
-    cancelled: 'Cancelled'
+    cancelled: 'Cancelled',
+    rejected: 'Rejected'
   }
 
   return (
@@ -155,17 +317,20 @@ export default function AdminBookings() {
         <div>
           <h1 className="text-3xl font-black">Bookings Management</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage all incoming service bookings from customers
+            Real data from Firebase - {bookings.length} bookings found
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors shadow-lg shadow-green-500/20">
+        <button 
+          className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors shadow-lg shadow-green-500/20"
+          onClick={fetchBookings}
+        >
           <Download className="h-4 w-4" />
-          Export Report
+          Refresh Data
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border rounded-2xl p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -186,6 +351,18 @@ export default function AdminBookings() {
             </div>
             <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-950/30 flex items-center justify-center shrink-0">
               <AlertCircle className="h-5 w-5 text-amber-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">Accepted</p>
+              <p className="text-2xl font-black text-teal-600 mt-1">{stats.accepted}</p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-teal-100 dark:bg-teal-950/30 flex items-center justify-center shrink-0">
+              <ThumbsUp className="h-5 w-5 text-teal-600" />
             </div>
           </div>
         </div>
@@ -229,11 +406,23 @@ export default function AdminBookings() {
         <div className="bg-card border rounded-2xl p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">Revenue</p>
-              <p className="text-2xl font-black text-green-700 mt-1">AED {stats.revenue.toLocaleString()}</p>
+              <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">Cancelled</p>
+              <p className="text-2xl font-black text-red-600 mt-1">{stats.cancelled}</p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-lg bg-red-100 dark:bg-red-950/30 flex items-center justify-center shrink-0">
+              <XCircle className="h-5 w-5 text-red-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">Rejected</p>
+              <p className="text-2xl font-black text-rose-600 mt-1">{stats.rejected}</p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-rose-100 dark:bg-rose-950/30 flex items-center justify-center shrink-0">
+              <ThumbsDown className="h-5 w-5 text-rose-600" />
             </div>
           </div>
         </div>
@@ -346,10 +535,12 @@ export default function AdminBookings() {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border-none outline-none transition-all cursor-pointer ${statusColors[booking.status]}`}
                           >
                             <option value="pending">Pending</option>
+                            <option value="accepted">Accepted</option>
                             <option value="confirmed">Confirmed</option>
                             <option value="in-progress">In Progress</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
+                            <option value="rejected">Rejected</option>
                           </select>
                         </div>
                       </div>
@@ -564,10 +755,12 @@ export default function AdminBookings() {
                       className={`w-full px-2 py-1 rounded-lg text-xs font-bold border-none outline-none cursor-pointer ${statusColors[editFormData.status]}`}
                     >
                       <option value="pending">Pending</option>
+                      <option value="accepted">Accepted</option>
                       <option value="confirmed">Confirmed</option>
                       <option value="in-progress">In Progress</option>
                       <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
+                      <option value="rejected">Rejected</option>
                     </select>
                   </div>
                 </div>
