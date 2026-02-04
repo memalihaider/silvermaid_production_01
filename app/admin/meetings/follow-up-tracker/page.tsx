@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { CheckCircle, AlertCircle, Clock, Users, Briefcase, TrendingUp, Filter, Search, Archive, Zap, Plus, Link as LinkIcon, Eye, Edit2, Trash2, ArrowRight, X } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { CheckCircle, AlertCircle, Clock, Users, Briefcase, TrendingUp, Filter, Search, Archive, Zap, Plus, Link as LinkIcon, Eye, Edit2, Trash2, ArrowRight, X, Calendar, FileText, ClipboardList, Target } from 'lucide-react'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebase' // Aapka Firebase config file
 
 export default function FollowUpTracker() {
   const [filterStatus, setFilterStatus] = useState('all')
@@ -9,8 +11,15 @@ export default function FollowUpTracker() {
   const [filterPriority, setFilterPriority] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTab, setSelectedTab] = useState<'active' | 'timeline' | 'accountability'>('active')
-  const [editingItem, setEditingItem] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
+  
+  // Real data states
+  const [meetings, setMeetings] = useState<any[]>([])
+  const [notes, setNotes] = useState<any[]>([])
+  const [decisions, setDecisions] = useState<any[]>([])
+  const [actionItems, setActionItems] = useState<any[]>([])
+  const [todayDate] = useState(new Date().toISOString().split('T')[0]) // YYYY-MM-DD format
+
   const [newItem, setNewItem] = useState({
     item: '',
     owner: '',
@@ -20,238 +29,190 @@ export default function FollowUpTracker() {
     priority: 'Medium',
     notes: ''
   })
-  const [actionItems, setActionItems] = useState([
-    {
-      id: 1,
-      item: 'Send final invoice to client',
-      owner: 'Layla Al-Mansouri',
-      dueDate: '2025-01-21',
-      status: 'pending',
-      linkedJob: 'JOB-DOT-2025-001',
-      linkedClient: 'Downtown Business Tower',
-      createdDate: '2025-01-20',
-      priority: 'High',
-      accountable: 'Layla',
-      impact: 'Critical - client payment',
-      timelineImpact: 'Affects job closure completion',
-      progressPercent: 0,
-      dependencies: [],
-      linkedMeeting: 'Job Closeout - Downtown Tower',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-    {
-      id: 2,
-      item: 'Collect client feedback survey',
-      owner: 'Ahmed Al-Mazrouei',
-      dueDate: '2025-01-22',
-      status: 'pending',
-      linkedJob: 'JOB-DOT-2025-001',
-      linkedClient: 'Downtown Business Tower',
-      createdDate: '2025-01-20',
-      priority: 'Medium',
-      accountable: 'Ahmed',
-      impact: 'High - quality assurance',
-      timelineImpact: 'Input for next job scheduling',
-      progressPercent: 0,
-      dependencies: [1],
-      linkedMeeting: 'Job Closeout - Downtown Tower',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-    {
-      id: 3,
-      item: 'Process team bonuses',
-      owner: 'Fatima Al-Ketbi',
-      dueDate: '2025-01-25',
-      status: 'pending',
-      linkedJob: null,
-      linkedClient: null,
-      createdDate: '2025-01-20',
-      priority: 'High',
-      accountable: 'Fatima',
-      impact: 'Medium - employee morale',
-      timelineImpact: 'Must complete before payroll cutoff',
-      progressPercent: 0,
-      dependencies: [],
-      linkedMeeting: 'Job Closeout - Downtown Tower',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-    {
-      id: 4,
-      item: 'Prepare equipment maintenance checklist',
-      owner: 'Omar Khan',
-      dueDate: '2025-01-25',
-      status: 'in-progress',
-      linkedJob: null,
-      linkedClient: null,
-      createdDate: '2025-01-20',
-      priority: 'High',
-      accountable: 'Omar',
-      impact: 'Critical - equipment availability',
-      timelineImpact: 'Weekend maintenance dependent on this',
-      progressPercent: 60,
-      dependencies: [],
-      linkedMeeting: 'Weekly Operations Standup',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-    {
-      id: 5,
-      item: 'Send welcome packages to new clients',
-      owner: 'Sara Al-Noor',
-      dueDate: '2025-01-21',
-      status: 'completed',
-      linkedJob: null,
-      linkedClient: 'New Client A, New Client B',
-      createdDate: '2025-01-19',
-      priority: 'Low',
-      accountable: 'Sara',
-      impact: 'Low - relationship building',
-      timelineImpact: 'Enables new client onboarding',
-      progressPercent: 100,
-      dependencies: [],
-      linkedMeeting: 'Weekly Operations Standup',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-    {
-      id: 6,
-      item: 'Prepare Q1 budget allocation report',
-      owner: 'Layla Al-Mansouri',
-      dueDate: '2025-01-25',
-      status: 'in-progress',
-      linkedJob: null,
-      linkedClient: null,
-      createdDate: '2025-01-21',
-      priority: 'High',
-      accountable: 'Layla',
-      impact: 'Critical - budget planning',
-      timelineImpact: 'Affects hiring and equipment purchases',
-      progressPercent: 75,
-      dependencies: [],
-      linkedMeeting: 'Financial Review Q4 2024',
-      assignedBy: 'Fatima Al-Ketbi'
-    },
-    {
-      id: 7,
-      item: 'Research and quote new equipment vendors',
-      owner: 'Ahmed Al-Mazrouei',
-      dueDate: '2025-01-28',
-      status: 'pending',
-      linkedJob: null,
-      linkedClient: null,
-      createdDate: '2025-01-21',
-      priority: 'Medium',
-      accountable: 'Ahmed',
-      impact: 'Medium - operational efficiency',
-      timelineImpact: 'Equipment purchase dependent on this',
-      progressPercent: 0,
-      dependencies: [6],
-      linkedMeeting: 'Financial Review Q4 2024',
-      assignedBy: 'Fatima Al-Ketbi'
-    },
-    {
-      id: 8,
-      item: 'Confirm job assignments with Mohammed team',
-      owner: 'Ahmed Al-Mazrouei',
-      dueDate: '2025-01-21',
-      status: 'pending',
-      linkedJob: 'JOB-MAL-2025-003',
-      linkedClient: 'Shopping Mall Dubai',
-      createdDate: '2025-01-20',
-      priority: 'High',
-      accountable: 'Ahmed',
-      impact: 'Critical - job scheduling',
-      timelineImpact: 'Blocks new client job start date',
-      progressPercent: 0,
-      dependencies: [4],
-      linkedMeeting: 'Weekly Operations Standup',
-      assignedBy: 'Ahmed Al-Mazrouei'
-    },
-  ])
 
-  const handleAddItem = () => {
-    if (newItem.item && newItem.owner && newItem.dueDate) {
-      if (editingItem) {
-        setActionItems(actionItems.map(item => item.id === editingItem ? { ...item, item: newItem.item, owner: newItem.owner, dueDate: newItem.dueDate, status: newItem.status, linkedJob: newItem.linkedJob, priority: newItem.priority } : item) as any)
-        setEditingItem(null)
-      } else {
-        const item = {
-          id: Math.max(...actionItems.map(i => i.id), 0) + 1,
-          item: newItem.item,
-          owner: newItem.owner,
-          dueDate: newItem.dueDate,
-          status: newItem.status,
-          linkedJob: newItem.linkedJob,
-          linkedClient: '',
-          createdDate: new Date().toISOString().split('T')[0],
-          priority: newItem.priority,
-          accountable: newItem.owner.split(' ')[0],
-          impact: newItem.priority === 'High' ? 'Critical' : 'Medium',
-          timelineImpact: '',
-          progressPercent: 0,
-          dependencies: [],
-          linkedMeeting: '',
-          assignedBy: 'Current User'
-        }
-        setActionItems([...actionItems, item] as any)
+  // Fetch today's data from Firebase
+  useEffect(() => {
+    const fetchTodayData = async () => {
+      try {
+        // Get today's meetings
+        const meetingsQuery = query(
+          collection(db, 'meetingCalender'),
+          where('date', '==', todayDate)
+        )
+        const meetingsSnapshot = await getDocs(meetingsQuery)
+        const todayMeetings = meetingsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setMeetings(todayMeetings)
+
+        // Get today's notes
+        const notesQuery = query(
+          collection(db, 'notes'),
+          where('meetingDate', '==', todayDate)
+        )
+        const notesSnapshot = await getDocs(notesQuery)
+        const todayNotes = notesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setNotes(todayNotes)
+
+        // Get today's decisions
+        const decisionsQuery = query(
+          collection(db, 'decisions'),
+          where('createdAt', '>=', `${todayDate}T00:00:00.000Z`),
+          where('createdAt', '<=', `${todayDate}T23:59:59.999Z`)
+        )
+        const decisionsSnapshot = await getDocs(decisionsQuery)
+        const todayDecisions = decisionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setDecisions(todayDecisions)
+
+        // Get today's action items
+        const actionsQuery = query(
+          collection(db, 'actionItems'),
+          where('createdAt', '>=', `${todayDate}T00:00:00.000Z`),
+          where('createdAt', '<=', `${todayDate}T23:59:59.999Z`)
+        )
+        const actionsSnapshot = await getDocs(actionsQuery)
+        const todayActions = actionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setActionItems(todayActions)
+
+      } catch (error) {
+        console.error('Error fetching data:', error)
       }
-      setNewItem({ item: '', owner: '', dueDate: '', status: 'pending', linkedJob: '', priority: 'Medium', notes: '' })
-      setShowForm(false)
     }
-  }
 
-  const handleEditItem = (id: number) => {
-    const item = actionItems.find(i => i.id === id)
-    if (item) {
-      setNewItem({ item: item.item, owner: item.owner, dueDate: item.dueDate, status: item.status as any, linkedJob: item.linkedJob || '', priority: item.priority, notes: '' })
-      setEditingItem(id)
-      setShowForm(true)
-    }
-  }
+    fetchTodayData()
+  }, [todayDate])
 
-  const handleDeleteItem = (id: number) => {
-    setActionItems(actionItems.filter(item => item.id !== id))
-  }
+  // Combine all data for display
+  const allFollowUps = useMemo(() => {
+    const combined = [
+      // Convert meetings to follow-up format
+      ...meetings.map(meeting => ({
+        id: `meeting_${meeting.id}`,
+        type: 'meeting',
+        title: meeting.title || 'Meeting',
+        description: meeting.summary || meeting.agendaAI || 'Auto-generated meeting',
+        owner: meeting.organizer || meeting.createdByName || 'Unknown',
+        date: meeting.date || todayDate,
+        time: meeting.time || '00:00',
+        status: meeting.status || 'Scheduled',
+        priority: meeting.priority || 'Medium',
+        location: meeting.location || '',
+        duration: meeting.duration || '',
+        attendees: meeting.attendeeNames || [],
+        cost: meeting.cost || 0,
+        linkedClient: meeting.linkedClient || '',
+        linkedJob: meeting.linkedJob || ''
+      })),
 
-  const handleUpdateStatus = (id: number, status: string) => {
-    setActionItems(actionItems.map(item => item.id === id ? { ...item, status: status as any } : item))
-  }
+      // Convert notes to follow-up format
+      ...notes.map(note => ({
+        id: `note_${note.id}`,
+        type: 'note',
+        title: note.meetingTitle || 'Meeting Notes',
+        description: note.notes || 'No notes content',
+        owner: note.createdByName || 'Unknown',
+        date: note.meetingDate || todayDate,
+        time: note.meetingTime || '00:00',
+        status: 'Completed',
+        priority: 'Medium',
+        meetingId: note.meetingId || ''
+      })),
 
-  const handleUpdateProgress = (id: number, percent: number) => {
-    setActionItems(actionItems.map(item => item.id === id ? { ...item, progressPercent: percent } : item))
-  }
+      // Convert decisions to follow-up format
+      ...decisions.map(decision => ({
+        id: `decision_${decision.id}`,
+        type: 'decision',
+        title: decision.title || 'Decision',
+        description: decision.description || 'No description',
+        owner: decision.createdByName || 'Unknown',
+        date: decision.dueDate || todayDate,
+        status: decision.status || 'Pending',
+        priority: decision.priority || 'Medium',
+        linkedItems: decision.linkedItems || []
+      })),
 
+      // Convert action items to follow-up format
+      ...actionItems.map(action => ({
+        id: `action_${action.id}`,
+        type: 'action',
+        title: action.title || 'Action Item',
+        description: action.description || 'No description',
+        owner: action.createdByName || action.owner || 'Unknown',
+        date: action.dueDate || todayDate,
+        status: action.status || 'pending',
+        priority: action.priority || 'Medium',
+        linkedJob: action.linkedJob || '',
+        progressPercent: action.status === 'completed' ? 100 : 
+                        action.status === 'in-progress' ? 50 : 0
+      }))
+    ]
+
+    return combined
+  }, [meetings, notes, decisions, actionItems, todayDate])
+
+  // Filtering logic
   const filteredItems = useMemo(() => {
-    return actionItems.filter(item => {
-      const statusMatch = filterStatus === 'all' || item.status === filterStatus
+    return allFollowUps.filter(item => {
+      const statusMatch = filterStatus === 'all' || item.status.toLowerCase() === filterStatus.toLowerCase()
       const ownerMatch = filterOwner === 'all' || item.owner === filterOwner
       const priorityMatch = filterPriority === 'all' || item.priority === filterPriority
-      const searchMatch = item.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.linkedClient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.linkedJob?.toLowerCase().includes(searchTerm.toLowerCase())
+      const searchMatch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (item.linkedJob && item.linkedJob.toLowerCase().includes(searchTerm.toLowerCase()))
       return statusMatch && ownerMatch && priorityMatch && searchMatch
     })
-  }, [filterStatus, filterOwner, filterPriority, searchTerm])
+  }, [allFollowUps, filterStatus, filterOwner, filterPriority, searchTerm])
 
+  // Statistics
   const stats = useMemo(() => {
+    const total = allFollowUps.length
+    const completed = allFollowUps.filter(i => i.status.toLowerCase() === 'completed' || i.status.toLowerCase() === 'implemented').length
+    const inProgress = allFollowUps.filter(i => i.status.toLowerCase() === 'in-progress').length
+    const pending = allFollowUps.filter(i => i.status.toLowerCase() === 'pending').length
+    
     return {
-      total: actionItems.length,
-      completed: actionItems.filter(i => i.status === 'completed').length,
-      inProgress: actionItems.filter(i => i.status === 'in-progress').length,
-      pending: actionItems.filter(i => i.status === 'pending').length,
-      overdue: actionItems.filter(i => i.dueDate < '2025-01-20' && i.status !== 'completed').length,
-      critical: actionItems.filter(i => i.priority === 'High').length,
+      total,
+      completed,
+      inProgress,
+      pending,
+      meetings: meetings.length,
+      notes: notes.length,
+      decisions: decisions.length,
+      actions: actionItems.length,
+      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
     }
-  }, [])
+  }, [allFollowUps, meetings, notes, decisions, actionItems])
 
-  const owners = ['all', ...Array.from(new Set(actionItems.map(i => i.owner)))]
-  const statuses = ['all', 'pending', 'in-progress', 'completed']
+  // Get unique owners for filter
+  const owners = ['all', ...Array.from(new Set(allFollowUps.map(i => i.owner))).filter(Boolean)]
+  const statuses = ['all', 'pending', 'in-progress', 'completed', 'scheduled', 'implemented']
   const priorities = ['all', 'High', 'Medium', 'Low']
 
+  // Helper functions
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-700'
-      case 'in-progress': return 'bg-blue-100 text-blue-700'
-      case 'pending': return 'bg-yellow-100 text-yellow-700'
-      default: return 'bg-gray-100 text-gray-700'
+    const statusLower = status.toLowerCase()
+    switch (statusLower) {
+      case 'completed':
+      case 'implemented':
+        return 'bg-green-100 text-green-700'
+      case 'in-progress':
+        return 'bg-blue-100 text-blue-700'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700'
+      case 'scheduled':
+        return 'bg-purple-100 text-purple-700'
+      default:
+        return 'bg-gray-100 text-gray-700'
     }
   }
 
@@ -259,12 +220,29 @@ export default function FollowUpTracker() {
     switch (priority) {
       case 'High': return 'bg-red-100 text-red-700'
       case 'Medium': return 'bg-orange-100 text-orange-700'
-      default: return 'bg-green-100 text-green-700'
+      case 'Low': return 'bg-green-100 text-green-700'
+      default: return 'bg-gray-100 text-gray-700'
     }
   }
 
-  const isOverdue = (dueDate: string, status: string) => {
-    return dueDate < '2025-01-20' && status !== 'completed'
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'meeting': return <Calendar className="h-4 w-4" />
+      case 'note': return <FileText className="h-4 w-4" />
+      case 'decision': return <ClipboardList className="h-4 w-4" />
+      case 'action': return <Target className="h-4 w-4" />
+      default: return <AlertCircle className="h-4 w-4" />
+    }
+  }
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'meeting': return 'bg-blue-50 text-blue-600 border-blue-200'
+      case 'note': return 'bg-green-50 text-green-600 border-green-200'
+      case 'decision': return 'bg-purple-50 text-purple-600 border-purple-200'
+      case 'action': return 'bg-orange-50 text-orange-600 border-orange-200'
+      default: return 'bg-gray-50 text-gray-600 border-gray-200'
+    }
   }
 
   return (
@@ -273,75 +251,43 @@ export default function FollowUpTracker() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black">Follow-Up Tracker</h1>
-          <p className="text-muted-foreground mt-1">Accountability tracking, timeline impact, and job cross-linking</p>
+          <p className="text-muted-foreground mt-1">Today's Meetings, Notes, Decisions & Actions - {todayDate}</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); setEditingItem(null); setNewItem({ item: '', owner: '', dueDate: '', status: 'pending', linkedJob: '', priority: 'Medium', notes: '' }) }} className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus className="h-5 w-5" />
-          <span className="font-bold">{showForm ? 'Cancel' : 'New Follow-Up'}</span>
-        </button>
       </div>
 
-      {/* Add/Edit Form */}
-      {showForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">{editingItem ? 'Edit Follow-Up' : 'Add New Follow-Up'}</h3>
-            <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="p-1 hover:bg-blue-100 rounded">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input type="text" placeholder="Action Item *" value={newItem.item} onChange={(e) => setNewItem({...newItem, item: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2" />
-            <select value={newItem.priority} onChange={(e) => setNewItem({...newItem, priority: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="Low">Low Priority</option>
-              <option value="Medium">Medium Priority</option>
-              <option value="High">High Priority</option>
-            </select>
-            <input type="text" placeholder="Owner *" value={newItem.owner} onChange={(e) => setNewItem({...newItem, owner: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="date" value={newItem.dueDate} onChange={(e) => setNewItem({...newItem, dueDate: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <select value={newItem.status} onChange={(e) => setNewItem({...newItem, status: e.target.value as any})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <input type="text" placeholder="Linked Job ID (optional)" value={newItem.linkedJob} onChange={(e) => setNewItem({...newItem, linkedJob: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <textarea placeholder="Notes" value={newItem.notes} onChange={(e) => setNewItem({...newItem, notes: e.target.value})} className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3 h-20" />
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
-            <button onClick={handleAddItem} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold">{editingItem ? 'Update' : 'Add Follow-Up'}</button>
-          </div>
-        </div>
-      )}
-
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Total</p>
+      <div className="grid grid-cols-2 md:grid-cols-8 gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Total Items</p>
           <p className="text-2xl font-black text-blue-700">{stats.total}</p>
         </div>
-        <div className="bg-linear-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-3">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Meetings</p>
+          <p className="text-2xl font-black text-green-700">{stats.meetings}</p>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Notes</p>
+          <p className="text-2xl font-black text-purple-700">{stats.notes}</p>
+        </div>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Decisions</p>
+          <p className="text-2xl font-black text-orange-700">{stats.decisions}</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Actions</p>
+          <p className="text-2xl font-black text-red-700">{stats.actions}</p>
+        </div>
+        <div className="bg-green-100 border border-green-300 rounded-lg p-3">
           <p className="text-xs text-muted-foreground mb-1">Completed</p>
-          <p className="text-2xl font-black text-green-700">{stats.completed}</p>
-          <p className="text-xs text-green-600 mt-1">{Math.round((stats.completed / stats.total) * 100)}%</p>
+          <p className="text-2xl font-black text-green-800">{stats.completed}</p>
         </div>
-        <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3">
+        <div className="bg-blue-100 border border-blue-300 rounded-lg p-3">
           <p className="text-xs text-muted-foreground mb-1">In Progress</p>
-          <p className="text-2xl font-black text-blue-700">{stats.inProgress}</p>
+          <p className="text-2xl font-black text-blue-800">{stats.inProgress}</p>
         </div>
-        <div className="bg-linear-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-3">
+        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3">
           <p className="text-xs text-muted-foreground mb-1">Pending</p>
-          <p className="text-2xl font-black text-yellow-700">{stats.pending}</p>
-        </div>
-        <div className="bg-linear-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Job-Linked</p>
-          <p className="text-2xl font-black text-purple-700">{actionItems.filter(i => i.linkedJob).length}</p>
-        </div>
-        <div className="bg-linear-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">High Priority</p>
-          <p className="text-2xl font-black text-red-700">{stats.critical}</p>
+          <p className="text-2xl font-black text-yellow-800">{stats.pending}</p>
         </div>
       </div>
 
@@ -366,13 +312,13 @@ export default function FollowUpTracker() {
       </div>
 
       {/* Filters */}
-      <div className="bg-card border rounded-lg p-4 space-y-3">
+      <div className="bg-white border rounded-lg p-4 space-y-3">
         <div className="flex gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search action items, jobs, clients..."
+              placeholder="Search items, descriptions, jobs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -388,7 +334,9 @@ export default function FollowUpTracker() {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {statuses.map(status => (
-                <option key={status} value={status}>{status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}</option>
+                <option key={status} value={status}>
+                  {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
               ))}
             </select>
           </div>
@@ -400,7 +348,9 @@ export default function FollowUpTracker() {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {priorities.map(priority => (
-                <option key={priority} value={priority}>{priority === 'all' ? 'All Priority' : priority}</option>
+                <option key={priority} value={priority}>
+                  {priority === 'all' ? 'All Priority' : priority}
+                </option>
               ))}
             </select>
           </div>
@@ -412,227 +362,294 @@ export default function FollowUpTracker() {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {owners.map(owner => (
-                <option key={owner} value={owner}>{owner === 'all' ? 'All Owners' : owner.split(' ')[0]}</option>
+                <option key={owner} value={owner}>
+                  {owner === 'all' ? 'All Owners' : owner}
+                </option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted-foreground mb-2 block">Type</label>
+            <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <option value="all">All Types</option>
+              <option value="meeting">Meetings</option>
+              <option value="note">Notes</option>
+              <option value="decision">Decisions</option>
+              <option value="action">Actions</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* ACTIVE TAB - Action Items List */}
+      {/* ACTIVE TAB - All Items List */}
       {selectedTab === 'active' && (
         <div className="space-y-3">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className={`border rounded-lg p-4 transition-all ${
-                isOverdue(item.dueDate, item.status)
-                  ? 'bg-red-50 border-red-200 shadow-sm'
-                  : 'bg-card border-default hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-bold text-lg">{item.item}</p>
-                    {isOverdue(item.dueDate, item.status) && (
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">From: {item.linkedMeeting}</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className={`text-xs px-2 py-1 rounded font-semibold ${getPriorityColor(item.priority)}`}>
-                    {item.priority}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded font-semibold ${getStatusColor(item.status)}`}>
-                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              {item.status !== 'completed' && (
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-muted-foreground">Progress</p>
-                    <p className="text-xs font-bold">{item.progressPercent}%</p>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        item.status === 'in-progress' ? 'bg-blue-600' : 'bg-yellow-600'
-                      }`}
-                      style={{ width: `${item.progressPercent}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
-                <div className="text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Owner</p>
-                  <p className="font-semibold">{item.owner.split(' ')[0]}</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Due Date</p>
-                  <p className={`font-semibold ${isOverdue(item.dueDate, item.status) ? 'text-red-600' : ''}`}>
-                    {item.dueDate}
-                  </p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Impact</p>
-                  <p className="font-semibold text-blue-600 text-xs">{item.impact.split(' ')[0]}</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Assigned By</p>
-                  <p className="font-semibold text-xs">{item.assignedBy.split(' ')[0]}</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
-                  <p className="font-semibold text-xs">{item.createdDate}</p>
-                </div>
-              </div>
-
-              {/* Cross-Links */}
-              {(item.linkedJob || item.linkedClient) && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {item.linkedJob && (
-                    <a href={`/admin/jobs/detail?id=${item.linkedJob}`} className="flex items-center gap-1 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded hover:bg-pink-200 transition-colors">
-                      <LinkIcon className="h-3 w-3" />
-                      {item.linkedJob}
-                    </a>
-                  )}
-                  {item.linkedClient && (
-                    <span className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
-                      {item.linkedClient.split(',')[0].trim()}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Timeline Impact & Actions */}
-              <div className="flex gap-3 items-start">
-                <div className="flex-1 p-3 bg-muted/50 rounded border-l-4 border-orange-500">
-                  <p className="text-xs font-bold mb-1">⏱️ Timeline Impact</p>
-                  <p className="text-xs text-muted-foreground">{item.timelineImpact}</p>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleUpdateStatus(item.id, item.status === 'completed' ? 'pending' : 'completed')} className="p-2 hover:bg-blue-100 text-blue-600 rounded transition-colors" title={`Mark as ${item.status === 'completed' ? 'pending' : 'completed'}`}>
-                    <CheckCircle className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleEditItem(item.id)} className="p-2 hover:bg-green-100 text-green-600 rounded transition-colors" title="Edit">
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDeleteItem(item.id)} className="p-2 hover:bg-red-100 text-red-600 rounded transition-colors" title="Delete">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-gray-50">
+              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-gray-600">No items found for today</h3>
+              <p className="text-gray-500 mt-2">No meetings, notes, decisions or actions scheduled for {todayDate}</p>
             </div>
-          ))}
+          ) : (
+            filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className={`border rounded-lg p-4 transition-all hover:shadow-md ${getTypeColor(item.type)}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getTypeIcon(item.type)}
+                      <p className="font-bold text-lg">{item.title}</p>
+                      <span className={`text-xs px-2 py-1 rounded font-semibold ${getTypeColor(item.type)}`}>
+                        {item.type.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">{item.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className={`text-xs px-2 py-1 rounded font-semibold ${getPriorityColor(item.priority)}`}>
+                      {item.priority}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded font-semibold ${getStatusColor(item.status)}`}>
+                      {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                  <div className="text-sm">
+                    <p className="text-xs text-gray-500 mb-1">Owner</p>
+                    <p className="font-semibold">{item.owner}</p>
+                  </div>
+                  <div className="text-sm">
+                    <p className="text-xs text-gray-500 mb-1">Date & Time</p>
+                    <p className="font-semibold">
+                      {item.date} {item.time && `at ${item.time}`}
+                    </p>
+                  </div>
+                  {item.linkedJob && (
+                    <div className="text-sm">
+                      <p className="text-xs text-gray-500 mb-1">Linked Job</p>
+                      <p className="font-semibold text-blue-600">{item.linkedJob}</p>
+                    </div>
+                  )}
+                  {item.location && (
+                    <div className="text-sm">
+                      <p className="text-xs text-gray-500 mb-1">Location</p>
+                      <p className="font-semibold">{item.location}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {item.attendees && item.attendees.length > 0 && (
+                    <div className="flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      <Users className="h-3 w-3" />
+                      {item.attendees.length} attendees
+                    </div>
+                  )}
+                  {item.duration && (
+                    <div className="flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      <Clock className="h-3 w-3" />
+                      {item.duration}
+                    </div>
+                  )}
+                  {item.cost && item.cost > 0 && (
+                    <div className="flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      AED {item.cost}
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Bar for Actions */}
+                {item.type === 'action' && item.progressPercent !== undefined && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-gray-500">Progress</p>
+                      <p className="text-xs font-bold">{item.progressPercent}%</p>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          item.status === 'completed' ? 'bg-green-600' :
+                          item.status === 'in-progress' ? 'bg-blue-600' : 'bg-yellow-600'
+                        }`}
+                        style={{ width: `${item.progressPercent}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {/* TIMELINE TAB */}
+      {/* TIMELINE TAB - Chronological View */}
       {selectedTab === 'timeline' && (
-        <div className="space-y-3">
+        <div className="space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-bold mb-4">Dependency Timeline</h3>
+            <h3 className="font-bold mb-4 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Today's Timeline - {todayDate}
+            </h3>
+            
+            {/* Sort by time */}
             {filteredItems
-              .filter(item => item.dependencies && item.dependencies.length > 0)
-              .map(item => (
+              .filter(item => item.time)
+              .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'))
+              .map((item, index) => (
                 <div key={item.id} className="mb-4 pb-4 border-b last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <p className="font-bold text-sm">{item.item}</p>
-                      <p className="text-xs text-muted-foreground">Due: {item.dueDate}</p>
+                  <div className="flex items-start gap-4">
+                    <div className="bg-blue-100 text-blue-700 rounded-lg p-3 text-center min-w-20">
+                      <p className="font-bold text-lg">{item.time || 'N/A'}</p>
+                      <p className="text-xs">Time</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <div className="text-right text-xs">
-                      <p className="font-bold">{item.dependencies.length} blocker(s)</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getTypeIcon(item.type)}
+                        <p className="font-bold">{item.title}</p>
+                        <span className={`text-xs px-2 py-1 rounded ${getTypeColor(item.type)}`}>
+                          {item.type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <div className="flex gap-3 mt-2">
+                        <span className="text-xs text-gray-500">Owner: {item.owner}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${getStatusColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
           </div>
-          {/* Timeline Impact Summary */}
-          <div className="bg-card border rounded-lg p-4 space-y-3">
-            <h3 className="font-bold mb-4">Job Impact Analysis</h3>
-            {Array.from(new Set(actionItems.filter(i => i.linkedJob).map(i => i.linkedJob as string))).map(job => {
-              const jobItems = actionItems.filter(i => i.linkedJob === job);
-              return (
-                <div key={job} className="border rounded-lg p-3 bg-muted/50">
-                  <p className="font-bold text-sm mb-2">{job}</p>
-                  <p className="text-xs text-muted-foreground mb-2">{jobItems.length} action items</p>
-                  <div className="space-y-1">
-                    {jobItems.map(item => (
-                      <div key={item.id} className="text-xs flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${item.status === 'completed' ? 'bg-green-600' : item.status === 'in-progress' ? 'bg-blue-600' : 'bg-yellow-600'}`}></span>
-                        {item.item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+
+          {/* Summary by Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border rounded-lg p-4">
+              <h4 className="font-bold mb-3">By Type Summary</h4>
+              <div className="space-y-2">
+                {['meeting', 'note', 'decision', 'action'].map(type => {
+                  const count = filteredItems.filter(item => item.type === type).length
+                  if (count === 0) return null
+                  return (
+                    <div key={type} className="flex justify-between items-center">
+                      <span className="flex items-center gap-2">
+                        {getTypeIcon(type)}
+                        {type.charAt(0).toUpperCase() + type.slice(1)}s
+                      </span>
+                      <span className="font-bold">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            
+            <div className="border rounded-lg p-4">
+              <h4 className="font-bold mb-3">By Status Summary</h4>
+              <div className="space-y-2">
+                {['pending', 'in-progress', 'completed', 'scheduled'].map(status => {
+                  const count = filteredItems.filter(item => 
+                    item.status.toLowerCase() === status.toLowerCase()
+                  ).length
+                  if (count === 0) return null
+                  return (
+                    <div key={status} className="flex justify-between items-center">
+                      <span className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${getStatusColor(status).split(' ')[0]}`}></span>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </span>
+                      <span className="font-bold">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ACCOUNTABILITY TAB */}
+      {/* ACCOUNTABILITY TAB - By Owner */}
       {selectedTab === 'accountability' && (
         <div className="space-y-3">
-          {Array.from(new Set(filteredItems.map(i => i.owner))).map(owner => {
-            const ownerItems = filteredItems.filter(i => i.owner === owner);
-            const completed = ownerItems.filter(i => i.status === 'completed').length;
-            const total = ownerItems.length;
+          {owners.filter(owner => owner !== 'all').map(owner => {
+            const ownerItems = filteredItems.filter(item => item.owner === owner)
+            if (ownerItems.length === 0) return null
+            
+            const completed = ownerItems.filter(item => 
+              item.status.toLowerCase() === 'completed' || 
+              item.status.toLowerCase() === 'implemented'
+            ).length
+            const total = ownerItems.length
+            const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
             
             return (
-              <div key={owner} className="bg-card border rounded-lg p-4">
+              <div key={owner} className="bg-white border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-bold">{owner}</p>
-                    <p className="text-xs text-muted-foreground">Assigned by: {ownerItems[0]?.assignedBy}</p>
+                    <p className="font-bold text-lg">{owner}</p>
+                    <p className="text-sm text-gray-500">{ownerItems.length} items total</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-black text-blue-600">{Math.round((completed / total) * 100)}%</p>
-                    <p className="text-xs text-muted-foreground">{completed}/{total} complete</p>
+                    <p className="text-2xl font-black text-blue-600">{completionRate}%</p>
+                    <p className="text-xs text-gray-500">{completed}/{total} completed</p>
                   </div>
                 </div>
                 
-                <div className="w-full bg-muted rounded-full h-3 mb-3">
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                   <div
-                    className="h-3 rounded-full bg-blue-600 transition-all"
-                    style={{ width: `${(completed / total) * 100}%` }}
+                    className="h-3 rounded-full bg-green-600 transition-all"
+                    style={{ width: `${completionRate}%` }}
                   ></div>
                 </div>
 
                 <div className="space-y-2">
                   {ownerItems.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
                       <div className="flex-1">
-                        <p className="text-sm font-semibold">{item.item}</p>
-                        <p className="text-xs text-muted-foreground">Due: {item.dueDate}</p>
+                        <div className="flex items-center gap-2">
+                          {getTypeIcon(item.type)}
+                          <p className="font-semibold">{item.title}</p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{item.type.toUpperCase()} • Due: {item.date}</p>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded font-semibold ${getStatusColor(item.status)}`}>
-                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded ${getStatusColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(item.priority)}`}>
+                          {item.priority}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-        <Zap className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold text-blue-900">Accountability & Timeline Tracking</p>
-          <p className="text-sm text-blue-800 mt-1">Track action items with full accountability to individual owners. Visualize dependencies, timeline impact on linked jobs, and completion rates per person. Identify blockers and manage priorities for optimal workflow.</p>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Zap className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-blue-900">Today's Follow-Up Summary - {todayDate}</p>
+            <p className="text-sm text-blue-800 mt-1">
+              Showing {stats.total} total items: {stats.meetings} meetings, {stats.notes} notes, 
+              {' '}{stats.decisions} decisions, and {stats.actions} action items. 
+              Overall completion rate: {stats.completionRate}%
+            </p>
+            <p className="text-xs text-blue-700 mt-2">
+              Data fetched from Firebase collections: meetingCalender, notes, decisions, actionItems
+            </p>
+          </div>
         </div>
       </div>
     </div>

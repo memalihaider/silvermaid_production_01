@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   DollarSign,
   Plus,
@@ -32,13 +32,97 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react'
-import { MOCK_CLIENTS, MOCK_INVOICES, MOCK_PAYMENTS, MOCK_EXPENSES, calculateFinancialSummary, Client, Invoice, Payment, Expense } from '@/lib/finance-data'
+import { db } from '@/lib/firebase'
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  deleteDoc,
+  serverTimestamp,
+  query,
+  orderBy
+} from 'firebase/firestore'
+
+// Types
+interface Client {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  location: string;
+  joinDate: string;
+  totalSpent: number;
+  projects: number;
+  lastService: string;
+  status: string;
+  tier: string;
+  notes: string;
+  contracts?: any[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  invoiceDate: string;
+  dueDate: string;
+  status: 'Draft' | 'Sent' | 'Paid' | 'Overdue';
+  lineItems: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    unit: string;
+    amount: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  taxRate: number;
+  total: number;
+  notes: string;
+  paymentTerms: string;
+  currencyCode: string;
+  sentDate?: string;
+  paidDate?: string;
+  createdBy: string;
+  updatedAt: string;
+}
+
+interface Payment {
+  id: string;
+  invoiceId: string;
+  clientId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  transactionRef: string;
+  status: string;
+}
+
+interface Expense {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  paymentMethod: string;
+  vendor: string;
+  approvalStatus: string;
+  notes: string;
+}
 
 export default function UnifiedFinancePage() {
-  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES)
-  const [payments, setPayments] = useState<Payment[]>(MOCK_PAYMENTS)
-  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES)
-  const [clients, setClients] = useState<Client[]>(MOCK_CLIENTS)
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [clients, setClients] = useState<Client[]>([])
 
   const [activeTab, setActiveTab] = useState('overview')
   const [searchTerm, setSearchTerm] = useState('')
@@ -85,13 +169,157 @@ export default function UnifiedFinancePage() {
     attachments: [] as { name: string; size: string; type: string }[]
   })
 
+  // Firebase se data fetch
+  useEffect(() => {
+    fetchAllData()
+  }, [])
+
+  const fetchAllData = async () => {
+    try {
+      // Clients fetch
+      const clientsRef = collection(db, 'clients')
+      const clientsSnapshot = await getDocs(clientsRef)
+      const clientsData: Client[] = []
+      clientsSnapshot.forEach(doc => {
+        const data = doc.data()
+        clientsData.push({
+          id: doc.id,
+          name: data.name || '',
+          company: data.company || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          location: data.location || '',
+          joinDate: data.joinDate || '',
+          totalSpent: data.totalSpent || 0,
+          projects: data.projects || 0,
+          lastService: data.lastService || '',
+          status: data.status || 'Active',
+          tier: data.tier || 'Bronze',
+          notes: data.notes || '',
+          contracts: data.contracts || [],
+          createdAt: formatFirebaseTimestamp(data.createdAt),
+          updatedAt: formatFirebaseTimestamp(data.updatedAt)
+        })
+      })
+      setClients(clientsData)
+
+      // Invoices fetch
+      const invoicesRef = collection(db, 'invoices')
+      const invoicesQuery = query(invoicesRef, orderBy('invoiceDate', 'desc'))
+      const invoicesSnapshot = await getDocs(invoicesQuery)
+      const invoicesData: Invoice[] = []
+      invoicesSnapshot.forEach(doc => {
+        const data = doc.data()
+        invoicesData.push({
+          id: doc.id,
+          invoiceNumber: data.invoiceNumber || '',
+          clientId: data.clientId || '',
+          clientName: data.clientName || '',
+          clientEmail: data.clientEmail || '',
+          invoiceDate: data.invoiceDate || '',
+          dueDate: data.dueDate || '',
+          status: data.status || 'Draft',
+          lineItems: data.lineItems || [],
+          subtotal: data.subtotal || 0,
+          tax: data.tax || 0,
+          taxRate: data.taxRate || 0.10,
+          total: data.total || 0,
+          notes: data.notes || '',
+          paymentTerms: data.paymentTerms || '30 days',
+          currencyCode: data.currencyCode || 'AED',
+          sentDate: data.sentDate || '',
+          paidDate: data.paidDate || '',
+          createdBy: data.createdBy || 'Admin',
+          updatedAt: data.updatedAt || ''
+        })
+      })
+      setInvoices(invoicesData)
+
+      // Payments fetch
+      const paymentsRef = collection(db, 'record-payment')
+      const paymentsSnapshot = await getDocs(paymentsRef)
+      const paymentsData: Payment[] = []
+      paymentsSnapshot.forEach(doc => {
+        const data = doc.data()
+        paymentsData.push({
+          id: doc.id,
+          invoiceId: data.invoiceId || '',
+          clientId: data.clientId || '',
+          amount: data.amount || 0,
+          paymentDate: data.paymentDate || '',
+          paymentMethod: data.paymentMethod || '',
+          transactionRef: data.transactionRef || '',
+          status: data.status || 'Completed'
+        })
+      })
+      setPayments(paymentsData)
+
+      // Expenses fetch
+      const expensesRef = collection(db, 'record-expense')
+      const expensesSnapshot = await getDocs(expensesRef)
+      const expensesData: Expense[] = []
+      expensesSnapshot.forEach(doc => {
+        const data = doc.data()
+        expensesData.push({
+          id: doc.id,
+          description: data.description || '',
+          category: data.category || 'Supplies',
+          amount: data.amount || 0,
+          date: data.date || '',
+          paymentMethod: data.paymentMethod || 'Bank Transfer',
+          vendor: data.vendor || '',
+          approvalStatus: data.approvalStatus || 'Pending',
+          notes: data.notes || ''
+        })
+      })
+      setExpenses(expensesData)
+
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
+  }
+
+  const formatFirebaseTimestamp = (timestamp: any): string => {
+    if (!timestamp) return new Date().toISOString().split('T')[0]
+    
+    if (timestamp.toDate) {
+      return timestamp.toDate().toISOString().split('T')[0]
+    }
+    
+    if (timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toISOString().split('T')[0]
+    }
+    
+    return timestamp as string
+  }
+
   // Calculate financial summary
-  const summary = useMemo(() => calculateFinancialSummary(invoices, payments, expenses), [invoices, payments, expenses])
+  const summary = useMemo(() => {
+    const totalIncome = payments.reduce((sum, p) => sum + p.amount, 0)
+    const totalPending = invoices
+      .filter(inv => inv.status === 'Sent')
+      .reduce((sum, inv) => sum + inv.total, 0)
+    const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+    const profit = totalIncome - totalExpenses
+    const profitMargin = totalIncome > 0 ? (profit / totalIncome) * 100 : 0
+    
+    return {
+      totalIncome,
+      totalPending,
+      totalExpenses,
+      profit,
+      profitMargin,
+      paidInvoices: invoices.filter(inv => inv.status === 'Paid').length,
+      pendingInvoices: invoices.filter(inv => inv.status === 'Sent').length,
+      overdueInvoices: invoices.filter(inv => inv.status === 'Overdue').length
+    }
+  }, [invoices, payments, expenses])
 
   // Filter invoices
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
-      const matchesSearch = inv.invoiceNumber.includes(searchTerm) || inv.clientName.includes(searchTerm)
+      const matchesSearch = inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          inv.clientName.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesStatus = filterStatus === 'all' || inv.status === filterStatus
       return matchesSearch && matchesStatus
     })
@@ -100,20 +328,28 @@ export default function UnifiedFinancePage() {
   // Filter clients
   const filteredClients = useMemo(() => {
     return clients.filter(client =>
-      client.name.includes(searchTerm) || client.company.includes(searchTerm)
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      client.company.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [clients, searchTerm])
 
   // Filter expenses
   const filteredExpenses = useMemo(() => {
     return expenses.filter(exp =>
-      exp.description.includes(searchTerm) || exp.category.includes(searchTerm)
+      exp.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      exp.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [expenses, searchTerm])
 
-  const handleAddInvoice = () => {
+  const handleAddInvoice = async () => {
     if (!newInvoice.clientId || newInvoice.lineItems.length === 0 || !newInvoice.dueDate) {
       alert('Please fill all required fields')
+      return
+    }
+
+    const client = clients.find(c => c.id === newInvoice.clientId)
+    if (!client) {
+      alert('Client not found')
       return
     }
 
@@ -121,15 +357,14 @@ export default function UnifiedFinancePage() {
     const tax = subtotal * 0.10
     const total = subtotal + tax
 
-    const invoice: Invoice = {
-      id: `INV${Date.now()}`,
-      invoiceNumber: `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`,
+    const invoiceData = {
+      invoiceNumber: `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`,
       clientId: newInvoice.clientId,
-      clientName: clients.find(c => c.id === newInvoice.clientId)?.name || '',
-      clientEmail: clients.find(c => c.id === newInvoice.clientId)?.email,
+      clientName: client.name,
+      clientEmail: client.email,
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: newInvoice.dueDate,
-      status: 'Sent',
+      status: 'Sent' as const,
       lineItems: newInvoice.lineItems.map((item, idx) => ({
         id: `LI${Date.now()}${idx}`,
         ...item,
@@ -144,23 +379,117 @@ export default function UnifiedFinancePage() {
       currencyCode: 'AED',
       sentDate: new Date().toISOString().split('T')[0],
       createdBy: 'Admin',
-      updatedAt: new Date().toISOString().split('T')[0]
+      updatedAt: new Date().toISOString().split('T')[0],
+      createdAt: serverTimestamp()
     }
 
-    setInvoices([...invoices, invoice])
-    setNewInvoice({ clientId: '', lineItems: [{ description: '', quantity: 1, unitPrice: 0, unit: 'service' }], notes: '', paymentTerms: '30 days', dueDate: '', attachments: [] })
-    setShowInvoiceModal(false)
-    alert('Invoice created successfully!')
+    try {
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, 'invoices'), invoiceData)
+      
+      // Add to local state
+      const newInvoiceObj: Invoice = {
+        id: docRef.id,
+        ...invoiceData
+      }
+      
+      setInvoices([...invoices, newInvoiceObj])
+      setNewInvoice({ 
+        clientId: '', 
+        lineItems: [{ description: '', quantity: 1, unitPrice: 0, unit: 'service' }], 
+        notes: '', 
+        paymentTerms: '30 days', 
+        dueDate: '', 
+        attachments: [] 
+      })
+      setShowInvoiceModal(false)
+      alert('Invoice created successfully!')
+      
+      // Generate PDF (simple browser print)
+      generateInvoicePDF(newInvoiceObj)
+      
+    } catch (error) {
+      console.error('Error creating invoice:', error)
+      alert('Failed to create invoice')
+    }
   }
 
-  const handleAddClient = () => {
+  const generateInvoicePDF = (invoice: Invoice) => {
+    // Simple browser print function
+    const printContent = `
+      <html>
+        <head>
+          <title>Invoice ${invoice.invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .invoice-info { margin-bottom: 20px; }
+            .line-items { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .line-items th, .line-items td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .totals { float: right; margin-top: 20px; }
+            .total-row { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>INVOICE</h1>
+            <h2>${invoice.invoiceNumber}</h2>
+          </div>
+          
+          <div class="invoice-info">
+            <p><strong>Date:</strong> ${formatDate(invoice.invoiceDate)}</p>
+            <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+            <p><strong>Client:</strong> ${invoice.clientName}</p>
+            <p><strong>Email:</strong> ${invoice.clientEmail}</p>
+          </div>
+          
+          <table class="line-items">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoice.lineItems.map(item => `
+                <tr>
+                  <td>${item.description}</td>
+                  <td>${item.quantity}</td>
+                  <td>${formatCurrency(item.unitPrice)}</td>
+                  <td>${formatCurrency(item.amount)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="totals">
+            <p>Subtotal: ${formatCurrency(invoice.subtotal)}</p>
+            <p>Tax (10%): ${formatCurrency(invoice.tax)}</p>
+            <p class="total-row">Total: ${formatCurrency(invoice.total)}</p>
+            <p><strong>Payment Terms:</strong> ${invoice.paymentTerms}</p>
+            <p><strong>Status:</strong> ${invoice.status}</p>
+          </div>
+        </body>
+      </html>
+    `
+    
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  const handleAddClient = async () => {
     if (!newClient.name || !newClient.email) {
       alert('Please fill required fields')
       return
     }
 
-    const client: Client = {
-      id: `CLI${Date.now()}`,
+    const clientData = {
       name: newClient.name,
       company: newClient.company,
       email: newClient.email,
@@ -169,26 +498,45 @@ export default function UnifiedFinancePage() {
       joinDate: new Date().toISOString().split('T')[0],
       totalSpent: 0,
       projects: 0,
-      lastService: '',
+      lastService: 'No service yet',
       status: 'Active',
       tier: 'Bronze',
-      notes: newClient.notes
+      notes: newClient.notes,
+      contracts: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     }
 
-    setClients([...clients, client])
-    setNewClient({ name: '', company: '', email: '', phone: '', location: '', notes: '' })
-    setShowClientModal(false)
-    alert('Client added successfully!')
+    try {
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, 'clients'), clientData)
+      
+      // Add to local state
+      const newClientObj: Client = {
+        id: docRef.id,
+        ...clientData,
+        createdAt: new Date().toISOString().split('T')[0],
+        updatedAt: new Date().toISOString().split('T')[0]
+      }
+      
+      setClients([...clients, newClientObj])
+      setNewClient({ name: '', company: '', email: '', phone: '', location: '', notes: '' })
+      setShowClientModal(false)
+      alert('Client added successfully!')
+      
+    } catch (error) {
+      console.error('Error adding client:', error)
+      alert('Failed to add client')
+    }
   }
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     if (!newExpense.description || !newExpense.amount) {
       alert('Please fill required fields')
       return
     }
 
-    const expense: Expense = {
-      id: `EXP${Date.now()}`,
+    const expenseData = {
       description: newExpense.description,
       category: newExpense.category,
       amount: newExpense.amount,
@@ -199,53 +547,110 @@ export default function UnifiedFinancePage() {
       notes: newExpense.notes
     }
 
-    setExpenses([...expenses, expense])
-    setNewExpense({ description: '', category: 'Supplies', amount: 0, vendor: '', notes: '' })
-    setShowExpenseModal(false)
-    alert('Expense recorded successfully!')
+    try {
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, 'record-expense'), expenseData)
+      
+      // Add to local state
+      const newExpenseObj: Expense = {
+        id: docRef.id,
+        ...expenseData
+      }
+      
+      setExpenses([...expenses, newExpenseObj])
+      setNewExpense({ description: '', category: 'Supplies', amount: 0, vendor: '', notes: '' })
+      setShowExpenseModal(false)
+      alert('Expense recorded successfully!')
+      
+    } catch (error) {
+      console.error('Error adding expense:', error)
+      alert('Failed to record expense')
+    }
   }
 
-  const handleAddPayment = () => {
+  const handleAddPayment = async () => {
     if (!newPayment.invoiceId || !newPayment.amount) {
       alert('Please fill required fields')
       return
     }
 
-    const payment: Payment = {
-      id: `PAY${Date.now()}`,
+    const invoice = invoices.find(inv => inv.id === newPayment.invoiceId)
+    if (!invoice) {
+      alert('Invoice not found')
+      return
+    }
+
+    const paymentData = {
       invoiceId: newPayment.invoiceId,
-      clientId: invoices.find(inv => inv.id === newPayment.invoiceId)?.clientId || '',
+      clientId: invoice.clientId,
       amount: newPayment.amount,
       paymentDate: new Date().toISOString().split('T')[0],
-      paymentMethod: newPayment.paymentMethod as any,
+      paymentMethod: newPayment.paymentMethod,
       transactionRef: newPayment.transactionRef,
       status: 'Completed'
     }
 
-    setPayments([...payments, payment])
-
-    // Update invoice status to Paid if full amount received
-    const invoice = invoices.find(inv => inv.id === newPayment.invoiceId)
-    if (invoice && newPayment.amount >= invoice.total) {
-      setInvoices(invoices.map(inv =>
-        inv.id === newPayment.invoiceId ? { ...inv, status: 'Paid', paidDate: new Date().toISOString().split('T')[0] } : inv
-      ))
+    try {
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, 'record-payment'), paymentData)
+      
+      // Add to local state
+      const newPaymentObj: Payment = {
+        id: docRef.id,
+        ...paymentData
+      }
+      
+      setPayments([...payments, newPaymentObj])
+      
+      // Update invoice status to Paid if full amount received
+      if (newPayment.amount >= invoice.total) {
+        await updateDoc(doc(db, 'invoices', invoice.id), {
+          status: 'Paid',
+          paidDate: new Date().toISOString().split('T')[0],
+          updatedAt: new Date().toISOString().split('T')[0]
+        })
+        
+        // Update local state
+        setInvoices(invoices.map(inv =>
+          inv.id === invoice.id ? { 
+            ...inv, 
+            status: 'Paid', 
+            paidDate: new Date().toISOString().split('T')[0] 
+          } : inv
+        ))
+      }
+      
+      setNewPayment({ invoiceId: '', amount: 0, paymentMethod: 'Bank Transfer', transactionRef: '', attachments: [] })
+      setShowPaymentModal(false)
+      alert('Payment recorded successfully!')
+      
+    } catch (error) {
+      console.error('Error recording payment:', error)
+      alert('Failed to record payment')
     }
-
-    setNewPayment({ invoiceId: '', amount: 0, paymentMethod: 'Bank Transfer', transactionRef: '', attachments: [] })
-    setShowPaymentModal(false)
-    alert('Payment recorded successfully!')
   }
 
-  const handleDeleteInvoice = (id: string) => {
+  const handleDeleteInvoice = async (id: string) => {
     if (confirm('Delete this invoice?')) {
-      setInvoices(invoices.filter(inv => inv.id !== id))
+      try {
+        await deleteDoc(doc(db, 'invoices', id))
+        setInvoices(invoices.filter(inv => inv.id !== id))
+      } catch (error) {
+        console.error('Error deleting invoice:', error)
+        alert('Failed to delete invoice')
+      }
     }
   }
 
-  const handleDeleteExpense = (id: string) => {
+  const handleDeleteExpense = async (id: string) => {
     if (confirm('Delete this expense?')) {
-      setExpenses(expenses.filter(exp => exp.id !== id))
+      try {
+        await deleteDoc(doc(db, 'record-expense', id))
+        setExpenses(expenses.filter(exp => exp.id !== id))
+      } catch (error) {
+        console.error('Error deleting expense:', error)
+        alert('Failed to delete expense')
+      }
     }
   }
 
@@ -594,11 +999,11 @@ export default function UnifiedFinancePage() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Invoice</p>
-                      <p className="font-bold text-sm">{invoice?.invoiceNumber}</p>
+                      <p className="font-bold text-sm">{invoice?.invoiceNumber || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Client</p>
-                      <p className="font-bold text-sm">{invoice?.clientName}</p>
+                      <p className="font-bold text-sm">{invoice?.clientName || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Amount</p>

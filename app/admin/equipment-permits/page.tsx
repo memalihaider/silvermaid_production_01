@@ -8,35 +8,67 @@ import {
   Trash2,
   Search,
   Filter,
-  Download,
-  Upload,
   CheckCircle,
   AlertCircle,
   Clock,
   Calendar,
-  Tag,
-  Building,
   Wrench,
   ShieldCheck,
   DollarSign,
   AlertTriangle,
-  Eye,
-  ChevronRight,
   ArrowLeft,
   Bell,
   History,
-  RefreshCw,
-  MapPin,
   ShoppingCart
 } from 'lucide-react'
 import Link from 'next/link'
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  Timestamp 
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+
+type Equipment = {
+  id: string
+  name: string
+  category: string
+  status: 'Available' | 'In Use' | 'Maintenance'
+  location: string
+  purchaseDate: string
+  cost: number
+  maintenanceDate: string
+  condition: 'Excellent' | 'Good' | 'Fair' | 'Poor'
+  quantity: number
+  lastServiced: string
+  createdAt: Timestamp
+}
+
+type Permit = {
+  id: string
+  name: string
+  category: string
+  status: 'Active' | 'Expiring Soon' | 'Expired'
+  issueDate: string
+  expiryDate: string
+  issuer: string
+  renewalDate: string
+  cost: number
+  createdAt: Timestamp
+}
 
 type Reminder = {
   id: string
-  type: 'equipment' | 'permit'
-  itemId: number
+  type: 'equipment' | 'permit' | 'material'
+  itemId: string
   itemName: string
-  reminderType: 'maintenance' | 'expiry' | 'renewal'
+  reminderType: 'maintenance' | 'expiry' | 'renewal' | 'restock'
   dueDate: string
   status: 'pending' | 'completed' | 'overdue'
   message: string
@@ -46,16 +78,18 @@ type Reminder = {
 type TrackingLog = {
   id: string
   type: 'equipment' | 'permit' | 'material'
-  itemId: number
+  itemId: string
   itemName: string
   action: string
   user: string
   timestamp: string
   details: string
+  createdAt: Timestamp
+  date: string // Added date field for filtering
 }
 
 type Material = {
-  id: number
+  id: string
   name: string
   category: string
   quantity: number
@@ -67,6 +101,7 @@ type Material = {
   location: string
   reorderLevel: number
   invoices: Array<{id: string, type: string, file: string, date: string, amount: string}>
+  createdAt: Timestamp
 }
 
 export default function EquipmentPermitsPage() {
@@ -76,92 +111,14 @@ export default function EquipmentPermitsPage() {
   const [showReminderModal, setShowReminderModal] = useState(false)
   const [selectedItemForReminder, setSelectedItemForReminder] = useState<any>(null)
   
-  // Equipment State
-  const [equipment, setEquipment] = useState([
-    { id: 1, name: 'Industrial Vacuum Cleaner', category: 'Cleaning', status: 'Available', location: 'Warehouse A', purchaseDate: '2024-01-15', cost: 2500, maintenanceDate: '2025-01-20', condition: 'Excellent', quantity: 3, lastServiced: '2024-06-15' },
-    { id: 2, name: 'High-Pressure Washer', category: 'Outdoor', status: 'In Use', location: 'Job Site - Tower B', purchaseDate: '2023-06-20', cost: 4200, maintenanceDate: '2025-01-15', condition: 'Good', quantity: 2, lastServiced: '2024-07-10' },
-    { id: 3, name: 'Floor Buffer Machine', category: 'Cleaning', status: 'Available', location: 'Warehouse B', purchaseDate: '2024-03-10', cost: 3500, maintenanceDate: '2025-01-25', condition: 'Good', quantity: 1, lastServiced: '2024-08-20' },
-    { id: 4, name: 'Safety Harness Kit', category: 'Safety', status: 'Available', location: 'Safety Storage', purchaseDate: '2023-11-01', cost: 800, maintenanceDate: '2025-02-01', condition: 'Excellent', quantity: 10, lastServiced: '2024-05-15' },
-    { id: 5, name: 'Ladder (30ft)', category: 'Access', status: 'In Use', location: 'Job Site - Downtown Tower', purchaseDate: '2023-09-05', cost: 1200, maintenanceDate: '2025-01-30', condition: 'Good', quantity: 2, lastServiced: '2024-06-20' },
-  ])
-
-  // Reminders State
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: 'r1',
-      type: 'equipment',
-      itemId: 2,
-      itemName: 'High-Pressure Washer',
-      reminderType: 'maintenance',
-      dueDate: '2025-01-15',
-      status: 'pending',
-      message: 'Scheduled maintenance required',
-      createdAt: '2024-12-15'
-    },
-    {
-      id: 'r2',
-      type: 'permit',
-      itemId: 3,
-      itemName: 'Safety Compliance Certificate',
-      reminderType: 'renewal',
-      dueDate: '2025-01-10',
-      status: 'overdue',
-      message: 'Renewal required immediately',
-      createdAt: '2024-11-10'
-    }
-  ])
-
-  // Tracking Logs State
-  const [trackingLogs, setTrackingLogs] = useState<TrackingLog[]>([
-    {
-      id: 't1',
-      type: 'equipment',
-      itemId: 1,
-      itemName: 'Industrial Vacuum Cleaner',
-      action: 'Added',
-      user: 'Admin User',
-      timestamp: '2024-01-15 10:30',
-      details: 'New equipment added to inventory'
-    },
-    {
-      id: 't2',
-      type: 'equipment',
-      itemId: 2,
-      itemName: 'High-Pressure Washer',
-      action: 'Status Changed',
-      user: 'Admin User',
-      timestamp: '2024-12-20 14:15',
-      details: 'Status changed from Available to In Use'
-    },
-    {
-      id: 't3',
-      type: 'permit',
-      itemId: 1,
-      itemName: 'Building Access Pass',
-      action: 'Renewed',
-      user: 'Admin User',
-      timestamp: '2025-01-01 09:00',
-      details: 'Permit renewed for 2025'
-    }
-  ])
-
-  // Permits State
-  const [permits, setPermits] = useState([
-    { id: 1, name: 'Building Access Pass', category: 'Building', status: 'Active', issueDate: '2025-01-01', expiryDate: '2025-12-31', issuer: 'Municipal Authority', renewalDate: '2025-10-01', cost: 500 },
-    { id: 2, name: 'Waste Disposal License', category: 'Environmental', status: 'Active', issueDate: '2024-06-15', expiryDate: '2025-06-15', issuer: 'Environmental Department', renewalDate: '2025-05-15', cost: 1200 },
-    { id: 3, name: 'Safety Compliance Certificate', category: 'Safety', status: 'Expiring Soon', issueDate: '2024-01-10', expiryDate: '2025-01-10', issuer: 'Safety Board', renewalDate: '2024-12-01', cost: 300 },
-    { id: 4, name: 'Worker Permit', category: 'Labor', status: 'Active', issueDate: '2024-09-01', expiryDate: '2026-09-01', issuer: 'Labor Department', renewalDate: '2026-08-01', cost: 400 },
-    { id: 5, name: 'Commercial License', category: 'Commercial', status: 'Active', issueDate: '2023-12-01', expiryDate: '2025-12-01', issuer: 'Commerce Ministry', renewalDate: '2025-11-01', cost: 2000 },
-  ])
-
-  // Materials State
-  const [materials, setMaterials] = useState<Material[]>([
-    { id: 1, name: 'Cleaning Solution', category: 'Chemicals', quantity: 150, unit: 'liter', cost: 2500, supplier: 'ChemSupply Co', dateAdded: '2025-01-10', status: 'In Stock', location: 'Warehouse A', reorderLevel: 50, invoices: [] },
-    { id: 2, name: 'Microfiber Cloths', category: 'Textiles', quantity: 500, unit: 'piece', cost: 1200, supplier: 'TextilePro', dateAdded: '2025-01-15', status: 'In Stock', location: 'Warehouse B', reorderLevel: 100, invoices: [] },
-    { id: 3, name: 'Safety Gloves', category: 'PPE', quantity: 45, unit: 'box', cost: 800, supplier: 'SafetyGear Ltd', dateAdded: '2024-12-20', status: 'Low Stock', location: 'Storage Room', reorderLevel: 100, invoices: [] },
-    { id: 4, name: 'Floor Wax', category: 'Chemicals', quantity: 0, unit: 'liter', cost: 1800, supplier: 'FloorCare Inc', dateAdded: '2025-01-05', status: 'Out of Stock', location: 'Warehouse A', reorderLevel: 30, invoices: [] },
-  ])
-
+  // States for Firebase data
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [permits, setPermits] = useState<Permit[]>([])
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [reminders, setReminders] = useState<Reminder[]>([])
+  const [trackingLogs, setTrackingLogs] = useState<TrackingLog[]>([])
+  const [todaysActivities, setTodaysActivities] = useState<TrackingLog[]>([])
+  
   // Modals
   const [showAddEquipmentModal, setShowAddEquipmentModal] = useState(false)
   const [showAddPermitModal, setShowAddPermitModal] = useState(false)
@@ -169,36 +126,28 @@ export default function EquipmentPermitsPage() {
   const [showEditEquipmentModal, setShowEditEquipmentModal] = useState(false)
   const [showEditPermitModal, setShowEditPermitModal] = useState(false)
   const [showEditMaterialModal, setShowEditMaterialModal] = useState(false)
-  const [selectedEquipment, setSelectedEquipment] = useState<any>(null)
-  const [selectedPermit, setSelectedPermit] = useState<any>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
+  const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null)
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
 
   // Form States
   const [equipmentForm, setEquipmentForm] = useState({
     name: '',
     category: 'Cleaning',
-    status: 'Available',
+    status: 'Available' as 'Available' | 'In Use' | 'Maintenance',
     location: '',
     cost: '',
     quantity: '1',
-    condition: 'Good',
+    condition: 'Good' as 'Excellent' | 'Good' | 'Fair' | 'Poor',
     maintenanceDate: '',
-    invoices: [] as Array<{id: string, type: string, file: string, date: string, amount: string}>,
-    materials: [] as Array<{id: string, name: string, quantity: string, unit: string, cost: string}>,
-    invoiceType: 'repairing',
-    invoiceFile: '',
-    invoiceAmount: '',
-    invoiceDate: '',
-    materialName: '',
-    materialQuantity: '',
-    materialUnit: 'piece',
-    materialCost: ''
+    purchaseDate: new Date().toISOString().split('T')[0],
+    lastServiced: new Date().toISOString().split('T')[0]
   })
 
   const [permitForm, setPermitForm] = useState({
     name: '',
     category: 'Building',
-    status: 'Active',
+    status: 'Active' as 'Active' | 'Expiring Soon' | 'Expired',
     issuer: '',
     cost: '',
     issueDate: '',
@@ -214,342 +163,560 @@ export default function EquipmentPermitsPage() {
     cost: '',
     supplier: '',
     location: '',
-    reorderLevel: '',
-    invoices: [] as Array<{id: string, type: string, file: string, date: string, amount: string}>,
-    invoiceType: 'purchase',
-    invoiceFile: '',
-    invoiceAmount: '',
-    invoiceDate: ''
+    reorderLevel: ''
   })
 
-  // Auto-check for overdue items and update reminders
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const today = new Date().toISOString().split('T')[0]
-      
-      setReminders(prev => prev.map(reminder => {
-        if (reminder.dueDate < today && reminder.status === 'pending') {
-          return { ...reminder, status: 'overdue' as 'overdue' }
-        }
-        return reminder
-      }))
-    }, 60000) // Check every minute
+  // Aaj ki date nikalne ke liye
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0] // YYYY-MM-DD format
+  }
 
-    return () => clearInterval(interval)
+  // Firebase se data fetch karna
+  useEffect(() => {
+    fetchAllData()
   }, [])
 
-  // Log tracking action
-  const addTrackingLog = (type: 'equipment' | 'permit' | 'material', itemId: number, itemName: string, action: string, details: string) => {
-    const newLog: TrackingLog = {
-      id: `t${Date.now()}`,
-      type,
-      itemId,
-      itemName,
-      action,
-      user: 'Admin User',
-      timestamp: new Date().toLocaleString(),
-      details
+  // Equipment aur Permits ke liye reminders count nikalne ke liye function
+  const getExpiryRemindersCount = (type: 'equipment' | 'permit') => {
+    return reminders.filter(r => 
+      r.type === type && 
+      r.reminderType === 'expiry' && 
+      r.status !== 'completed'
+    ).length
+  }
+
+  const fetchAllData = async () => {
+    try {
+      // Equipment fetch karna
+      const equipmentSnapshot = await getDocs(collection(db, 'equipment'))
+      const equipmentData = equipmentSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Equipment[]
+      setEquipment(equipmentData)
+
+      // Permits fetch karna
+      const permitsSnapshot = await getDocs(collection(db, 'permits_licenses'))
+      const permitsData = permitsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Permit[]
+      setPermits(permitsData)
+
+      // Materials fetch karna
+      const materialsSnapshot = await getDocs(collection(db, 'materials'))
+      const materialsData = materialsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Material[]
+      setMaterials(materialsData)
+
+      // Reminders fetch karna
+      const remindersSnapshot = await getDocs(collection(db, 'reminders'))
+      const remindersData = remindersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Reminder[]
+      setReminders(remindersData)
+
+      // Sab tracking logs fetch karna
+      const trackingSnapshot = await getDocs(collection(db, 'tracking'))
+      const allTrackingData = trackingSnapshot.docs.map(doc => {
+        const data = doc.data()
+        // Extract date from timestamp for filtering
+        const timestamp = data.timestamp || ''
+        let date = ''
+        if (timestamp) {
+          // Try to extract date from timestamp string
+          const dateMatch = timestamp.match(/\d{4}-\d{2}-\d{2}/)
+          date = dateMatch ? dateMatch[0] : ''
+        }
+        
+        return {
+          id: doc.id,
+          ...data,
+          date: date || getTodayDate() // Default to today if no date found
+        }
+      }) as TrackingLog[]
+      
+      setTrackingLogs(allTrackingData)
+      
+      // Aaj ki date ke activities filter karna
+      const today = getTodayDate()
+      const todaysFilteredActivities = allTrackingData.filter(log => {
+        // Check if log has date field
+        if (log.date) {
+          return log.date === today
+        }
+        // If no date field, check timestamp
+        if (log.timestamp && log.timestamp.includes(today)) {
+          return true
+        }
+        return false
+      })
+      
+      setTodaysActivities(todaysFilteredActivities)
+
+    } catch (error) {
+      console.error('Error fetching data:', error)
     }
-    setTrackingLogs([newLog, ...trackingLogs])
+  }
+
+  // Log tracking action with proper date
+  const addTrackingLog = async (
+    type: 'equipment' | 'permit' | 'material', 
+    itemId: string, 
+    itemName: string, 
+    action: string, 
+    details: string
+  ) => {
+    try {
+      const today = getTodayDate()
+      const timestamp = new Date().toLocaleString()
+      
+      const newLog = {
+        type,
+        itemId,
+        itemName,
+        action,
+        user: 'Admin User',
+        timestamp: timestamp,
+        details,
+        date: today, // Add date field for filtering
+        createdAt: Timestamp.now()
+      }
+      
+      await addDoc(collection(db, 'tracking'), newLog)
+      
+      // Local state update
+      const logWithId = {
+        id: `t${Date.now()}`,
+        ...newLog
+      }
+      
+      setTrackingLogs(prev => [logWithId, ...prev])
+      setTodaysActivities(prev => [logWithId, ...prev])
+      
+    } catch (error) {
+      console.error('Error adding tracking log:', error)
+    }
   }
 
   // Equipment Handlers
-  const handleAddEquipment = () => {
-    if (equipmentForm.name && equipmentForm.location) {
-      const newEquipment = {
-        id: Math.max(...equipment.map(e => e.id), 0) + 1,
-        name: equipmentForm.name,
-        category: equipmentForm.category,
-        status: equipmentForm.status,
-        location: equipmentForm.location,
-        cost: parseInt(equipmentForm.cost) || 0,
-        quantity: parseInt(equipmentForm.quantity) || 1,
-        condition: equipmentForm.condition,
-        maintenanceDate: equipmentForm.maintenanceDate,
-        invoices: equipmentForm.invoices,
-        materials: equipmentForm.materials,
-        purchaseDate: new Date().toISOString().split('T')[0],
-        lastServiced: new Date().toISOString().split('T')[0]
+  const handleAddEquipment = async () => {
+    if (equipmentForm.name && equipmentForm.location && equipmentForm.cost) {
+      try {
+        const newEquipment = {
+          name: equipmentForm.name,
+          category: equipmentForm.category,
+          status: equipmentForm.status,
+          location: equipmentForm.location,
+          purchaseDate: equipmentForm.purchaseDate,
+          cost: parseInt(equipmentForm.cost),
+          maintenanceDate: equipmentForm.maintenanceDate,
+          condition: equipmentForm.condition,
+          quantity: parseInt(equipmentForm.quantity) || 1,
+          lastServiced: equipmentForm.lastServiced,
+          createdAt: Timestamp.now()
+        }
+
+        // Firebase me add karna
+        const docRef = await addDoc(collection(db, 'equipment'), newEquipment)
+        
+        // Local state update
+        setEquipment(prev => [...prev, {
+          id: docRef.id,
+          ...newEquipment
+        }])
+
+        // Tracking log add karna
+        await addTrackingLog('equipment', docRef.id, equipmentForm.name, 'Added', 
+          `New equipment added to inventory at ${equipmentForm.location}`)
+
+        // Form reset karna
+        setEquipmentForm({
+          name: '',
+          category: 'Cleaning',
+          status: 'Available',
+          location: '',
+          cost: '',
+          quantity: '1',
+          condition: 'Good',
+          maintenanceDate: '',
+          purchaseDate: new Date().toISOString().split('T')[0],
+          lastServiced: new Date().toISOString().split('T')[0]
+        })
+        
+        setShowAddEquipmentModal(false)
+        
+      } catch (error) {
+        console.error('Error adding equipment:', error)
       }
-      setEquipment([...equipment, newEquipment])
-      addTrackingLog('equipment', newEquipment.id, newEquipment.name, 'Added', `New equipment added to inventory at ${newEquipment.location}`)
-      setEquipmentForm({
-        name: '',
-        category: 'Cleaning',
-        status: 'Available',
-        location: '',
-        cost: '',
-        quantity: '1',
-        condition: 'Good',
-        maintenanceDate: '',
-        invoices: [],
-        materials: [],
-        invoiceType: 'repairing',
-        invoiceFile: '',
-        invoiceAmount: '',
-        invoiceDate: '',
-        materialName: '',
-        materialQuantity: '',
-        materialUnit: 'piece',
-        materialCost: ''
-      })
-      setShowAddEquipmentModal(false)
     }
   }
 
-  const handleEditEquipment = () => {
+  const handleEditEquipment = async () => {
     if (selectedEquipment && equipmentForm.name) {
-      const changes = []
-      if (selectedEquipment.status !== equipmentForm.status) changes.push(`status changed to ${equipmentForm.status}`)
-      if (selectedEquipment.location !== equipmentForm.location) changes.push(`location changed to ${equipmentForm.location}`)
-      
-      setEquipment(equipment.map(e =>
-        e.id === selectedEquipment.id
-          ? { ...e, ...equipmentForm, cost: parseInt(equipmentForm.cost) || 0, quantity: parseInt(equipmentForm.quantity) || 1 }
-          : e
-      ))
-      
-      if (changes.length > 0) {
-        addTrackingLog('equipment', selectedEquipment.id, equipmentForm.name, 'Updated', `Equipment updated: ${changes.join(', ')}`)
+      try {
+        const equipmentRef = doc(db, 'equipment', selectedEquipment.id)
+        const updatedData = {
+          name: equipmentForm.name,
+          category: equipmentForm.category,
+          status: equipmentForm.status,
+          location: equipmentForm.location,
+          cost: parseInt(equipmentForm.cost) || 0,
+          quantity: parseInt(equipmentForm.quantity) || 1,
+          condition: equipmentForm.condition,
+          maintenanceDate: equipmentForm.maintenanceDate
+        }
+
+        // Firebase update
+        await updateDoc(equipmentRef, updatedData)
+
+        // Local state update
+        setEquipment(prev => prev.map(e =>
+          e.id === selectedEquipment.id
+            ? { ...e, ...updatedData }
+            : e
+        ))
+
+        // Tracking log
+        await addTrackingLog('equipment', selectedEquipment.id, equipmentForm.name, 
+          'Updated', `Equipment details updated`)
+
+        setShowEditEquipmentModal(false)
+        setSelectedEquipment(null)
+        
+      } catch (error) {
+        console.error('Error updating equipment:', error)
       }
-      
-      setShowEditEquipmentModal(false)
-      setSelectedEquipment(null)
-      setEquipmentForm({
-        name: '',
-        category: 'Cleaning',
-        status: 'Available',
-        location: '',
-        cost: '',
-        quantity: '1',
-        condition: 'Good',
-        maintenanceDate: '',
-        invoices: [],
-        materials: [],
-        invoiceType: 'repairing',
-        invoiceFile: '',
-        invoiceAmount: '',
-        invoiceDate: '',
-        materialName: '',
-        materialQuantity: '',
-        materialUnit: 'piece',
-        materialCost: ''
-      })
     }
   }
 
-  const handleDeleteEquipment = (id: number) => {
-    const equip = equipment.find(e => e.id === id)
-    if (equip) {
-      addTrackingLog('equipment', id, equip.name, 'Deleted', `Equipment removed from inventory`)
+  const handleDeleteEquipment = async (id: string) => {
+    try {
+      const equip = equipment.find(e => e.id === id)
+      if (equip) {
+        // Firebase se delete
+        await deleteDoc(doc(db, 'equipment', id))
+        
+        // Local state update
+        setEquipment(prev => prev.filter(e => e.id !== id))
+        
+        // Tracking log
+        await addTrackingLog('equipment', id, equip.name, 'Deleted', 
+          `Equipment removed from inventory`)
+      }
+    } catch (error) {
+      console.error('Error deleting equipment:', error)
     }
-    setEquipment(equipment.filter(e => e.id !== id))
   }
 
   // Reminder Handlers
-  const handleAddReminder = (reminderType: 'maintenance' | 'expiry' | 'renewal', dueDate: string, message: string) => {
-    if (selectedItemForReminder) {
-      const newReminder: Reminder = {
-        id: `r${Date.now()}`,
-        type: selectedItemForReminder.type,
-        itemId: selectedItemForReminder.id,
-        itemName: selectedItemForReminder.name,
-        reminderType,
-        dueDate,
-        status: 'pending',
-        message,
-        createdAt: new Date().toISOString().split('T')[0]
+  const handleAddReminder = async (
+    reminderType: 'maintenance' | 'expiry' | 'renewal' | 'restock', 
+    dueDate: string, 
+    message: string
+  ) => {
+    if (selectedItemForReminder && dueDate) {
+      try {
+        const newReminder = {
+          type: selectedItemForReminder.type,
+          itemId: selectedItemForReminder.id,
+          itemName: selectedItemForReminder.name,
+          reminderType,
+          dueDate,
+          status: 'pending' as 'pending',
+          message,
+          createdAt: getTodayDate()
+        }
+
+        // Firebase me add
+        const docRef = await addDoc(collection(db, 'reminders'), newReminder)
+        
+        // Local state update
+        setReminders(prev => [...prev, {
+          id: docRef.id,
+          ...newReminder
+        }])
+
+        // Tracking log add karna
+        await addTrackingLog('reminder', docRef.id, newReminder.itemName, 'Reminder Added', 
+          `Reminder set for ${selectedItemForReminder.type}: ${newReminder.message}`)
+
+        setShowReminderModal(false)
+        setSelectedItemForReminder(null)
+        
+      } catch (error) {
+        console.error('Error adding reminder:', error)
       }
-      setReminders([...reminders, newReminder])
-      setShowReminderModal(false)
-      setSelectedItemForReminder(null)
     }
   }
 
-  const handleCompleteReminder = (id: string) => {
-    setReminders(reminders.map(r => r.id === id ? { ...r, status: 'completed' as 'completed' } : r))
+  const handleCompleteReminder = async (id: string) => {
+    try {
+      const reminder = reminders.find(r => r.id === id)
+      if (reminder) {
+        const reminderRef = doc(db, 'reminders', id)
+        await updateDoc(reminderRef, { status: 'completed' })
+        
+        // Tracking log
+        await addTrackingLog('reminder', id, reminder.itemName, 'Reminder Completed', 
+          `Reminder marked as completed`)
+        
+        setReminders(prev => prev.map(r => 
+          r.id === id ? { ...r, status: 'completed' } : r
+        ))
+      }
+    } catch (error) {
+      console.error('Error completing reminder:', error)
+    }
   }
 
-  const handleDeleteReminder = (id: string) => {
-    setReminders(reminders.filter(r => r.id !== id))
+  const handleDeleteReminder = async (id: string) => {
+    try {
+      const reminder = reminders.find(r => r.id === id)
+      if (reminder) {
+        await deleteDoc(doc(db, 'reminders', id))
+        
+        // Tracking log
+        await addTrackingLog('reminder', id, reminder.itemName, 'Reminder Deleted', 
+          `Reminder removed`)
+        
+        setReminders(prev => prev.filter(r => r.id !== id))
+      }
+    } catch (error) {
+      console.error('Error deleting reminder:', error)
+    }
   }
 
   // Permit Handlers
-  const handleAddPermit = () => {
-    if (permitForm.name && permitForm.issuer) {
-      const newPermit = {
-        id: Math.max(...permits.map(p => p.id), 0) + 1,
-        ...permitForm,
-        cost: parseInt(permitForm.cost) || 0
+  const handleAddPermit = async () => {
+    if (permitForm.name && permitForm.issuer && permitForm.expiryDate) {
+      try {
+        const newPermit = {
+          name: permitForm.name,
+          category: permitForm.category,
+          status: permitForm.status,
+          issuer: permitForm.issuer,
+          cost: parseInt(permitForm.cost) || 0,
+          issueDate: permitForm.issueDate || getTodayDate(),
+          expiryDate: permitForm.expiryDate,
+          renewalDate: permitForm.renewalDate || permitForm.expiryDate,
+          createdAt: Timestamp.now()
+        }
+
+        // Firebase me add
+        const docRef = await addDoc(collection(db, 'permits_licenses'), newPermit)
+        
+        // Local state update
+        setPermits(prev => [...prev, {
+          id: docRef.id,
+          ...newPermit
+        }])
+
+        // Tracking log
+        await addTrackingLog('permit', docRef.id, permitForm.name, 'Added', 
+          `New permit issued by ${permitForm.issuer}`)
+
+        // Form reset
+        setPermitForm({
+          name: '',
+          category: 'Building',
+          status: 'Active',
+          issuer: '',
+          cost: '',
+          issueDate: '',
+          expiryDate: '',
+          renewalDate: ''
+        })
+        
+        setShowAddPermitModal(false)
+        
+      } catch (error) {
+        console.error('Error adding permit:', error)
       }
-      setPermits([...permits, newPermit])
-      addTrackingLog('permit', newPermit.id, newPermit.name, 'Added', `New permit issued by ${newPermit.issuer}`)
-      setPermitForm({
-        name: '',
-        category: 'Building',
-        status: 'Active',
-        issuer: '',
-        cost: '',
-        issueDate: '',
-        expiryDate: '',
-        renewalDate: ''
-      })
-      setShowAddPermitModal(false)
     }
   }
 
-  const handleEditPermit = () => {
+  const handleEditPermit = async () => {
     if (selectedPermit && permitForm.name) {
-      const changes = []
-      if (selectedPermit.status !== permitForm.status) changes.push(`status changed to ${permitForm.status}`)
-      if (selectedPermit.expiryDate !== permitForm.expiryDate) changes.push(`expiry date updated to ${permitForm.expiryDate}`)
-      
-      setPermits(permits.map(p =>
-        p.id === selectedPermit.id
-          ? { ...p, ...permitForm, cost: parseInt(permitForm.cost) || 0 }
-          : p
-      ))
-      
-      if (changes.length > 0) {
-        addTrackingLog('permit', selectedPermit.id, permitForm.name, 'Updated', `Permit updated: ${changes.join(', ')}`)
+      try {
+        const permitRef = doc(db, 'permits_licenses', selectedPermit.id)
+        const updatedData = {
+          name: permitForm.name,
+          category: permitForm.category,
+          status: permitForm.status,
+          issuer: permitForm.issuer,
+          cost: parseInt(permitForm.cost) || 0,
+          issueDate: permitForm.issueDate,
+          expiryDate: permitForm.expiryDate,
+          renewalDate: permitForm.renewalDate
+        }
+
+        // Firebase update
+        await updateDoc(permitRef, updatedData)
+
+        // Local state update
+        setPermits(prev => prev.map(p =>
+          p.id === selectedPermit.id
+            ? { ...p, ...updatedData }
+            : p
+        ))
+
+        // Tracking log
+        await addTrackingLog('permit', selectedPermit.id, permitForm.name, 
+          'Updated', `Permit details updated`)
+
+        setShowEditPermitModal(false)
+        setSelectedPermit(null)
+        
+      } catch (error) {
+        console.error('Error updating permit:', error)
       }
-      
-      setShowEditPermitModal(false)
-      setSelectedPermit(null)
-      setPermitForm({
-        name: '',
-        category: 'Building',
-        status: 'Active',
-        issuer: '',
-        cost: '',
-        issueDate: '',
-        expiryDate: '',
-        renewalDate: ''
-      })
     }
   }
 
-  const handleDeletePermit = (id: number) => {
-    const permit = permits.find(p => p.id === id)
-    if (permit) {
-      addTrackingLog('permit', id, permit.name, 'Deleted', `Permit removed from system`)
+  const handleDeletePermit = async (id: string) => {
+    try {
+      const permit = permits.find(p => p.id === id)
+      if (permit) {
+        // Firebase se delete
+        await deleteDoc(doc(db, 'permits_licenses', id))
+        
+        // Local state update
+        setPermits(prev => prev.filter(p => p.id !== id))
+        
+        // Tracking log
+        await addTrackingLog('permit', id, permit.name, 'Deleted', 
+          `Permit removed from system`)
+      }
+    } catch (error) {
+      console.error('Error deleting permit:', error)
     }
-    setPermits(permits.filter(p => p.id !== id))
   }
 
   // Material Handlers
-  const handleAddMaterial = () => {
+  const handleAddMaterial = async () => {
     if (materialForm.name && materialForm.quantity && materialForm.cost && materialForm.supplier) {
-      const newMaterial: Material = {
-        id: Math.max(...materials.map(m => m.id), 0) + 1,
-        name: materialForm.name,
-        category: materialForm.category,
-        quantity: parseInt(materialForm.quantity) || 0,
-        unit: materialForm.unit,
-        cost: parseInt(materialForm.cost) || 0,
-        supplier: materialForm.supplier,
-        location: materialForm.location,
-        reorderLevel: parseInt(materialForm.reorderLevel) || 0,
-        dateAdded: new Date().toISOString().split('T')[0],
-        status: 'In Stock',
-        invoices: materialForm.invoices
+      try {
+        const quantity = parseInt(materialForm.quantity) || 0
+        const reorderLevel = parseInt(materialForm.reorderLevel) || 0
+        
+        const newMaterial = {
+          name: materialForm.name,
+          category: materialForm.category,
+          quantity: quantity,
+          unit: materialForm.unit,
+          cost: parseInt(materialForm.cost) || 0,
+          supplier: materialForm.supplier,
+          location: materialForm.location,
+          reorderLevel: reorderLevel,
+          dateAdded: getTodayDate(),
+          status: (quantity === 0 ? 'Out of Stock' : 
+                  quantity <= reorderLevel ? 'Low Stock' : 'In Stock') as 'In Stock' | 'Low Stock' | 'Out of Stock',
+          invoices: [],
+          createdAt: Timestamp.now()
+        }
+
+        // Firebase me add
+        const docRef = await addDoc(collection(db, 'materials'), newMaterial)
+        
+        // Local state update
+        setMaterials(prev => [...prev, {
+          id: docRef.id,
+          ...newMaterial
+        }])
+
+        // Tracking log
+        await addTrackingLog('material', docRef.id, materialForm.name, 'Added', 
+          `New material added from ${materialForm.supplier}`)
+
+        // Form reset
+        setMaterialForm({
+          name: '',
+          category: 'Chemicals',
+          quantity: '',
+          unit: 'piece',
+          cost: '',
+          supplier: '',
+          location: '',
+          reorderLevel: ''
+        })
+        
+        setShowAddMaterialModal(false)
+        
+      } catch (error) {
+        console.error('Error adding material:', error)
       }
-      setMaterials([...materials, newMaterial])
-      addTrackingLog('material', newMaterial.id, newMaterial.name, 'Added', `New material added from ${newMaterial.supplier}`)
-      setMaterialForm({
-        name: '',
-        category: 'Chemicals',
-        quantity: '',
-        unit: 'piece',
-        cost: '',
-        supplier: '',
-        location: '',
-        reorderLevel: '',
-        invoices: [],
-        invoiceType: 'purchase',
-        invoiceFile: '',
-        invoiceAmount: '',
-        invoiceDate: ''
-      })
-      setShowAddMaterialModal(false)
     }
   }
 
-  const handleEditMaterial = () => {
+  const handleEditMaterial = async () => {
     if (selectedMaterial && materialForm.name) {
-      const changes = []
-      if (selectedMaterial.quantity !== parseInt(materialForm.quantity)) changes.push(`quantity updated`)
-      if (selectedMaterial.location !== materialForm.location) changes.push(`location changed to ${materialForm.location}`)
-      
-      const updatedMaterial: Material = {
-        ...selectedMaterial,
-        name: materialForm.name,
-        category: materialForm.category,
-        quantity: parseInt(materialForm.quantity) || 0,
-        unit: materialForm.unit,
-        cost: parseInt(materialForm.cost) || 0,
-        supplier: materialForm.supplier,
-        location: materialForm.location,
-        reorderLevel: parseInt(materialForm.reorderLevel) || 0,
-        status: parseInt(materialForm.quantity) === 0 ? 'Out of Stock' : parseInt(materialForm.quantity) <= parseInt(materialForm.reorderLevel) ? 'Low Stock' : 'In Stock',
-        invoices: materialForm.invoices
+      try {
+        const materialRef = doc(db, 'materials', selectedMaterial.id)
+        const quantity = parseInt(materialForm.quantity) || 0
+        const reorderLevel = parseInt(materialForm.reorderLevel) || 0
+        
+        const updatedData = {
+          name: materialForm.name,
+          category: materialForm.category,
+          quantity: quantity,
+          unit: materialForm.unit,
+          cost: parseInt(materialForm.cost) || 0,
+          supplier: materialForm.supplier,
+          location: materialForm.location,
+          reorderLevel: reorderLevel,
+          status: (quantity === 0 ? 'Out of Stock' : 
+                  quantity <= reorderLevel ? 'Low Stock' : 'In Stock') as 'In Stock' | 'Low Stock' | 'Out of Stock'
+        }
+
+        // Firebase update
+        await updateDoc(materialRef, updatedData)
+
+        // Local state update
+        setMaterials(prev => prev.map(m =>
+          m.id === selectedMaterial.id
+            ? { ...m, ...updatedData }
+            : m
+        ))
+
+        // Tracking log
+        await addTrackingLog('material', selectedMaterial.id, materialForm.name, 
+          'Updated', `Material details updated`)
+
+        setShowEditMaterialModal(false)
+        setSelectedMaterial(null)
+        
+      } catch (error) {
+        console.error('Error updating material:', error)
       }
-      
-      setMaterials(materials.map(m => m.id === selectedMaterial.id ? updatedMaterial : m))
-      
-      if (changes.length > 0) {
-        addTrackingLog('material', selectedMaterial.id, materialForm.name, 'Updated', `Material updated: ${changes.join(', ')}`)
-      }
-      
-      setShowEditMaterialModal(false)
-      setSelectedMaterial(null)
-      setMaterialForm({
-        name: '',
-        category: 'Chemicals',
-        quantity: '',
-        unit: 'piece',
-        cost: '',
-        supplier: '',
-        location: '',
-        reorderLevel: '',
-        invoices: [],
-        invoiceType: 'purchase',
-        invoiceFile: '',
-        invoiceAmount: '',
-        invoiceDate: ''
-      })
     }
   }
 
-  const handleDeleteMaterial = (id: number) => {
-    const material = materials.find(m => m.id === id)
-    if (material) {
-      addTrackingLog('material', id, material.name, 'Deleted', `Material removed from inventory`)
+  const handleDeleteMaterial = async (id: string) => {
+    try {
+      const material = materials.find(m => m.id === id)
+      if (material) {
+        // Firebase se delete
+        await deleteDoc(doc(db, 'materials', id))
+        
+        // Local state update
+        setMaterials(prev => prev.filter(m => m.id !== id))
+        
+        // Tracking log
+        await addTrackingLog('material', id, material.name, 'Deleted', 
+          `Material removed from inventory`)
+      }
+    } catch (error) {
+      console.error('Error deleting material:', error)
     }
-    setMaterials(materials.filter(m => m.id !== id))
   }
 
-  const openEditMaterialModal = (material: Material) => {
-    setSelectedMaterial(material)
-    setMaterialForm({
-      name: material.name,
-      category: material.category,
-      quantity: material.quantity.toString(),
-      unit: material.unit,
-      cost: material.cost.toString(),
-      supplier: material.supplier,
-      location: material.location,
-      reorderLevel: material.reorderLevel.toString(),
-      invoices: material.invoices,
-      invoiceType: 'purchase',
-      invoiceFile: '',
-      invoiceAmount: '',
-      invoiceDate: ''
-    })
-    setShowEditMaterialModal(true)
-  }
-
-  const openEditEquipmentModal = (equip: any) => {
+  // Edit modals open karne ke functions
+  const openEditEquipmentModal = (equip: Equipment) => {
     setSelectedEquipment(equip)
     setEquipmentForm({
       name: equip.name,
@@ -560,21 +727,13 @@ export default function EquipmentPermitsPage() {
       quantity: equip.quantity.toString(),
       condition: equip.condition,
       maintenanceDate: equip.maintenanceDate,
-      invoices: equip.invoices || [],
-      materials: equip.materials || [],
-      invoiceType: 'repairing',
-      invoiceFile: '',
-      invoiceAmount: '',
-      invoiceDate: '',
-      materialName: '',
-      materialQuantity: '',
-      materialUnit: 'piece',
-      materialCost: ''
+      purchaseDate: equip.purchaseDate,
+      lastServiced: equip.lastServiced
     })
     setShowEditEquipmentModal(true)
   }
 
-  const openEditPermitModal = (permit: any) => {
+  const openEditPermitModal = (permit: Permit) => {
     setSelectedPermit(permit)
     setPermitForm({
       name: permit.name,
@@ -587,6 +746,21 @@ export default function EquipmentPermitsPage() {
       renewalDate: permit.renewalDate
     })
     setShowEditPermitModal(true)
+  }
+
+  const openEditMaterialModal = (material: Material) => {
+    setSelectedMaterial(material)
+    setMaterialForm({
+      name: material.name,
+      category: material.category,
+      quantity: material.quantity.toString(),
+      unit: material.unit,
+      cost: material.cost.toString(),
+      supplier: material.supplier,
+      location: material.location,
+      reorderLevel: material.reorderLevel.toString()
+    })
+    setShowEditMaterialModal(true)
   }
 
   // Filter functions
@@ -626,6 +800,11 @@ export default function EquipmentPermitsPage() {
     }
   }
 
+  // Aaj ki date ke reminders filter karna
+  const todaysReminders = reminders.filter(reminder => {
+    return reminder.createdAt === getTodayDate()
+  })
+
   return (
     <div className="min-h-screen bg-white text-gray-900 p-6 space-y-8">
       {/* Header */}
@@ -641,8 +820,9 @@ export default function EquipmentPermitsPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Updated with Reminder Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Equipment Card */}
         <div className="bg-linear-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -651,20 +831,42 @@ export default function EquipmentPermitsPage() {
             <span className="text-xs font-bold text-blue-700 uppercase">Total Equipment</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">{equipment.length}</div>
-          <div className="text-xs text-blue-600 mt-2">{equipment.filter(e => e.status === 'Available').length} Available</div>
+          <div className="text-xs text-blue-600 mt-2">
+            {getExpiryRemindersCount('equipment') > 0 && (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {getExpiryRemindersCount('equipment')} Expiry Reminders
+              </span>
+            )}
+            {getExpiryRemindersCount('equipment') === 0 && (
+              <span>{equipment.filter(e => e.status === 'Available').length} Available</span>
+            )}
+          </div>
         </div>
 
+        {/* Permits Card */}
         <div className="bg-linear-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-green-600" />
+              <ShieldCheck className="w-4 h-4 text-green-600" />
             </div>
             <span className="text-xs font-bold text-green-700 uppercase">Active Permits</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">{permits.filter(p => p.status === 'Active').length}</div>
-          <div className="text-xs text-green-600 mt-2">Of {permits.length} Total</div>
+          <div className="text-xs text-green-600 mt-2">
+            {getExpiryRemindersCount('permit') > 0 && (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {getExpiryRemindersCount('permit')} Expiry Reminders
+              </span>
+            )}
+            {getExpiryRemindersCount('permit') === 0 && (
+              <span>Of {permits.length} Total</span>
+            )}
+          </div>
         </div>
 
+        {/* In Use Equipment Card */}
         <div className="bg-linear-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-orange-100 rounded-lg">
@@ -676,6 +878,7 @@ export default function EquipmentPermitsPage() {
           <div className="text-xs text-orange-600 mt-2">Equipment Items</div>
         </div>
 
+        {/* Expiring Soon Card - Updated */}
         <div className="bg-linear-to-br from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-red-100 rounded-lg">
@@ -683,10 +886,16 @@ export default function EquipmentPermitsPage() {
             </div>
             <span className="text-xs font-bold text-red-700 uppercase">Expiring Soon</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{permits.filter(p => p.status === 'Expiring Soon').length}</div>
-          <div className="text-xs text-red-600 mt-2">Permits</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {permits.filter(p => p.status === 'Expiring Soon').length + 
+             reminders.filter(r => r.reminderType === 'expiry' && r.status === 'pending').length}
+          </div>
+          <div className="text-xs text-red-600 mt-2">
+            {permits.filter(p => p.status === 'Expiring Soon').length} Permits + {reminders.filter(r => r.reminderType === 'expiry' && r.status === 'pending').length} Reminders
+          </div>
         </div>
 
+        {/* Total Value Card */}
         <div className="bg-linear-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -694,7 +903,11 @@ export default function EquipmentPermitsPage() {
             </div>
             <span className="text-xs font-bold text-purple-700 uppercase">Total Value</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">AED {(equipment.reduce((sum, e) => sum + e.cost, 0) + permits.reduce((sum, p) => sum + p.cost, 0)).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            AED {(equipment.reduce((sum, e) => sum + e.cost, 0) + 
+                 permits.reduce((sum, p) => sum + p.cost, 0) + 
+                 materials.reduce((sum, m) => sum + (m.cost * m.quantity), 0)).toLocaleString()}
+          </div>
           <div className="text-xs text-purple-600 mt-2">All Assets</div>
         </div>
       </div>
@@ -755,13 +968,19 @@ export default function EquipmentPermitsPage() {
               <option value="In Use">In Use</option>
               <option value="Maintenance">Maintenance</option>
             </>
-          ) : (
+          ) : activeTab === 'permits' ? (
             <>
               <option value="Active">Active</option>
               <option value="Expiring Soon">Expiring Soon</option>
               <option value="Expired">Expired</option>
             </>
-          )}
+          ) : activeTab === 'materials' ? (
+            <>
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </>
+          ) : null}
         </select>
 
         <button
@@ -1011,14 +1230,17 @@ export default function EquipmentPermitsPage() {
                         {reminder.status}
                       </span>
                       <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${
-                        reminder.type === 'equipment' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        reminder.type === 'equipment' ? 'bg-blue-100 text-blue-800' : 
+                        reminder.type === 'permit' ? 'bg-purple-100 text-purple-800' :
+                        'bg-green-100 text-green-800'
                       }`}>
                         {reminder.type}
                       </span>
                       <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${
                         reminder.reminderType === 'maintenance' ? 'bg-orange-100 text-orange-800' :
                         reminder.reminderType === 'expiry' ? 'bg-red-100 text-red-800' :
-                        'bg-green-100 text-green-800'
+                        reminder.reminderType === 'renewal' ? 'bg-green-100 text-green-800' :
+                        'bg-blue-100 text-blue-800'
                       }`}>
                         {reminder.reminderType}
                       </span>
@@ -1046,7 +1268,7 @@ export default function EquipmentPermitsPage() {
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-all"
                       title="Delete Reminder"
                     >
-                      <X className="w-5 h-5" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -1064,44 +1286,71 @@ export default function EquipmentPermitsPage() {
         </div>
       )}
 
-      {/* Tracking Tab */}
+      {/* Tracking Tab - UPDATED WITH TODAY'S ACTIVITIES */}
       {activeTab === 'tracking' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900">Activity Tracking Log</h3>
-            <span className="text-sm text-gray-600">{trackingLogs.length} total activities</span>
+            <h3 className="text-lg font-bold text-gray-900">Today's Activity Tracking ({getTodayDate()})</h3>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">
+                <span className="font-bold">{todaysActivities.length}</span> activities today
+              </span>
+              <div className="flex gap-2">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">
+                  Equipment: {todaysActivities.filter(a => a.type === 'equipment').length}
+                </span>
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold">
+                  Permits: {todaysActivities.filter(a => a.type === 'permit').length}
+                </span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-lg text-xs font-bold">
+                  Materials: {todaysActivities.filter(a => a.type === 'material').length}
+                </span>
+                <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">
+                  Reminders: {todaysActivities.filter(a => a.type === 'reminder').length}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white border border-gray-300 rounded-3xl overflow-hidden">
             <div className="divide-y divide-gray-200">
-              {trackingLogs.map((log) => (
+              {todaysActivities.length > 0 ? todaysActivities.map((log) => (
                 <div key={log.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start gap-4">
                     <div className={`p-3 rounded-xl ${
-                      log.action === 'Added' ? 'bg-green-100' :
-                      log.action === 'Updated' ? 'bg-blue-100' :
-                      log.action === 'Deleted' ? 'bg-red-100' :
+                      log.action.includes('Added') ? 'bg-green-100' :
+                      log.action.includes('Updated') ? 'bg-blue-100' :
+                      log.action.includes('Deleted') ? 'bg-red-100' :
+                      log.action.includes('Completed') ? 'bg-emerald-100' :
                       'bg-gray-100'
                     }`}>
                       {log.type === 'equipment' ? (
                         <Wrench className="w-5 h-5 text-gray-700" />
-                      ) : (
+                      ) : log.type === 'permit' ? (
                         <ShieldCheck className="w-5 h-5 text-gray-700" />
+                      ) : log.type === 'material' ? (
+                        <ShoppingCart className="w-5 h-5 text-gray-700" />
+                      ) : (
+                        <Bell className="w-5 h-5 text-gray-700" />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="text-base font-bold text-gray-900">{log.itemName}</h4>
                         <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          log.action === 'Added' ? 'bg-green-100 text-green-800' :
-                          log.action === 'Updated' ? 'bg-blue-100 text-blue-800' :
-                          log.action === 'Deleted' ? 'bg-red-100 text-red-800' :
+                          log.action.includes('Added') ? 'bg-green-100 text-green-800' :
+                          log.action.includes('Updated') ? 'bg-blue-100 text-blue-800' :
+                          log.action.includes('Deleted') ? 'bg-red-100 text-red-800' :
+                          log.action.includes('Completed') ? 'bg-emerald-100 text-emerald-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {log.action}
                         </span>
                         <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          log.type === 'equipment' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          log.type === 'equipment' ? 'bg-blue-100 text-blue-800' : 
+                          log.type === 'permit' ? 'bg-purple-100 text-purple-800' :
+                          log.type === 'material' ? 'bg-green-100 text-green-800' :
+                          'bg-amber-100 text-amber-800'
                         }`}>
                           {log.type}
                         </span>
@@ -1113,19 +1362,69 @@ export default function EquipmentPermitsPage() {
                           {log.timestamp}
                         </span>
                         <span>By {log.user}</span>
+                        {log.date && (
+                          <span className="bg-gray-100 px-2 py-0.5 rounded">
+                            Date: {log.date}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-12 text-center">
+                  <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium">No activities recorded today</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Activities will appear here when you add, update, or delete equipment, permits, materials, or reminders
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          {trackingLogs.length === 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12 text-center">
-              <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">No tracking logs yet</p>
-              <p className="text-gray-500 text-sm mt-1">Activity will be logged automatically</p>
+          {/* Aaj ki date ke summary statistics */}
+          {todaysActivities.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <div className="text-sm font-bold text-blue-700 mb-1">Equipment Activities</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {todaysActivities.filter(a => a.type === 'equipment').length}
+                </div>
+                <div className="text-xs text-blue-600 mt-1">
+                  {todaysActivities.filter(a => a.type === 'equipment' && a.action.includes('Added')).length} Added
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
+                <div className="text-sm font-bold text-purple-700 mb-1">Permit Activities</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {todaysActivities.filter(a => a.type === 'permit').length}
+                </div>
+                <div className="text-xs text-purple-600 mt-1">
+                  {todaysActivities.filter(a => a.type === 'permit' && a.action.includes('Added')).length} Added
+                </div>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+                <div className="text-sm font-bold text-green-700 mb-1">Material Activities</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {todaysActivities.filter(a => a.type === 'material').length}
+                </div>
+                <div className="text-xs text-green-600 mt-1">
+                  {todaysActivities.filter(a => a.type === 'material' && a.action.includes('Added')).length} Added
+                </div>
+              </div>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                <div className="text-sm font-bold text-amber-700 mb-1">Reminder Activities</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {todaysActivities.filter(a => a.type === 'reminder').length}
+                </div>
+                <div className="text-xs text-amber-600 mt-1">
+                  {todaysActivities.filter(a => a.type === 'reminder' && a.action.includes('Added')).length} Added
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1151,7 +1450,8 @@ export default function EquipmentPermitsPage() {
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                 <p className="text-sm font-bold text-blue-900">
-                  {selectedItemForReminder.type === 'equipment' ? 'Equipment' : 'Permit'}: {selectedItemForReminder.name}
+                  {selectedItemForReminder.type === 'equipment' ? 'Equipment' : 
+                   selectedItemForReminder.type === 'permit' ? 'Permit' : 'Material'}: {selectedItemForReminder.name}
                 </p>
               </div>
 
@@ -1164,6 +1464,7 @@ export default function EquipmentPermitsPage() {
                   <option value="maintenance">Maintenance</option>
                   <option value="expiry">Expiry</option>
                   <option value="renewal">Renewal</option>
+                  <option value="restock">Restock</option>
                 </select>
               </div>
 
@@ -1183,6 +1484,7 @@ export default function EquipmentPermitsPage() {
                   rows={3}
                   placeholder="Add reminder notes..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  defaultValue={`${selectedItemForReminder.type} reminder for ${selectedItemForReminder.name}`}
                 />
               </div>
 
@@ -1202,7 +1504,7 @@ export default function EquipmentPermitsPage() {
                     const dueDate = (document.getElementById('dueDate') as HTMLInputElement).value
                     const message = (document.getElementById('reminderMessage') as HTMLTextAreaElement).value
                     if (dueDate) {
-                      handleAddReminder(reminderType, dueDate, message || `${reminderType} reminder`)
+                      handleAddReminder(reminderType, dueDate, message)
                     }
                   }}
                   className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
@@ -1218,7 +1520,7 @@ export default function EquipmentPermitsPage() {
       {/* Add Equipment Modal */}
       {showAddEquipmentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Add New Equipment</h3>
               <button
@@ -1230,277 +1532,101 @@ export default function EquipmentPermitsPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Basic Information Section */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Wrench className="w-4 h-4 text-indigo-600" />
-                  Basic Information
-                </h4>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="Equipment Name"
-                      value={equipmentForm.name}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, name: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <select
-                      value={equipmentForm.category}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, category: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="Cleaning">Cleaning</option>
-                      <option value="Safety">Safety</option>
-                      <option value="Access">Access</option>
-                      <option value="Outdoor">Outdoor</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="Location"
-                      value={equipmentForm.location}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, location: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Cost"
-                      value={equipmentForm.cost}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, cost: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      value={equipmentForm.status}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, status: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="In Use">In Use</option>
-                      <option value="Maintenance">Maintenance</option>
-                    </select>
-                    <input
-                      type="number"
-                      placeholder="Quantity"
-                      value={equipmentForm.quantity}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, quantity: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      value={equipmentForm.condition}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, condition: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="Excellent">Excellent</option>
-                      <option value="Good">Good</option>
-                      <option value="Fair">Fair</option>
-                      <option value="Poor">Poor</option>
-                    </select>
-                    <input
-                      type="date"
-                      value={equipmentForm.maintenanceDate}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, maintenanceDate: e.target.value})}
-                      placeholder="Next Maintenance"
-                      className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoice Section */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-indigo-600" />
-                  Invoices
-                </h4>
-                
-                {/* Invoice List */}
-                {equipmentForm.invoices.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    {equipmentForm.invoices.map((invoice, idx) => (
-                      <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{invoice.type}</p>
-                          <p className="text-xs text-gray-600">{invoice.date} - AED {invoice.amount}</p>
-                        </div>
-                        <button
-                          onClick={() => setEquipmentForm({...equipmentForm, invoices: equipmentForm.invoices.filter((_, i) => i !== idx)})}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Invoice Form */}
-                <div className="space-y-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <div className="grid grid-cols-2 gap-3">
-                    <select
-                      value={equipmentForm.invoiceType}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, invoiceType: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    >
-                      <option value="repairing">Repairing Invoice</option>
-                      <option value="maintenance">Maintenance Invoice</option>
-                      <option value="parts">Parts Invoice</option>
-                      <option value="service">Service Invoice</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <input
-                      type="date"
-                      value={equipmentForm.invoiceDate}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, invoiceDate: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <input
-                    type="number"
-                    placeholder="Invoice Amount"
-                    value={equipmentForm.invoiceAmount}
-                    onChange={(e) => setEquipmentForm({...equipmentForm, invoiceAmount: e.target.value})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <input
-                    type="file"
-                    onChange={(e) => setEquipmentForm({...equipmentForm, invoiceFile: e.target.files?.[0]?.name || ''})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-
-                  <button
-                    onClick={() => {
-                      if (equipmentForm.invoiceType && equipmentForm.invoiceDate && equipmentForm.invoiceAmount) {
-                        const newInvoice = {
-                          id: `inv${Date.now()}`,
-                          type: equipmentForm.invoiceType,
-                          file: equipmentForm.invoiceFile,
-                          date: equipmentForm.invoiceDate,
-                          amount: equipmentForm.invoiceAmount
-                        }
-                        setEquipmentForm({
-                          ...equipmentForm,
-                          invoices: [...equipmentForm.invoices, newInvoice],
-                          invoiceType: 'repairing',
-                          invoiceFile: '',
-                          invoiceAmount: '',
-                          invoiceDate: ''
-                        })
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium"
-                  >
-                    Add Invoice
-                  </button>
-                </div>
-              </div>
-
-              {/* Materials Section */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-indigo-600" />
-                  Materials
-                </h4>
-                
-                {/* Materials List */}
-                {equipmentForm.materials.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    {equipmentForm.materials.map((material, idx) => (
-                      <div key={material.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{material.name}</p>
-                          <p className="text-xs text-gray-600">{material.quantity} {material.unit} - AED {material.cost}</p>
-                        </div>
-                        <button
-                          onClick={() => setEquipmentForm({...equipmentForm, materials: equipmentForm.materials.filter((_, i) => i !== idx)})}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Material Form */}
-                <div className="space-y-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="Material Name"
-                    value={equipmentForm.materialName}
-                    onChange={(e) => setEquipmentForm({...equipmentForm, materialName: e.target.value})}
-                    className="w-full px-3 py-2 text-sm border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="Equipment Name *"
+                    value={equipmentForm.name}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, name: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <input
-                      type="number"
-                      placeholder="Quantity"
-                      value={equipmentForm.materialQuantity}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, materialQuantity: e.target.value})}
-                      className="px-3 py-2 text-sm border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                    <select
-                      value={equipmentForm.materialUnit}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, materialUnit: e.target.value})}
-                      className="px-3 py-2 text-sm border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                    >
-                      <option value="piece">Piece</option>
-                      <option value="kg">KG</option>
-                      <option value="liter">Liter</option>
-                      <option value="meter">Meter</option>
-                      <option value="box">Box</option>
-                    </select>
-                    <input
-                      type="number"
-                      placeholder="Cost"
-                      value={equipmentForm.materialCost}
-                      onChange={(e) => setEquipmentForm({...equipmentForm, materialCost: e.target.value})}
-                      className="px-3 py-2 text-sm border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (equipmentForm.materialName && equipmentForm.materialQuantity && equipmentForm.materialCost) {
-                        const newMaterial = {
-                          id: `mat${Date.now()}`,
-                          name: equipmentForm.materialName,
-                          quantity: equipmentForm.materialQuantity,
-                          unit: equipmentForm.materialUnit,
-                          cost: equipmentForm.materialCost
-                        }
-                        setEquipmentForm({
-                          ...equipmentForm,
-                          materials: [...equipmentForm.materials, newMaterial],
-                          materialName: '',
-                          materialQuantity: '',
-                          materialUnit: 'piece',
-                          materialCost: ''
-                        })
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-medium"
+                  <select
+                    value={equipmentForm.category}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, category: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    Add Material
-                  </button>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Safety">Safety</option>
+                    <option value="Access">Access</option>
+                    <option value="Outdoor">Outdoor</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Location *"
+                    value={equipmentForm.location}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, location: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Cost (AED) *"
+                    value={equipmentForm.cost}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, cost: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <select
+                    value={equipmentForm.status}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, status: e.target.value as any})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="In Use">In Use</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Quantity"
+                    value={equipmentForm.quantity}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, quantity: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <select
+                    value={equipmentForm.condition}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, condition: e.target.value as any})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Poor">Poor</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={equipmentForm.maintenanceDate}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, maintenanceDate: e.target.value})}
+                    placeholder="Next Maintenance"
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="date"
+                    value={equipmentForm.purchaseDate}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, purchaseDate: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    type="date"
+                    value={equipmentForm.lastServiced}
+                    onChange={(e) => setEquipmentForm({...equipmentForm, lastServiced: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-4 border-t">
+              <div className="flex items-center gap-3 pt-4">
                 <button
                   onClick={() => setShowAddEquipmentModal(false)}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
@@ -1520,7 +1646,7 @@ export default function EquipmentPermitsPage() {
       )}
 
       {/* Edit Equipment Modal */}
-      {showEditEquipmentModal && (
+      {showEditEquipmentModal && selectedEquipment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
@@ -1578,7 +1704,7 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={equipmentForm.status}
-                  onChange={(e) => setEquipmentForm({...equipmentForm, status: e.target.value})}
+                  onChange={(e) => setEquipmentForm({...equipmentForm, status: e.target.value as any})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="Available">Available</option>
@@ -1597,7 +1723,7 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={equipmentForm.condition}
-                  onChange={(e) => setEquipmentForm({...equipmentForm, condition: e.target.value})}
+                  onChange={(e) => setEquipmentForm({...equipmentForm, condition: e.target.value as any})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="Excellent">Excellent</option>
@@ -1653,7 +1779,7 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Permit Name"
+                  placeholder="Permit Name *"
                   value={permitForm.name}
                   onChange={(e) => setPermitForm({...permitForm, name: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1674,14 +1800,14 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Issuer Name"
+                  placeholder="Issuer Name *"
                   value={permitForm.issuer}
                   onChange={(e) => setPermitForm({...permitForm, issuer: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <input
                   type="number"
-                  placeholder="Cost"
+                  placeholder="Cost (AED)"
                   value={permitForm.cost}
                   onChange={(e) => setPermitForm({...permitForm, cost: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1693,23 +1819,36 @@ export default function EquipmentPermitsPage() {
                   type="date"
                   value={permitForm.issueDate}
                   onChange={(e) => setPermitForm({...permitForm, issueDate: e.target.value})}
+                  placeholder="Issue Date"
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <input
                   type="date"
                   value={permitForm.expiryDate}
                   onChange={(e) => setPermitForm({...permitForm, expiryDate: e.target.value})}
+                  placeholder="Expiry Date *"
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              <input
-                type="date"
-                value={permitForm.renewalDate}
-                onChange={(e) => setPermitForm({...permitForm, renewalDate: e.target.value})}
-                placeholder="Renewal Date"
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="date"
+                  value={permitForm.renewalDate}
+                  onChange={(e) => setPermitForm({...permitForm, renewalDate: e.target.value})}
+                  placeholder="Renewal Date"
+                  className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <select
+                  value={permitForm.status}
+                  onChange={(e) => setPermitForm({...permitForm, status: e.target.value as any})}
+                  className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Expiring Soon">Expiring Soon</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
 
               <div className="flex items-center gap-3 pt-4">
                 <button
@@ -1731,7 +1870,7 @@ export default function EquipmentPermitsPage() {
       )}
 
       {/* Edit Permit Modal */}
-      {showEditPermitModal && (
+      {showEditPermitModal && selectedPermit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
@@ -1801,12 +1940,23 @@ export default function EquipmentPermitsPage() {
                 />
               </div>
 
-              <input
-                type="date"
-                value={permitForm.renewalDate}
-                onChange={(e) => setPermitForm({...permitForm, renewalDate: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="date"
+                  value={permitForm.renewalDate}
+                  onChange={(e) => setPermitForm({...permitForm, renewalDate: e.target.value})}
+                  className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <select
+                  value={permitForm.status}
+                  onChange={(e) => setPermitForm({...permitForm, status: e.target.value as any})}
+                  className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Expiring Soon">Expiring Soon</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
 
               <div className="flex items-center gap-3 pt-4">
                 <button
@@ -1848,7 +1998,7 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Material Name"
+                  placeholder="Material Name *"
                   value={materialForm.name}
                   onChange={(e) => setMaterialForm({...materialForm, name: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1869,7 +2019,7 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="number"
-                  placeholder="Quantity"
+                  placeholder="Quantity *"
                   value={materialForm.quantity}
                   onChange={(e) => setMaterialForm({...materialForm, quantity: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1890,14 +2040,14 @@ export default function EquipmentPermitsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="number"
-                  placeholder="Unit Cost (AED)"
+                  placeholder="Unit Cost (AED) *"
                   value={materialForm.cost}
                   onChange={(e) => setMaterialForm({...materialForm, cost: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <input
                   type="text"
-                  placeholder="Supplier"
+                  placeholder="Supplier *"
                   value={materialForm.supplier}
                   onChange={(e) => setMaterialForm({...materialForm, supplier: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1921,97 +2071,6 @@ export default function EquipmentPermitsPage() {
                 />
               </div>
 
-              {/* Invoice Section */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-indigo-600" />
-                  Invoices
-                </h4>
-                
-                {/* Invoice List */}
-                {materialForm.invoices.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    {materialForm.invoices.map((invoice, idx) => (
-                      <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{invoice.type}</p>
-                          <p className="text-xs text-gray-600">{invoice.date} - AED {invoice.amount}</p>
-                        </div>
-                        <button
-                          onClick={() => setMaterialForm({...materialForm, invoices: materialForm.invoices.filter((_, i) => i !== idx)})}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Invoice Form */}
-                <div className="space-y-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <div className="grid grid-cols-2 gap-3">
-                    <select
-                      value={materialForm.invoiceType}
-                      onChange={(e) => setMaterialForm({...materialForm, invoiceType: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    >
-                      <option value="purchase">Purchase Invoice</option>
-                      <option value="delivery">Delivery Invoice</option>
-                      <option value="quality">Quality Check</option>
-                      <option value="warranty">Warranty Invoice</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <input
-                      type="date"
-                      value={materialForm.invoiceDate}
-                      onChange={(e) => setMaterialForm({...materialForm, invoiceDate: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <input
-                    type="number"
-                    placeholder="Invoice Amount"
-                    value={materialForm.invoiceAmount}
-                    onChange={(e) => setMaterialForm({...materialForm, invoiceAmount: e.target.value})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <input
-                    type="file"
-                    onChange={(e) => setMaterialForm({...materialForm, invoiceFile: e.target.files?.[0]?.name || ''})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-
-                  <button
-                    onClick={() => {
-                      if (materialForm.invoiceType && materialForm.invoiceDate && materialForm.invoiceAmount) {
-                        const newInvoice = {
-                          id: `inv${Date.now()}`,
-                          type: materialForm.invoiceType,
-                          file: materialForm.invoiceFile,
-                          date: materialForm.invoiceDate,
-                          amount: materialForm.invoiceAmount
-                        }
-                        setMaterialForm({
-                          ...materialForm,
-                          invoices: [...materialForm.invoices, newInvoice],
-                          invoiceType: 'purchase',
-                          invoiceFile: '',
-                          invoiceAmount: '',
-                          invoiceDate: ''
-                        })
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium"
-                  >
-                    Add Invoice
-                  </button>
-                </div>
-              </div>
-
               <div className="flex items-center gap-3 pt-4">
                 <button
                   onClick={() => setShowAddMaterialModal(false)}
@@ -2032,7 +2091,7 @@ export default function EquipmentPermitsPage() {
       )}
 
       {/* Edit Material Modal */}
-      {showEditMaterialModal && (
+      {showEditMaterialModal && selectedMaterial && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
@@ -2123,97 +2182,6 @@ export default function EquipmentPermitsPage() {
                   onChange={(e) => setMaterialForm({...materialForm, reorderLevel: e.target.value})}
                   className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-
-              {/* Invoice Section */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-indigo-600" />
-                  Invoices
-                </h4>
-                
-                {/* Invoice List */}
-                {materialForm.invoices.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    {materialForm.invoices.map((invoice, idx) => (
-                      <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{invoice.type}</p>
-                          <p className="text-xs text-gray-600">{invoice.date} - AED {invoice.amount}</p>
-                        </div>
-                        <button
-                          onClick={() => setMaterialForm({...materialForm, invoices: materialForm.invoices.filter((_, i) => i !== idx)})}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Invoice Form */}
-                <div className="space-y-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <div className="grid grid-cols-2 gap-3">
-                    <select
-                      value={materialForm.invoiceType}
-                      onChange={(e) => setMaterialForm({...materialForm, invoiceType: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    >
-                      <option value="purchase">Purchase Invoice</option>
-                      <option value="delivery">Delivery Invoice</option>
-                      <option value="quality">Quality Check</option>
-                      <option value="warranty">Warranty Invoice</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <input
-                      type="date"
-                      value={materialForm.invoiceDate}
-                      onChange={(e) => setMaterialForm({...materialForm, invoiceDate: e.target.value})}
-                      className="px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <input
-                    type="number"
-                    placeholder="Invoice Amount"
-                    value={materialForm.invoiceAmount}
-                    onChange={(e) => setMaterialForm({...materialForm, invoiceAmount: e.target.value})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <input
-                    type="file"
-                    onChange={(e) => setMaterialForm({...materialForm, invoiceFile: e.target.files?.[0]?.name || ''})}
-                    className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-
-                  <button
-                    onClick={() => {
-                      if (materialForm.invoiceType && materialForm.invoiceDate && materialForm.invoiceAmount) {
-                        const newInvoice = {
-                          id: `inv${Date.now()}`,
-                          type: materialForm.invoiceType,
-                          file: materialForm.invoiceFile,
-                          date: materialForm.invoiceDate,
-                          amount: materialForm.invoiceAmount
-                        }
-                        setMaterialForm({
-                          ...materialForm,
-                          invoices: [...materialForm.invoices, newInvoice],
-                          invoiceType: 'purchase',
-                          invoiceFile: '',
-                          invoiceAmount: '',
-                          invoiceDate: ''
-                        })
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium"
-                  >
-                    Add Invoice
-                  </button>
-                </div>
               </div>
 
               <div className="flex items-center gap-3 pt-4">

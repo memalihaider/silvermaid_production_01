@@ -714,15 +714,7 @@ if (sortConfig.key) {
             <TrendingUp className="h-8 w-8 text-amber-600" />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-2xl font-bold text-gray-900">{metrics.totalProjects}</p>
-            </div>
-            <Briefcase className="h-8 w-8 text-purple-600" />
-          </div>
-        </div>
+       
       </div>
 
       {/* Search and Filters */}
@@ -908,17 +900,7 @@ if (sortConfig.key) {
                         )}
                       </div>
                     </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('projects')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Projects
-                        {sortConfig.key === 'projects' && (
-                          sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
-                    </th>
+                    
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Last Service
                     </th>
@@ -972,9 +954,7 @@ if (sortConfig.key) {
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         AED {(client.totalSpent / 1000).toFixed(0)}K
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {client.projects}
-                      </td>
+                   
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                         {client.lastService}
                       </td>

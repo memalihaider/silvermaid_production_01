@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Plus,
   X,
   Search,
-  Filter,
   MessageSquare,
   AlertCircle,
   CheckCircle,
@@ -13,14 +12,83 @@ import {
   User,
   Calendar,
   Star,
-  TrendingUp,
   Eye,
   Edit,
   Trash2,
-  Send,
-  ArrowLeft
+  ArrowLeft,
+  Save,
+  UserCheck,
+  TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc,
+  deleteDoc, 
+  doc,
+  query,
+  orderBy,
+  Timestamp 
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+
+// Firebase Interfaces
+interface FirebaseEmployee {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  position: string;
+  role: string;
+  status: string;
+  supervisor: string;
+  salary: number;
+  salaryStructure: string;
+  bankName: string;
+  bankAccount: string;
+  joinDate: string;
+  createdAt: string;
+  lastUpdated: string;
+}
+
+interface FirebaseFeedback {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  submittedBy: string;
+  submissionDate: string;
+  rating: number;
+  category: string;
+  title: string;
+  content: string;
+  status: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FirebaseComplaint {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  filedBy: string;
+  submissionDate: string;
+  category: string;
+  priority: string;
+  title: string;
+  description: string;
+  status: string;
+  assignedTo: string;
+  resolution: string;
+  attachments: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function EmployeeFeedbackAndComplaints() {
   const [activeTab, setActiveTab] = useState<'feedback' | 'complaints'>('feedback')
@@ -28,105 +96,15 @@ export default function EmployeeFeedbackAndComplaints() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
 
-  // Feedback State
-  const [feedbacks, setFeedbacks] = useState([
-    {
-      id: 1,
-      employeeId: 1,
-      employeeName: 'John Smith',
-      employeeRole: 'Supervisor',
-      submittedBy: 'Admin User',
-      submissionDate: '2025-01-08',
-      rating: 5,
-      category: 'Performance',
-      title: 'Excellent Job Leadership',
-      content: 'John has shown outstanding leadership qualities and consistently exceeds expectations.',
-      status: 'Active',
-      tags: ['Leadership', 'Performance', 'Professional']
-    },
-    {
-      id: 2,
-      employeeId: 2,
-      employeeName: 'Sarah Johnson',
-      employeeRole: 'Cleaner',
-      submittedBy: 'Manager',
-      submissionDate: '2025-01-07',
-      rating: 4.5,
-      category: 'Quality of Work',
-      title: 'High Quality Work Standards',
-      content: 'Sarah maintains consistently high quality work standards and is very reliable.',
-      status: 'Active',
-      tags: ['Quality', 'Reliability', 'Consistency']
-    },
-    {
-      id: 3,
-      employeeId: 3,
-      employeeName: 'Ahmed Hassan',
-      employeeRole: 'Team Lead',
-      submittedBy: 'Admin User',
-      submissionDate: '2025-01-05',
-      rating: 4,
-      category: 'Development',
-      title: 'Training & Development Needed',
-      content: 'Ahmed would benefit from additional training in new cleaning techniques.',
-      status: 'Pending Action',
-      tags: ['Training', 'Development', 'Skills']
-    }
-  ])
-
-  // Complaints State
-  const [complaints, setComplaints] = useState([
-    {
-      id: 1,
-      employeeId: 1,
-      employeeName: 'John Smith',
-      employeeRole: 'Supervisor',
-      filedBy: 'Employee',
-      submissionDate: '2025-01-08',
-      category: 'Workplace Safety',
-      priority: 'High',
-      title: 'Safety Equipment Issue',
-      description: 'Safety harness equipment needs maintenance and replacement.',
-      status: 'Open',
-      assignedTo: 'HR Manager',
-      resolution: '',
-      attachments: []
-    },
-    {
-      id: 2,
-      employeeId: 5,
-      employeeName: 'Maria Garcia',
-      employeeRole: 'Cleaner',
-      filedBy: 'Employee',
-      submissionDate: '2025-01-07',
-      category: 'Work Schedule',
-      priority: 'Medium',
-      title: 'Schedule Conflict',
-      description: 'Conflict with assigned shift times causing personal hardship.',
-      status: 'In Progress',
-      assignedTo: 'Supervisor',
-      resolution: 'Reviewing schedule alternatives with employee.',
-      attachments: []
-    },
-    {
-      id: 3,
-      employeeId: 2,
-      employeeName: 'Sarah Johnson',
-      employeeRole: 'Cleaner',
-      filedBy: 'Supervisor',
-      submissionDate: '2025-01-06',
-      category: 'Performance',
-      priority: 'Low',
-      title: 'Attendance Issue',
-      description: 'Minor attendance inconsistency noted last month.',
-      status: 'Resolved',
-      assignedTo: 'HR Manager',
-      resolution: 'Matter discussed with employee. Improvement noted.',
-      attachments: []
-    }
-  ])
+  // Real Data States
+  const [employees, setEmployees] = useState<FirebaseEmployee[]>([])
+  const [feedbacks, setFeedbacks] = useState<FirebaseFeedback[]>([])
+  const [complaints, setComplaints] = useState<FirebaseComplaint[]>([])
 
   // Form States
   const [feedbackForm, setFeedbackForm] = useState({
@@ -135,7 +113,8 @@ export default function EmployeeFeedbackAndComplaints() {
     category: 'Performance',
     title: '',
     content: '',
-    tags: ''
+    tags: '',
+    status: 'Active'
   })
 
   const [complaintForm, setComplaintForm] = useState({
@@ -144,100 +123,423 @@ export default function EmployeeFeedbackAndComplaints() {
     priority: 'Medium',
     title: '',
     description: '',
-    filedBy: 'Employee'
+    filedBy: 'Employee',
+    status: 'Open',
+    assignedTo: 'Unassigned',
+    resolution: ''
   })
 
-  // Employees list for dropdown
-  const employees = [
-    { id: 1, name: 'John Smith', role: 'Supervisor' },
-    { id: 2, name: 'Sarah Johnson', role: 'Cleaner' },
-    { id: 3, name: 'Ahmed Hassan', role: 'Team Lead' },
-    { id: 4, name: 'Maria Garcia', role: 'Cleaner' },
-    { id: 5, name: 'Michael Chen', role: 'Supervisor' }
-  ]
+  // Fetch all data from Firebase
+  useEffect(() => {
+    fetchEmployees()
+    fetchFeedbacks()
+    fetchComplaints()
+  }, [])
 
-  // Handlers
-  const handleAddFeedback = () => {
-    if (feedbackForm.employeeId && feedbackForm.title && feedbackForm.content) {
-      const employee = employees.find(e => e.id.toString() === feedbackForm.employeeId)
-      const newFeedback = {
-        id: Math.max(...feedbacks.map(f => f.id), 0) + 1,
-        employeeId: parseInt(feedbackForm.employeeId),
-        employeeName: employee?.name || '',
-        employeeRole: employee?.role || '',
-        submittedBy: 'Current Admin',
+  const fetchEmployees = async () => {
+    try {
+      const employeesRef = collection(db, 'employees')
+      const snapshot = await getDocs(employeesRef)
+      
+      const employeesList: FirebaseEmployee[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        employeesList.push({
+          id: doc.id,
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          department: data.department || '',
+          position: data.position || '',
+          role: data.role || '',
+          status: data.status || '',
+          supervisor: data.supervisor || '',
+          salary: data.salary || 0,
+          salaryStructure: data.salaryStructure || '',
+          bankName: data.bankName || '',
+          bankAccount: data.bankAccount || '',
+          joinDate: data.joinDate || '',
+          createdAt: data.createdAt || '',
+          lastUpdated: data.lastUpdated || ''
+        })
+      })
+      
+      setEmployees(employeesList)
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+    }
+  }
+
+  const fetchFeedbacks = async () => {
+    try {
+      const feedbacksRef = collection(db, 'feedbacks')
+      const q = query(feedbacksRef, orderBy('submissionDate', 'desc'))
+      const snapshot = await getDocs(q)
+      
+      const feedbacksList: FirebaseFeedback[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        feedbacksList.push({
+          id: doc.id,
+          employeeId: data.employeeId || '',
+          employeeName: data.employeeName || '',
+          employeeRole: data.employeeRole || '',
+          submittedBy: data.submittedBy || 'Admin',
+          submissionDate: data.submissionDate || '',
+          rating: data.rating || 0,
+          category: data.category || '',
+          title: data.title || '',
+          content: data.content || '',
+          status: data.status || 'Active',
+          tags: data.tags || [],
+          createdAt: data.createdAt || '',
+          updatedAt: data.updatedAt || ''
+        })
+      })
+      
+      setFeedbacks(feedbacksList)
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error)
+    }
+  }
+
+  const fetchComplaints = async () => {
+    try {
+      const complaintsRef = collection(db, 'complaints')
+      const q = query(complaintsRef, orderBy('submissionDate', 'desc'))
+      const snapshot = await getDocs(q)
+      
+      const complaintsList: FirebaseComplaint[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        complaintsList.push({
+          id: doc.id,
+          employeeId: data.employeeId || '',
+          employeeName: data.employeeName || '',
+          employeeRole: data.employeeRole || '',
+          filedBy: data.filedBy || 'Employee',
+          submissionDate: data.submissionDate || '',
+          category: data.category || '',
+          priority: data.priority || 'Medium',
+          title: data.title || '',
+          description: data.description || '',
+          status: data.status || 'Open',
+          assignedTo: data.assignedTo || 'Unassigned',
+          resolution: data.resolution || '',
+          attachments: data.attachments || [],
+          createdAt: data.createdAt || '',
+          updatedAt: data.updatedAt || ''
+        })
+      })
+      
+      setComplaints(complaintsList)
+    } catch (error) {
+      console.error('Error fetching complaints:', error)
+    }
+  }
+
+  // Clean data for Firebase
+  const cleanFirebaseData = (data: any) => {
+    const cleanData: any = {}
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        if (typeof data[key] === 'string' && data[key].trim() === '') {
+          cleanData[key] = ''
+        } else {
+          cleanData[key] = data[key]
+        }
+      } else {
+        cleanData[key] = ''
+      }
+    })
+    return cleanData
+  }
+
+  // Add Feedback to Firebase
+  const handleAddFeedback = async () => {
+    if (!feedbackForm.employeeId || !feedbackForm.title || !feedbackForm.content) {
+      alert('Please fill all required fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const employee = employees.find(e => e.id === feedbackForm.employeeId)
+      if (!employee) {
+        alert('Employee not found')
+        return
+      }
+
+      const feedbackData = {
+        employeeId: feedbackForm.employeeId,
+        employeeName: employee.name,
+        employeeRole: employee.position,
+        submittedBy: 'Admin',
         submissionDate: new Date().toISOString().split('T')[0],
         rating: feedbackForm.rating,
         category: feedbackForm.category,
         title: feedbackForm.title,
         content: feedbackForm.content,
-        status: 'Active',
-        tags: feedbackForm.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        status: feedbackForm.status,
+        tags: feedbackForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
-      setFeedbacks([...feedbacks, newFeedback])
+
+      const cleanData = cleanFirebaseData(feedbackData)
+      await addDoc(collection(db, 'feedbacks'), cleanData)
+
+      // Reset form and refresh data
       setFeedbackForm({
         employeeId: '',
         rating: 5,
         category: 'Performance',
         title: '',
         content: '',
-        tags: ''
+        tags: '',
+        status: 'Active'
       })
       setShowAddModal(false)
+      fetchFeedbacks()
+      
+      alert('Feedback added successfully!')
+    } catch (error) {
+      console.error('Error adding feedback:', error)
+      alert('Error adding feedback. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleAddComplaint = () => {
-    if (complaintForm.employeeId && complaintForm.title && complaintForm.description) {
-      const employee = employees.find(e => e.id.toString() === complaintForm.employeeId)
-      const newComplaint = {
-        id: Math.max(...complaints.map(c => c.id), 0) + 1,
-        employeeId: parseInt(complaintForm.employeeId),
-        employeeName: employee?.name || '',
-        employeeRole: employee?.role || '',
+  // Edit Feedback in Firebase
+  const handleEditFeedback = async () => {
+    if (!editingItem || !feedbackForm.title || !feedbackForm.content) {
+      alert('Please fill all required fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const updatedFeedback = {
+        ...editingItem,
+        rating: feedbackForm.rating,
+        category: feedbackForm.category,
+        title: feedbackForm.title,
+        content: feedbackForm.content,
+        status: feedbackForm.status,
+        tags: feedbackForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        updatedAt: new Date().toISOString()
+      }
+
+      const cleanData = cleanFirebaseData(updatedFeedback)
+      await updateDoc(doc(db, 'feedbacks', editingItem.id), cleanData)
+
+      // Reset form and refresh data
+      setFeedbackForm({
+        employeeId: '',
+        rating: 5,
+        category: 'Performance',
+        title: '',
+        content: '',
+        tags: '',
+        status: 'Active'
+      })
+      setShowEditModal(false)
+      setEditingItem(null)
+      fetchFeedbacks()
+      
+      alert('Feedback updated successfully!')
+    } catch (error) {
+      console.error('Error updating feedback:', error)
+      alert('Error updating feedback. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Add Complaint to Firebase
+  const handleAddComplaint = async () => {
+    if (!complaintForm.employeeId || !complaintForm.title || !complaintForm.description) {
+      alert('Please fill all required fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const employee = employees.find(e => e.id === complaintForm.employeeId)
+      if (!employee) {
+        alert('Employee not found')
+        return
+      }
+
+      const complaintData = {
+        employeeId: complaintForm.employeeId,
+        employeeName: employee.name,
+        employeeRole: employee.position,
         filedBy: complaintForm.filedBy,
         submissionDate: new Date().toISOString().split('T')[0],
         category: complaintForm.category,
         priority: complaintForm.priority,
         title: complaintForm.title,
         description: complaintForm.description,
-        status: 'Open',
-        assignedTo: 'Unassigned',
-        resolution: '',
-        attachments: []
+        status: complaintForm.status,
+        assignedTo: complaintForm.assignedTo,
+        resolution: complaintForm.resolution,
+        attachments: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
-      setComplaints([...complaints, newComplaint])
+
+      const cleanData = cleanFirebaseData(complaintData)
+      await addDoc(collection(db, 'complaints'), cleanData)
+
+      // Reset form and refresh data
       setComplaintForm({
         employeeId: '',
         category: 'Workplace Safety',
         priority: 'Medium',
         title: '',
         description: '',
-        filedBy: 'Employee'
+        filedBy: 'Employee',
+        status: 'Open',
+        assignedTo: 'Unassigned',
+        resolution: ''
       })
       setShowAddModal(false)
+      fetchComplaints()
+      
+      alert('Complaint added successfully!')
+    } catch (error) {
+      console.error('Error adding complaint:', error)
+      alert('Error adding complaint. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDeleteFeedback = (id: number) => {
-    setFeedbacks(feedbacks.filter(f => f.id !== id))
+  // Edit Complaint in Firebase
+  const handleEditComplaint = async () => {
+    if (!editingItem || !complaintForm.title || !complaintForm.description) {
+      alert('Please fill all required fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const updatedComplaint = {
+        ...editingItem,
+        category: complaintForm.category,
+        priority: complaintForm.priority,
+        title: complaintForm.title,
+        description: complaintForm.description,
+        filedBy: complaintForm.filedBy,
+        status: complaintForm.status,
+        assignedTo: complaintForm.assignedTo,
+        resolution: complaintForm.resolution,
+        updatedAt: new Date().toISOString()
+      }
+
+      const cleanData = cleanFirebaseData(updatedComplaint)
+      await updateDoc(doc(db, 'complaints', editingItem.id), cleanData)
+
+      // Reset form and refresh data
+      setComplaintForm({
+        employeeId: '',
+        category: 'Workplace Safety',
+        priority: 'Medium',
+        title: '',
+        description: '',
+        filedBy: 'Employee',
+        status: 'Open',
+        assignedTo: 'Unassigned',
+        resolution: ''
+      })
+      setShowEditModal(false)
+      setEditingItem(null)
+      fetchComplaints()
+      
+      alert('Complaint updated successfully!')
+    } catch (error) {
+      console.error('Error updating complaint:', error)
+      alert('Error updating complaint. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleDeleteComplaint = (id: number) => {
-    setComplaints(complaints.filter(c => c.id !== id))
+  // Delete Feedback from Firebase
+  const handleDeleteFeedback = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this feedback?')) return
+
+    try {
+      await deleteDoc(doc(db, 'feedbacks', id))
+      fetchFeedbacks()
+      alert('Feedback deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting feedback:', error)
+      alert('Error deleting feedback. Please try again.')
+    }
+  }
+
+  // Delete Complaint from Firebase
+  const handleDeleteComplaint = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return
+
+    try {
+      await deleteDoc(doc(db, 'complaints', id))
+      fetchComplaints()
+      alert('Complaint deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting complaint:', error)
+      alert('Error deleting complaint. Please try again.')
+    }
+  }
+
+  // Open Edit Modal for Feedback
+  const openEditFeedback = (feedback: FirebaseFeedback) => {
+    setEditingItem(feedback)
+    setFeedbackForm({
+      employeeId: feedback.employeeId,
+      rating: feedback.rating,
+      category: feedback.category,
+      title: feedback.title,
+      content: feedback.content,
+      tags: feedback.tags?.join(', ') || '',
+      status: feedback.status
+    })
+    setShowEditModal(true)
+  }
+
+  // Open Edit Modal for Complaint
+  const openEditComplaint = (complaint: FirebaseComplaint) => {
+    setEditingItem(complaint)
+    setComplaintForm({
+      employeeId: complaint.employeeId,
+      category: complaint.category,
+      priority: complaint.priority,
+      title: complaint.title,
+      description: complaint.description,
+      filedBy: complaint.filedBy,
+      status: complaint.status,
+      assignedTo: complaint.assignedTo,
+      resolution: complaint.resolution || ''
+    })
+    setShowEditModal(true)
   }
 
   // Filter functions
   const filteredFeedbacks = feedbacks.filter(f => {
-    const matchesSearch = f.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         f.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = searchTerm === '' || 
+      f.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.title.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || f.status === filterStatus
     return matchesSearch && matchesStatus
   })
 
   const filteredComplaints = complaints.filter(c => {
-    const matchesSearch = c.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = searchTerm === '' || 
+      c.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.title.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || c.status === filterStatus
     return matchesSearch && matchesStatus
   })
@@ -269,6 +571,16 @@ export default function EmployeeFeedbackAndComplaints() {
     }
   }
 
+  // Summary Statistics
+  const summaryStats = {
+    totalFeedbacks: feedbacks.length,
+    activeFeedbacks: feedbacks.filter(f => f.status === 'Active').length,
+    totalComplaints: complaints.length,
+    openComplaints: complaints.filter(c => c.status === 'Open').length,
+    inProgressComplaints: complaints.filter(c => c.status === 'In Progress').length,
+    resolvedComplaints: complaints.filter(c => c.status === 'Resolved').length
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900 p-6 space-y-8">
       {/* Header */}
@@ -293,8 +605,8 @@ export default function EmployeeFeedbackAndComplaints() {
             </div>
             <span className="text-xs font-bold text-blue-700 uppercase">Total Feedbacks</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{feedbacks.length}</div>
-          <div className="text-xs text-blue-600 mt-2">{feedbacks.filter(f => f.status === 'Active').length} Active</div>
+          <div className="text-2xl font-bold text-gray-900">{summaryStats.totalFeedbacks}</div>
+          <div className="text-xs text-blue-600 mt-2">{summaryStats.activeFeedbacks} Active</div>
         </div>
 
         <div className="bg-linear-to-br from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6">
@@ -304,8 +616,8 @@ export default function EmployeeFeedbackAndComplaints() {
             </div>
             <span className="text-xs font-bold text-red-700 uppercase">Total Complaints</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{complaints.length}</div>
-          <div className="text-xs text-red-600 mt-2">{complaints.filter(c => c.status === 'Open').length} Open</div>
+          <div className="text-2xl font-bold text-gray-900">{summaryStats.totalComplaints}</div>
+          <div className="text-xs text-red-600 mt-2">{summaryStats.openComplaints} Open</div>
         </div>
 
         <div className="bg-linear-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
@@ -315,7 +627,7 @@ export default function EmployeeFeedbackAndComplaints() {
             </div>
             <span className="text-xs font-bold text-yellow-700 uppercase">In Progress</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{complaints.filter(c => c.status === 'In Progress').length}</div>
+          <div className="text-2xl font-bold text-gray-900">{summaryStats.inProgressComplaints}</div>
           <div className="text-xs text-yellow-600 mt-2">Complaints</div>
         </div>
 
@@ -326,7 +638,7 @@ export default function EmployeeFeedbackAndComplaints() {
             </div>
             <span className="text-xs font-bold text-green-700 uppercase">Resolved</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{complaints.filter(c => c.status === 'Resolved').length}</div>
+          <div className="text-2xl font-bold text-gray-900">{summaryStats.resolvedComplaints}</div>
           <div className="text-xs text-green-600 mt-2">Complaints</div>
         </div>
       </div>
@@ -397,8 +709,15 @@ export default function EmployeeFeedbackAndComplaints() {
         </button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      )}
+
       {/* Feedback Tab */}
-      {activeTab === 'feedback' && (
+      {activeTab === 'feedback' && !loading && (
         <div className="space-y-4">
           {filteredFeedbacks.length === 0 ? (
             <div className="text-center py-12">
@@ -450,7 +769,7 @@ export default function EmployeeFeedbackAndComplaints() {
                       {feedback.category}
                     </span>
                   </div>
-                  {feedback.tags.length > 0 && (
+                  {feedback.tags && feedback.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {feedback.tags.map((tag, idx) => (
                         <span key={idx} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
@@ -473,12 +792,21 @@ export default function EmployeeFeedbackAndComplaints() {
                         setShowViewModal(true)
                       }}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="View"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => openEditFeedback(feedback)}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteFeedback(feedback.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -491,7 +819,7 @@ export default function EmployeeFeedbackAndComplaints() {
       )}
 
       {/* Complaints Tab */}
-      {activeTab === 'complaints' && (
+      {activeTab === 'complaints' && !loading && (
         <div className="space-y-4">
           {filteredComplaints.length === 0 ? (
             <div className="text-center py-12">
@@ -533,7 +861,7 @@ export default function EmployeeFeedbackAndComplaints() {
                     </span>
                   </div>
 
-                  {complaint.status !== 'Open' && (
+                  {complaint.status !== 'Open' && complaint.resolution && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                       <p className="text-xs font-bold text-gray-700 mb-1">Resolution:</p>
                       <p className="text-sm text-gray-600">{complaint.resolution}</p>
@@ -556,12 +884,21 @@ export default function EmployeeFeedbackAndComplaints() {
                         setShowViewModal(true)
                       }}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="View"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => openEditComplaint(complaint)}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteComplaint(complaint.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -591,7 +928,7 @@ export default function EmployeeFeedbackAndComplaints() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Employee</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Employee *</label>
                 <select
                   value={activeTab === 'feedback' ? feedbackForm.employeeId : complaintForm.employeeId}
                   onChange={(e) => {
@@ -602,11 +939,12 @@ export default function EmployeeFeedbackAndComplaints() {
                     }
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
                 >
                   <option value="">Select an employee...</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role})
+                      {emp.name} ({emp.position})
                     </option>
                   ))}
                 </select>
@@ -616,7 +954,7 @@ export default function EmployeeFeedbackAndComplaints() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Rating</label>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Rating *</label>
                       <input
                         type="number"
                         min="1"
@@ -625,41 +963,58 @@ export default function EmployeeFeedbackAndComplaints() {
                         value={feedbackForm.rating}
                         onChange={(e) => setFeedbackForm({...feedbackForm, rating: parseFloat(e.target.value)})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
                       <select
                         value={feedbackForm.category}
                         onChange={(e) => setFeedbackForm({...feedbackForm, category: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
                       >
                         <option value="Performance">Performance</option>
                         <option value="Quality of Work">Quality of Work</option>
                         <option value="Development">Development</option>
                         <option value="Behavior">Behavior</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                    <select
+                      value={feedbackForm.status}
+                      onChange={(e) => setFeedbackForm({...feedbackForm, status: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Pending Action">Pending Action</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Title *</label>
                     <input
                       type="text"
                       value={feedbackForm.title}
                       onChange={(e) => setFeedbackForm({...feedbackForm, title: e.target.value})}
                       placeholder="Feedback title"
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Feedback</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Feedback *</label>
                     <textarea
                       value={feedbackForm.content}
                       onChange={(e) => setFeedbackForm({...feedbackForm, content: e.target.value})}
                       placeholder="Provide detailed feedback..."
                       className="w-full h-24 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      required
                     />
                   </div>
 
@@ -678,11 +1033,12 @@ export default function EmployeeFeedbackAndComplaints() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
                       <select
                         value={complaintForm.category}
                         onChange={(e) => setComplaintForm({...complaintForm, category: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
                       >
                         <option value="Workplace Safety">Workplace Safety</option>
                         <option value="Work Schedule">Work Schedule</option>
@@ -692,11 +1048,12 @@ export default function EmployeeFeedbackAndComplaints() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Priority</label>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Priority *</label>
                       <select
                         value={complaintForm.priority}
                         onChange={(e) => setComplaintForm({...complaintForm, priority: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
                       >
                         <option value="High">High</option>
                         <option value="Medium">Medium</option>
@@ -705,37 +1062,77 @@ export default function EmployeeFeedbackAndComplaints() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Filed By</label>
-                    <select
-                      value={complaintForm.filedBy}
-                      onChange={(e) => setComplaintForm({...complaintForm, filedBy: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="Employee">Employee</option>
-                      <option value="Supervisor">Supervisor</option>
-                      <option value="Manager">Manager</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Filed By *</label>
+                      <select
+                        value={complaintForm.filedBy}
+                        onChange={(e) => setComplaintForm({...complaintForm, filedBy: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Employee">Employee</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Status *</label>
+                      <select
+                        value={complaintForm.status}
+                        onChange={(e) => setComplaintForm({...complaintForm, status: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Complaint Title</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Assigned To</label>
+                    <input
+                      type="text"
+                      value={complaintForm.assignedTo}
+                      onChange={(e) => setComplaintForm({...complaintForm, assignedTo: e.target.value})}
+                      placeholder="e.g., HR Manager, Supervisor"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Complaint Title *</label>
                     <input
                       type="text"
                       value={complaintForm.title}
                       onChange={(e) => setComplaintForm({...complaintForm, title: e.target.value})}
                       placeholder="Brief complaint title"
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Description *</label>
                     <textarea
                       value={complaintForm.description}
                       onChange={(e) => setComplaintForm({...complaintForm, description: e.target.value})}
                       placeholder="Provide detailed complaint description..."
                       className="w-full h-24 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Resolution</label>
+                    <textarea
+                      value={complaintForm.resolution}
+                      onChange={(e) => setComplaintForm({...complaintForm, resolution: e.target.value})}
+                      placeholder="Resolution details (if any)"
+                      className="w-full h-20 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                     />
                   </div>
                 </>
@@ -745,14 +1142,412 @@ export default function EmployeeFeedbackAndComplaints() {
                 <button
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                  disabled={loading}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={activeTab === 'feedback' ? handleAddFeedback : handleAddComplaint}
-                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+                  disabled={loading}
+                  className={`flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
-                  {activeTab === 'feedback' ? 'Add Feedback' : 'Add Complaint'}
+                  {loading ? 'Saving...' : activeTab === 'feedback' ? 'Add Feedback' : 'Add Complaint'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Feedback/Complaint Modal */}
+      {showEditModal && editingItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Edit {activeTab === 'feedback' ? 'Feedback' : 'Complaint'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false)
+                  setEditingItem(null)
+                }}
+                className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                <p className="text-sm text-blue-700">
+                  <span className="font-bold">Employee:</span> {editingItem.employeeName} ({editingItem.employeeRole})
+                </p>
+              </div>
+
+              {activeTab === 'feedback' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Rating *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.5"
+                        value={feedbackForm.rating}
+                        onChange={(e) => setFeedbackForm({...feedbackForm, rating: parseFloat(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
+                      <select
+                        value={feedbackForm.category}
+                        onChange={(e) => setFeedbackForm({...feedbackForm, category: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Performance">Performance</option>
+                        <option value="Quality of Work">Quality of Work</option>
+                        <option value="Development">Development</option>
+                        <option value="Behavior">Behavior</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                    <select
+                      value={feedbackForm.status}
+                      onChange={(e) => setFeedbackForm({...feedbackForm, status: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Pending Action">Pending Action</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Title *</label>
+                    <input
+                      type="text"
+                      value={feedbackForm.title}
+                      onChange={(e) => setFeedbackForm({...feedbackForm, title: e.target.value})}
+                      placeholder="Feedback title"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Feedback *</label>
+                    <textarea
+                      value={feedbackForm.content}
+                      onChange={(e) => setFeedbackForm({...feedbackForm, content: e.target.value})}
+                      placeholder="Provide detailed feedback..."
+                      className="w-full h-24 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={feedbackForm.tags}
+                      onChange={(e) => setFeedbackForm({...feedbackForm, tags: e.target.value})}
+                      placeholder="e.g., Leadership, Performance, Professional"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
+                      <select
+                        value={complaintForm.category}
+                        onChange={(e) => setComplaintForm({...complaintForm, category: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Workplace Safety">Workplace Safety</option>
+                        <option value="Work Schedule">Work Schedule</option>
+                        <option value="Performance">Performance</option>
+                        <option value="Management">Management</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Priority *</label>
+                      <select
+                        value={complaintForm.priority}
+                        onChange={(e) => setComplaintForm({...complaintForm, priority: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Filed By *</label>
+                      <select
+                        value={complaintForm.filedBy}
+                        onChange={(e) => setComplaintForm({...complaintForm, filedBy: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Employee">Employee</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Status *</label>
+                      <select
+                        value={complaintForm.status}
+                        onChange={(e) => setComplaintForm({...complaintForm, status: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Assigned To</label>
+                    <input
+                      type="text"
+                      value={complaintForm.assignedTo}
+                      onChange={(e) => setComplaintForm({...complaintForm, assignedTo: e.target.value})}
+                      placeholder="e.g., HR Manager, Supervisor"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Complaint Title *</label>
+                    <input
+                      type="text"
+                      value={complaintForm.title}
+                      onChange={(e) => setComplaintForm({...complaintForm, title: e.target.value})}
+                      placeholder="Brief complaint title"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Description *</label>
+                    <textarea
+                      value={complaintForm.description}
+                      onChange={(e) => setComplaintForm({...complaintForm, description: e.target.value})}
+                      placeholder="Provide detailed complaint description..."
+                      className="w-full h-24 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Resolution</label>
+                    <textarea
+                      value={complaintForm.resolution}
+                      onChange={(e) => setComplaintForm({...complaintForm, resolution: e.target.value})}
+                      placeholder="Resolution details (if any)"
+                      className="w-full h-20 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingItem(null)
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={activeTab === 'feedback' ? handleEditFeedback : handleEditComplaint}
+                  disabled={loading}
+                  className={`flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {showViewModal && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {activeTab === 'feedback' ? 'Feedback Details' : 'Complaint Details'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowViewModal(false)
+                  setSelectedItem(null)
+                }}
+                className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {activeTab === 'feedback' ? (
+                <>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <h4 className="font-bold text-gray-900 mb-2">{selectedItem.title}</h4>
+                    <p className="text-sm text-gray-600">{selectedItem.content}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Employee</label>
+                      <p className="text-sm text-gray-900">{selectedItem.employeeName}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Rating</label>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < Math.floor(selectedItem.rating)
+                                ? 'text-yellow-400 fill-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-2 text-sm font-bold">{selectedItem.rating}/5</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                      <p className="text-sm text-gray-900">{selectedItem.category}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(selectedItem.status)}`}>
+                        {selectedItem.status}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Submitted By</label>
+                      <p className="text-sm text-gray-900">{selectedItem.submittedBy}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                      <p className="text-sm text-gray-900">{selectedItem.submissionDate}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedItem.tags && selectedItem.tags.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Tags</label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedItem.tags.map((tag: string, idx: number) => (
+                          <span key={idx} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <h4 className="font-bold text-gray-900 mb-2">{selectedItem.title}</h4>
+                    <p className="text-sm text-gray-600">{selectedItem.description}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Employee</label>
+                      <p className="text-sm text-gray-900">{selectedItem.employeeName}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Priority</label>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getPriorityColor(selectedItem.priority)}`}>
+                        {selectedItem.priority}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                      <p className="text-sm text-gray-900">{selectedItem.category}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(selectedItem.status)}`}>
+                        {selectedItem.status}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Filed By</label>
+                      <p className="text-sm text-gray-900">{selectedItem.filedBy}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Assigned To</label>
+                      <p className="text-sm text-gray-900">{selectedItem.assignedTo}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                      <p className="text-sm text-gray-900">{selectedItem.submissionDate}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Created</label>
+                      <p className="text-sm text-gray-900">{new Date(selectedItem.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedItem.resolution && (
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Resolution</label>
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm text-gray-900">{selectedItem.resolution}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setShowViewModal(false)
+                    setSelectedItem(null)
+                  }}
+                  className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                >
+                  Close
                 </button>
               </div>
             </div>

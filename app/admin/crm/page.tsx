@@ -1068,8 +1068,8 @@ export default function UnifiedCRMDashboard() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1 max-w-32">
-                      {lead.source && lead.source.length > 0 ? (
-                        lead.source.slice(0, 2).map((src: string, index: number) => (
+                     {lead.source && Array.isArray(lead.source) ? (
+  lead.source.slice(0, 2).map((src: string, index: number) => (
                           <span key={index} className="inline-flex items-center px-1.5 py-0.5 bg-green-100 text-green-800 text-[8px] font-bold rounded-full uppercase">
                             {src.length > 8 ? `${src.substring(0, 8)}...` : src}
                           </span>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Plus,
   Search,
@@ -21,12 +21,36 @@ import {
   FileText,
   ArrowRight
 } from 'lucide-react'
-import { MOCK_EMPLOYEES, Employee } from '@/lib/hr-data'
+import { 
+  collection, 
+  getDocs, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query,
+  where,
+  Timestamp
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+
+interface FirebaseEmployee {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  position: string;
+  role: string;
+  status: string;
+  supervisor: string;
+}
 
 interface LeaveApplication {
   id: string
   employeeId: string
   employeeName: string
+  employeeDepartment: string
   leaveType: 'Annual' | 'Sick' | 'Special' | 'Maternity' | 'Paternity' | 'Unpaid'
   startDate: string
   endDate: string
@@ -61,57 +85,9 @@ const formatLongDate = (dateString: string) => {
   return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-const INITIAL_LEAVE_APPLICATIONS: LeaveApplication[] = [
-  {
-    id: 'LEAVE001',
-    employeeId: 'EMP001',
-    employeeName: 'John Smith',
-    leaveType: 'Annual',
-    startDate: '2026-02-10',
-    endDate: '2026-02-15',
-    daysRequested: 6,
-    reason: 'Family vacation to Europe',
-    status: 'Approved',
-    appliedDate: '2026-01-20',
-    appliedBy: 'John Smith',
-    approverComments: 'Approved. Have a great vacation!',
-    approverName: 'Maria Rodriguez',
-    approvalDate: '2026-01-21'
-  },
-  {
-    id: 'LEAVE002',
-    employeeId: 'EMP002',
-    employeeName: 'Sarah Johnson',
-    leaveType: 'Sick',
-    startDate: '2026-01-28',
-    endDate: '2026-01-30',
-    daysRequested: 3,
-    reason: 'Medical appointment and recovery',
-    status: 'Approved',
-    appliedDate: '2026-01-27',
-    appliedBy: 'Sarah Johnson',
-    approverComments: 'Approved. Get well soon.',
-    approverName: 'Maria Rodriguez',
-    approvalDate: '2026-01-27'
-  },
-  {
-    id: 'LEAVE003',
-    employeeId: 'EMP003',
-    employeeName: 'Ahmed Hassan',
-    leaveType: 'Annual',
-    startDate: '2026-03-05',
-    endDate: '2026-03-10',
-    daysRequested: 6,
-    reason: 'Personal reasons',
-    status: 'Pending',
-    appliedDate: '2026-01-25',
-    appliedBy: 'Ahmed Hassan'
-  }
-]
-
 export default function LeaveManagementPage() {
-  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>(INITIAL_LEAVE_APPLICATIONS)
-  const [employees] = useState<Employee[]>(MOCK_EMPLOYEES)
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([])
+  const [employees, setEmployees] = useState<FirebaseEmployee[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterLeaveType, setFilterLeaveType] = useState('all')
@@ -134,6 +110,93 @@ export default function LeaveManagementPage() {
     action: 'Approved' as 'Approved' | 'Rejected',
     comments: ''
   })
+
+  // Firebase se employees aur leave applications fetch karein
+  useEffect(() => {
+    fetchEmployees()
+    fetchLeaveApplications()
+  }, [])
+
+  const fetchEmployees = async () => {
+    try {
+      const employeesRef = collection(db, 'employees')
+      const snapshot = await getDocs(employeesRef)
+      
+      const employeesList: FirebaseEmployee[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        if (data.status === 'Active') {
+          employeesList.push({
+            id: doc.id,
+            name: data.name || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            department: data.department || '',
+            position: data.position || '',
+            role: data.role || '',
+            status: data.status || 'Active',
+            supervisor: data.supervisor || ''
+          })
+        }
+      })
+      
+      setEmployees(employeesList)
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+    }
+  }
+
+  const fetchLeaveApplications = async () => {
+    try {
+      const leavesRef = collection(db, 'leave-management')
+      const snapshot = await getDocs(leavesRef)
+      
+      const leavesList: LeaveApplication[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        
+        leavesList.push({
+          id: doc.id,
+          employeeId: data.employeeId || '',
+          employeeName: data.employeeName || '',
+          employeeDepartment: data.employeeDepartment || '',
+          leaveType: data.leaveType || 'Annual',
+          startDate: data.startDate || '',
+          endDate: data.endDate || '',
+          daysRequested: data.daysRequested || 0,
+          reason: data.reason || '',
+          status: data.status || 'Pending',
+          appliedDate: data.appliedDate || new Date().toISOString().split('T')[0],
+          appliedBy: data.appliedBy || 'Admin',
+          approverComments: data.approverComments || '',
+          approverName: data.approverName || '',
+          approvalDate: data.approvalDate || '',
+          documents: data.documents || []
+        })
+      })
+      
+      setLeaveApplications(leavesList)
+    } catch (error) {
+      console.error('Error fetching leave applications:', error)
+    }
+  }
+
+  // Clean data for Firebase
+  const cleanFirebaseData = (data: any) => {
+    const cleanData: any = {}
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        if (typeof data[key] === 'string' && data[key].trim() === '') {
+          cleanData[key] = ''
+        } else {
+          cleanData[key] = data[key]
+        }
+      } else {
+        cleanData[key] = ''
+      }
+    })
+    return cleanData
+  }
 
   // Calculate leave balance for employee
   const getLeaveBalance = (employeeId: string, leaveType: string) => {
@@ -187,8 +250,13 @@ export default function LeaveManagementPage() {
     }
   }, [leaveApplications])
 
-  // Handle add leave application
-  const handleAddLeaveApplication = () => {
+  // Pending applications for dropdown
+  const pendingApplications = useMemo(() => {
+    return leaveApplications.filter(app => app.status === 'Pending')
+  }, [leaveApplications])
+
+  // Handle add leave application - Firebase mein save karein with PENDING status
+  const handleAddLeaveApplication = async () => {
     if (!newLeaveForm.employeeId || !newLeaveForm.startDate || !newLeaveForm.endDate) {
       alert('Please fill in required fields')
       return
@@ -198,71 +266,117 @@ export default function LeaveManagementPage() {
     if (!employee) return
 
     const daysRequested = calculateDays(newLeaveForm.startDate, newLeaveForm.endDate)
-    const balance = getLeaveBalance(newLeaveForm.employeeId, newLeaveForm.leaveType)
 
-    if (daysRequested > balance && (newLeaveForm.leaveType as string) !== 'Unpaid') {
-      alert(`Insufficient balance. Available: ${balance} days, Requested: ${daysRequested} days`)
-      return
+    try {
+      const newApplicationData = cleanFirebaseData({
+        employeeId: newLeaveForm.employeeId,
+        employeeName: employee.name,
+        employeeDepartment: employee.department,
+        leaveType: newLeaveForm.leaveType,
+        startDate: newLeaveForm.startDate,
+        endDate: newLeaveForm.endDate,
+        daysRequested: daysRequested,
+        reason: newLeaveForm.reason,
+        status: 'Pending', // Status PENDING rahega
+        appliedDate: new Date().toISOString().split('T')[0],
+        appliedBy: 'Admin',
+        approverComments: '',
+        approverName: '',
+        approvalDate: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+
+      // Firebase mein save karein
+      const docRef = await addDoc(collection(db, 'leave-management'), newApplicationData)
+      
+      // Local state update karein
+      const newApplication: LeaveApplication = {
+        ...newApplicationData,
+        id: docRef.id
+      }
+      
+      setLeaveApplications([...leaveApplications, newApplication])
+      
+      // Reset form
+      setNewLeaveForm({
+        employeeId: '',
+        leaveType: 'Annual',
+        startDate: '',
+        endDate: '',
+        reason: '',
+        approverComments: ''
+      })
+      
+      setShowAddModal(false)
+      alert('Leave application added successfully with PENDING status!')
+      
+    } catch (error) {
+      console.error('Error adding leave application:', error)
+      alert('Error adding leave application. Please try again.')
     }
-
-    const newApplication: LeaveApplication = {
-      id: `LEAVE${String(leaveApplications.length + 1).padStart(3, '0')}`,
-      employeeId: newLeaveForm.employeeId,
-      employeeName: employee.name,
-      leaveType: newLeaveForm.leaveType,
-      startDate: newLeaveForm.startDate,
-      endDate: newLeaveForm.endDate,
-      daysRequested,
-      reason: newLeaveForm.reason,
-      status: 'Approved',
-      appliedDate: new Date().toISOString().split('T')[0],
-      appliedBy: 'Admin',
-      approverComments: newLeaveForm.approverComments || 'Added by admin',
-      approverName: 'Admin',
-      approvalDate: new Date().toISOString().split('T')[0]
-    }
-
-    setLeaveApplications([...leaveApplications, newApplication])
-    setNewLeaveForm({
-      employeeId: '',
-      leaveType: 'Annual',
-      startDate: '',
-      endDate: '',
-      reason: '',
-      approverComments: ''
-    })
-    setShowAddModal(false)
-    alert('Leave application added successfully!')
   }
 
-  // Handle process leave (approve/reject)
-  const handleProcessLeave = () => {
+  // Handle process leave (approve/reject) - Firebase mein update karein
+  const handleProcessLeave = async () => {
     if (!processForm.applicationId) return
 
-    setLeaveApplications(
-      leaveApplications.map(app =>
-        app.id === processForm.applicationId
-          ? {
-              ...app,
-              status: processForm.action,
-              approverComments: processForm.comments || app.approverComments,
-              approvalDate: new Date().toISOString().split('T')[0],
-              approverName: 'Admin'
-            }
-          : app
-      )
-    )
+    try {
+      const applicationToUpdate = leaveApplications.find(app => app.id === processForm.applicationId)
+      if (!applicationToUpdate) return
 
-    setProcessForm({ applicationId: '', action: 'Approved', comments: '' })
-    setShowAddModal(false)
-    alert(`Leave application ${processForm.action}!`)
+      const updateData = cleanFirebaseData({
+        status: processForm.action,
+        approverComments: processForm.comments || applicationToUpdate.approverComments,
+        approvalDate: new Date().toISOString().split('T')[0],
+        approverName: 'Admin',
+        updatedAt: new Date().toISOString()
+      })
+
+      // Firebase mein update karein
+      const leaveDoc = doc(db, 'leave-management', processForm.applicationId)
+      await updateDoc(leaveDoc, updateData)
+
+      // Local state update karein
+      setLeaveApplications(
+        leaveApplications.map(app =>
+          app.id === processForm.applicationId
+            ? {
+                ...app,
+                status: processForm.action,
+                approverComments: processForm.comments || app.approverComments,
+                approvalDate: new Date().toISOString().split('T')[0],
+                approverName: 'Admin'
+              }
+            : app
+        )
+      )
+
+      setProcessForm({ applicationId: '', action: 'Approved', comments: '' })
+      setShowAddModal(false)
+      alert(`Leave application ${processForm.action}!`)
+      
+    } catch (error) {
+      console.error('Error processing leave:', error)
+      alert('Error processing leave. Please try again.')
+    }
   }
 
-  // Handle delete
-  const handleDelete = (id: string) => {
-    if (confirm('Delete this leave application?')) {
+  // Handle delete - Firebase se delete karein
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this leave application?')) return
+
+    try {
+      // Firebase se delete karein
+      await deleteDoc(doc(db, 'leave-management', id))
+      
+      // Local state update karein
       setLeaveApplications(leaveApplications.filter(app => app.id !== id))
       alert('Leave application deleted!')
+      
+    } catch (error) {
+      console.error('Error deleting leave application:', error)
+      alert('Error deleting leave application. Please try again.')
     }
   }
 
@@ -327,9 +441,10 @@ export default function LeaveManagementPage() {
             setShowAddModal(true)
           }}
           className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors shadow-lg"
+          disabled={pendingApplications.length === 0}
         >
           <CheckCircle className="h-4 w-4" />
-          Process Applications
+          Process Applications ({pendingApplications.length})
         </button>
       </div>
 
@@ -386,7 +501,7 @@ export default function LeaveManagementPage() {
                     </div>
                     <div>
                       <h4 className="font-black">{app.employeeName}</h4>
-                      <p className="text-xs text-muted-foreground">{app.id}</p>
+                      <p className="text-xs text-muted-foreground">{app.employeeDepartment} • ID: {app.employeeId}</p>
                     </div>
                   </div>
 
@@ -458,6 +573,19 @@ export default function LeaveManagementPage() {
           <div className="bg-card border rounded-2xl p-12 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-muted-foreground">No leave applications found</p>
+            {employees.length > 0 ? (
+              <button 
+                onClick={() => {
+                  setModalMode('add')
+                  setShowAddModal(true)
+                }}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add First Leave Application
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500 mt-2">No employees available. Please add employees first.</p>
+            )}
           </div>
         )}
       </div>
@@ -493,7 +621,9 @@ export default function LeaveManagementPage() {
                       >
                         <option value="">Select Employee</option>
                         {employees.map(emp => (
-                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} - {emp.department} ({emp.position})
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -510,14 +640,6 @@ export default function LeaveManagementPage() {
                         ))}
                       </select>
                     </div>
-
-                    {newLeaveForm.employeeId && (
-                      <div className="md:col-span-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-xs text-blue-700">
-                          📊 {getLeaveTypeName(newLeaveForm.leaveType)} Balance: <span className="font-bold">{getLeaveBalance(newLeaveForm.employeeId, newLeaveForm.leaveType)}</span> days available
-                        </p>
-                      </div>
-                    )}
 
                     <div>
                       <label className="text-sm font-bold mb-2 block">Start Date *</label>
@@ -557,14 +679,11 @@ export default function LeaveManagementPage() {
                       />
                     </div>
 
-                    <div className="md:col-span-2">
-                      <label className="text-sm font-bold mb-2 block">Approver Comments (Optional)</label>
-                      <textarea
-                        value={newLeaveForm.approverComments}
-                        onChange={(e) => setNewLeaveForm({ ...newLeaveForm, approverComments: e.target.value })}
-                        className="w-full px-3 py-2 bg-muted/50 border rounded-lg text-sm h-16 resize-none"
-                        placeholder="Add any comments..."
-                      />
+                    <div className="md:col-span-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-xs text-amber-700">
+                        📝 <span className="font-bold">Note:</span> New leave applications will be created with <span className="font-bold">PENDING</span> status. 
+                        You can approve or reject them later from the "Process Applications" section.
+                      </p>
                     </div>
                   </div>
 
@@ -577,10 +696,15 @@ export default function LeaveManagementPage() {
                     </button>
                     <button
                       onClick={handleAddLeaveApplication}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-sm flex items-center justify-center gap-2"
+                      disabled={!newLeaveForm.employeeId || !newLeaveForm.startDate || !newLeaveForm.endDate}
+                      className={`flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 ${
+                        (!newLeaveForm.employeeId || !newLeaveForm.startDate || !newLeaveForm.endDate)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-green-700'
+                      }`}
                     >
                       <CheckCircle className="h-4 w-4" />
-                      Add Leave
+                      Add Leave (Pending)
                     </button>
                   </div>
                 </>
@@ -598,15 +722,21 @@ export default function LeaveManagementPage() {
                         className="w-full px-3 py-2 bg-muted/50 border rounded-lg text-sm"
                       >
                         <option value="">Choose an application to process</option>
-                        {leaveApplications
-                          .filter(app => app.status === 'Pending')
-                          .map(app => (
-                            <option key={app.id} value={app.id}>
-                              {app.employeeName} - {getLeaveTypeName(app.leaveType)} ({app.daysRequested}d)
-                            </option>
-                          ))}
+                        {pendingApplications.map(app => (
+                          <option key={app.id} value={app.id}>
+                            {app.employeeName} - {getLeaveTypeName(app.leaveType)} ({app.daysRequested}d) - {formatDate(app.startDate)} to {formatDate(app.endDate)}
+                          </option>
+                        ))}
                       </select>
                     </div>
+
+                    {pendingApplications.length === 0 && (
+                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                        <p className="text-sm text-amber-700">
+                          No pending leave applications to process. Add new leave applications first.
+                        </p>
+                      </div>
+                    )}
 
                     {processForm.applicationId && (
                       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -616,55 +746,61 @@ export default function LeaveManagementPage() {
                           return (
                             <div className="space-y-2 text-sm">
                               <p><span className="font-bold">Employee:</span> {app.employeeName}</p>
+                              <p><span className="font-bold">Department:</span> {app.employeeDepartment}</p>
                               <p><span className="font-bold">Leave Type:</span> {getLeaveTypeName(app.leaveType)}</p>
                               <p><span className="font-bold">Dates:</span> {formatDate(app.startDate)} - {formatDate(app.endDate)}</p>
                               <p><span className="font-bold">Days:</span> {app.daysRequested} days</p>
                               <p><span className="font-bold">Reason:</span> {app.reason}</p>
+                              <p><span className="font-bold">Applied On:</span> {formatDate(app.appliedDate)}</p>
                             </div>
                           )
                         })()}
                       </div>
                     )}
 
-                    <div>
-                      <label className="text-sm font-bold mb-2 block">Action *</label>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => setProcessForm({ ...processForm, action: 'Approved' })}
-                          className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
-                            processForm.action === 'Approved'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-muted/50 border hover:bg-muted'
-                          }`}
-                        >
-                          <Check className="h-4 w-4" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => setProcessForm({ ...processForm, action: 'Rejected' })}
-                          className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
-                            processForm.action === 'Rejected'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-muted/50 border hover:bg-muted'
-                          }`}
-                        >
-                          <Ban className="h-4 w-4" />
-                          Reject
-                        </button>
-                      </div>
-                    </div>
+                    {processForm.applicationId && (
+                      <>
+                        <div>
+                          <label className="text-sm font-bold mb-2 block">Action *</label>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setProcessForm({ ...processForm, action: 'Approved' })}
+                              className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
+                                processForm.action === 'Approved'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-muted/50 border hover:bg-muted'
+                              }`}
+                            >
+                              <Check className="h-4 w-4" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => setProcessForm({ ...processForm, action: 'Rejected' })}
+                              className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
+                                processForm.action === 'Rejected'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-muted/50 border hover:bg-muted'
+                              }`}
+                            >
+                              <Ban className="h-4 w-4" />
+                              Reject
+                            </button>
+                          </div>
+                        </div>
 
-                    <div>
-                      <label className="text-sm font-bold mb-2 block">
-                        {processForm.action === 'Rejected' ? 'Rejection Reason' : 'Approver Comments'} (Optional)
-                      </label>
-                      <textarea
-                        value={processForm.comments}
-                        onChange={(e) => setProcessForm({ ...processForm, comments: e.target.value })}
-                        className="w-full px-3 py-2 bg-muted/50 border rounded-lg text-sm h-20 resize-none"
-                        placeholder={processForm.action === 'Rejected' ? 'Explain why this application is rejected...' : 'Add any comments...'}
-                      />
-                    </div>
+                        <div>
+                          <label className="text-sm font-bold mb-2 block">
+                            {processForm.action === 'Rejected' ? 'Rejection Reason' : 'Approver Comments'} (Optional)
+                          </label>
+                          <textarea
+                            value={processForm.comments}
+                            onChange={(e) => setProcessForm({ ...processForm, comments: e.target.value })}
+                            className="w-full px-3 py-2 bg-muted/50 border rounded-lg text-sm h-20 resize-none"
+                            placeholder={processForm.action === 'Rejected' ? 'Explain why this application is rejected...' : 'Add any comments...'}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-4 border-t">
@@ -723,8 +859,16 @@ export default function LeaveManagementPage() {
                     <p className="font-bold">{selectedApplication.employeeName}</p>
                   </div>
                   <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Department</p>
+                    <p className="font-bold">{selectedApplication.employeeDepartment}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground">Employee ID</p>
                     <p className="font-bold">{selectedApplication.employeeId}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Application ID</p>
+                    <p className="font-bold">{selectedApplication.id}</p>
                   </div>
                 </div>
               </div>

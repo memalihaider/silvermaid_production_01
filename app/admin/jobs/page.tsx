@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   Plus,
   Search,
@@ -26,14 +26,15 @@ import {
   TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
-import NewJobForm from './components/NewJobForm'
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, where, Timestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase' // Your Firebase config
 import { MOCK_ATTENDANCE, Attendance } from '@/lib/hr-data'
 
 interface Job {
-  id: number
+  id: string // Firestore document ID
   title: string
   client: string
-  clientId: number
+  clientId: string
   status: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled'
   priority: 'Low' | 'Medium' | 'High' | 'Critical'
   scheduledDate: string | null
@@ -68,7 +69,7 @@ interface Job {
 }
 
 interface JobService {
-  id: number
+  id: string
   name: string
   quantity: number
   unitPrice: number
@@ -79,7 +80,7 @@ interface JobService {
 interface NewJobForm {
   title: string
   client: string
-  clientId: number | null
+  clientId: string | null
   priority: 'Low' | 'Medium' | 'High' | 'Critical'
   scheduledDate: string
   scheduledTime: string
@@ -99,164 +100,9 @@ interface NewJobForm {
   services?: JobService[]
 }
 
-const INITIAL_JOBS: Job[] = [
-  {
-    id: 1,
-    title: 'Office Deep Cleaning - Downtown Tower',
-    client: 'Downtown Business Tower',
-    clientId: 1,
-    status: 'Scheduled',
-    priority: 'High',
-    scheduledDate: '2025-01-20',
-    scheduledTime: '08:00',
-    endTime: '16:00',
-    location: 'Downtown, Dubai',
-    teamRequired: 4,
-    budget: 5000,
-    actualCost: 0,
-    description: 'Complete office floor deep cleaning with window and cubicle sanitization',
-    riskLevel: 'Low',
-    slaDeadline: '2025-01-25',
-    estimatedDuration: '8 hours',
-    requiredSkills: ['General Cleaning', 'Floor Care', 'Window Cleaning'],
-    permits: ['Building Access'],
-    tags: ['Office', 'Commercial'],
-    specialInstructions: 'Use eco-friendly products only. Avoid disruption during business hours.',
-    recurring: false,
-    createdAt: '2025-01-10T10:00:00Z',
-    updatedAt: '2025-01-10T10:00:00Z',
-    executionLogs: [],
-    assignedTo: ['John Smith', 'Sarah Johnson'],
-    reminderEnabled: true,
-    reminderDate: '2025-01-19',
-    reminderSent: false,
-    overtimeRequired: true,
-    overtimeHours: 2,
-    overtimeReason: 'Extended hours to complete additional sanitization',
-    overtimeApproved: false
-  },
-  {
-    id: 2,
-    title: 'Medical Facility Sanitization',
-    client: 'Emirates Medical Center',
-    clientId: 2,
-    status: 'Pending',
-    priority: 'Critical',
-    scheduledDate: null,
-    location: 'Al Baraha, Dubai',
-    teamRequired: 6,
-    budget: 8500,
-    actualCost: 0,
-    description: 'Complete sanitization of medical facility including operating rooms',
-    riskLevel: 'High',
-    estimatedDuration: '12 hours',
-    requiredSkills: ['Medical Cleaning', 'Sanitization', 'HEPA Certification'],
-    permits: ['Medical Facility Access', 'Biohazard Handling'],
-    tags: ['Medical', 'Sanitization'],
-    specialInstructions: 'Requires ISO 14644 certification. Strict hygiene protocols mandatory.',
-    recurring: true,
-    createdAt: '2025-01-09T14:30:00Z',
-    updatedAt: '2025-01-11T09:00:00Z',
-    executionLogs: [],
-    assignedTo: ['Ahmed Hassan', 'Maria Garcia']
-  },
-  {
-    id: 3,
-    title: 'Carpet Cleaning & Maintenance',
-    client: 'Hotel Al Manara',
-    clientId: 3,
-    status: 'In Progress',
-    priority: 'Medium',
-    scheduledDate: '2025-01-18',
-    scheduledTime: '09:00',
-    endTime: '17:00',
-    location: 'Al Manara, Dubai',
-    teamRequired: 3,
-    budget: 3500,
-    actualCost: 2100,
-    description: 'Deep carpet cleaning for hotel lobby and guest rooms',
-    riskLevel: 'Low',
-    estimatedDuration: '8 hours',
-    requiredSkills: ['Carpet Cleaning', 'Upholstery Care'],
-    permits: ['Hotel Access'],
-    tags: ['Carpet', 'Hospitality'],
-    specialInstructions: 'Work after guest checkout. Must complete by 6 PM.',
-    recurring: false,
-    createdAt: '2025-01-15T08:00:00Z',
-    updatedAt: '2025-01-18T10:30:00Z',
-    executionLogs: [],
-    assignedTo: ['Michael Chen', 'Lisa Wong'],
-    reminderEnabled: true,
-    reminderDate: '2025-01-17',
-    reminderSent: true
-  },
-  {
-    id: 4,
-    title: 'Residential Complex Maintenance',
-    client: 'Marina Residential Tower',
-    clientId: 4,
-    status: 'Scheduled',
-    priority: 'Medium',
-    scheduledDate: '2025-01-22',
-    scheduledTime: '07:00',
-    endTime: '15:00',
-    location: 'Marina, Dubai',
-    teamRequired: 5,
-    budget: 4200,
-    actualCost: 0,
-    description: 'Common areas cleaning, pool deck sanitization, and landscaping maintenance',
-    riskLevel: 'Low',
-    estimatedDuration: '8 hours',
-    requiredSkills: ['Residential Cleaning', 'Pool Maintenance', 'Landscaping'],
-    permits: ['Residential Access'],
-    tags: ['Residential', 'Maintenance'],
-    specialInstructions: 'Coordinate with building management. Avoid disturbing residents.',
-    recurring: true,
-    createdAt: '2025-01-08T11:00:00Z',
-    updatedAt: '2025-01-08T11:00:00Z',
-    executionLogs: [],
-    assignedTo: ['James Wilson', 'Emma Davis'],
-    reminderEnabled: true,
-    reminderDate: '2025-01-21',
-    reminderSent: false
-  },
-  {
-    id: 5,
-    title: 'Industrial Floor Coating',
-    client: 'Dubai Industrial Park',
-    clientId: 5,
-    status: 'Pending',
-    priority: 'High',
-    scheduledDate: null,
-    location: 'Industrial City, Dubai',
-    teamRequired: 8,
-    budget: 12000,
-    actualCost: 0,
-    description: 'Industrial floor preparation, epoxy coating application, and quality inspection',
-    riskLevel: 'High',
-    estimatedDuration: '24 hours',
-    requiredSkills: ['Industrial Cleaning', 'Epoxy Application', 'Safety Management'],
-    permits: ['Industrial Facility Access', 'Chemical Handling'],
-    tags: ['Industrial', 'Flooring'],
-    specialInstructions: 'Requires hazmat certification. Work during off-hours. Proper ventilation essential.',
-    recurring: false,
-    createdAt: '2025-01-07T15:45:00Z',
-    updatedAt: '2025-01-11T09:15:00Z',
-    executionLogs: [],
-    assignedTo: []
-  }
-]
-
-const AVAILABLE_CLIENTS = [
-  { id: 1, name: 'Downtown Business Tower', company: 'Business Towers LLC', tier: 'Gold' },
-  { id: 2, name: 'Emirates Medical Center', company: 'Emirates Healthcare', tier: 'Platinum' },
-  { id: 3, name: 'Hotel Al Manara', company: 'Hospitality Group', tier: 'Gold' },
-  { id: 4, name: 'Marina Residential Tower', company: 'Residential Developments', tier: 'Silver' },
-  { id: 5, name: 'Dubai Industrial Park', company: 'Industrial Holdings', tier: 'Gold' }
-]
-
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
@@ -265,9 +111,10 @@ export default function JobsPage() {
   const [selectedJobForExecution, setSelectedJobForExecution] = useState<Job | null>(null)
   const [executionChecklist, setExecutionChecklist] = useState<string[]>([])
   const [executionNotes, setExecutionNotes] = useState('')
-  const [editingJobId, setEditingJobId] = useState<number | null>(null)
+  const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const [showNewJobForm, setShowNewJobForm] = useState(false)
   const [attendance] = useState<Attendance[]>(MOCK_ATTENDANCE)
+  const [clients, setClients] = useState<any[]>([])
 
   const [newJobForm, setNewJobForm] = useState<NewJobForm>({
     title: '',
@@ -291,6 +138,84 @@ export default function JobsPage() {
     recurring: false,
     services: []
   })
+
+  // Fetch jobs from Firebase
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true)
+        const jobsQuery = query(collection(db, 'jobs'))
+        const jobsSnapshot = await getDocs(jobsQuery)
+        
+        const jobsData = jobsSnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            title: data.title || '',
+            client: data.client || '',
+            clientId: data.clientId || '',
+            status: data.status || 'Pending',
+            priority: data.priority || 'Medium',
+            scheduledDate: data.scheduledDate || null,
+            scheduledTime: data.scheduledTime || '',
+            endTime: data.endTime || '',
+            location: data.location || '',
+            teamRequired: data.teamRequired || 1,
+            budget: data.budget || 0,
+            actualCost: data.actualCost || 0,
+            description: data.description || '',
+            riskLevel: data.riskLevel || 'Low',
+            slaDeadline: data.slaDeadline || '',
+            estimatedDuration: data.estimatedDuration || '',
+            requiredSkills: data.requiredSkills || [],
+            permits: data.permits || [],
+            tags: data.tags || [],
+            specialInstructions: data.specialInstructions || '',
+            recurring: data.recurring || false,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            completedAt: data.completedAt || '',
+            executionLogs: data.executionLogs || [],
+            assignedTo: data.assignedTo || [],
+            reminderEnabled: data.reminderEnabled || false,
+            reminderDate: data.reminderDate || '',
+            reminderSent: data.reminderSent || false,
+            services: data.services || [],
+            overtimeRequired: data.overtimeRequired || false,
+            overtimeHours: data.overtimeHours || 0,
+            overtimeReason: data.overtimeReason || '',
+            overtimeApproved: data.overtimeApproved || false
+          } as Job
+        })
+        
+        setJobs(jobsData)
+      } catch (error) {
+        console.error('Error fetching jobs:', error)
+        alert('Error loading jobs from database')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const fetchClients = async () => {
+      try {
+        const clientsQuery = query(collection(db, 'clients'))
+        const clientsSnapshot = await getDocs(clientsQuery)
+        
+        const clientsData = clientsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        
+        setClients(clientsData)
+      } catch (error) {
+        console.error('Error fetching clients:', error)
+      }
+    }
+
+    fetchJobs()
+    fetchClients()
+  }, [])
 
   // Calculate statistics
   const stats = useMemo(() => ({
@@ -403,118 +328,161 @@ export default function JobsPage() {
     setShowNewJobModal(true)
   }
 
-  const handleSaveJob = useCallback(() => {
+  const handleSaveJob = useCallback(async () => {
     if (!newJobForm.title || !newJobForm.client || !newJobForm.location) {
       alert('Please fill in all required fields: Title, Client, and Location')
       return
     }
 
     try {
+      const jobData = {
+        title: newJobForm.title,
+        client: newJobForm.client,
+        clientId: newJobForm.clientId || '',
+        priority: newJobForm.priority,
+        scheduledDate: newJobForm.scheduledDate || null,
+        scheduledTime: newJobForm.scheduledTime,
+        endTime: newJobForm.endTime,
+        location: newJobForm.location,
+        teamRequired: newJobForm.teamRequired,
+        budget: newJobForm.budget,
+        description: newJobForm.description,
+        riskLevel: newJobForm.riskLevel,
+        slaDeadline: newJobForm.slaDeadline,
+        estimatedDuration: newJobForm.estimatedDuration,
+        requiredSkills: newJobForm.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
+        permits: newJobForm.permits.split(',').map(s => s.trim()).filter(s => s),
+        tags: newJobForm.tags.split(',').map(s => s.trim()).filter(s => s),
+        specialInstructions: newJobForm.specialInstructions,
+        recurring: newJobForm.recurring,
+        services: newJobForm.services || [],
+        updatedAt: new Date().toISOString(),
+        assignedTo: [],
+        executionLogs: [],
+        actualCost: 0,
+        reminderEnabled: false
+      }
+
       if (editingJobId) {
-        // Update existing job
-        const updated = jobs.map(j =>
+        // Update existing job in Firebase
+        const jobRef = doc(db, 'jobs', editingJobId)
+        await updateDoc(jobRef, jobData)
+        
+        // Update local state
+        setJobs(jobs.map(j =>
           j.id === editingJobId
-            ? {
-                ...j,
-                title: newJobForm.title,
-                client: newJobForm.client,
-                clientId: newJobForm.clientId || 0,
-                priority: newJobForm.priority,
-                scheduledDate: newJobForm.scheduledDate || null,
-                scheduledTime: newJobForm.scheduledTime,
-                endTime: newJobForm.endTime,
-                location: newJobForm.location,
-                teamRequired: newJobForm.teamRequired,
-                budget: newJobForm.budget,
-                description: newJobForm.description,
-                riskLevel: newJobForm.riskLevel,
-                slaDeadline: newJobForm.slaDeadline,
-                estimatedDuration: newJobForm.estimatedDuration,
-                requiredSkills: newJobForm.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-                permits: newJobForm.permits.split(',').map(s => s.trim()).filter(s => s),
-                tags: newJobForm.tags.split(',').map(s => s.trim()).filter(s => s),
-                specialInstructions: newJobForm.specialInstructions,
-                recurring: newJobForm.recurring,
-                updatedAt: new Date().toISOString(),
-                services: newJobForm.services || []
-              }
+            ? { ...j, ...jobData, id: editingJobId }
             : j
-        )
-        setJobs(updated)
-        setEditingJobId(null)
+        ))
         alert('Job updated successfully!')
       } else {
-        // Create new job
-        const newJob: Job = {
-          id: Math.max(...jobs.map(j => j.id), 0) + 1,
-          title: newJobForm.title,
-          client: newJobForm.client,
-          clientId: newJobForm.clientId || 0,
+        // Create new job in Firebase
+        const newJobData = {
+          ...jobData,
           status: 'Pending',
-          priority: newJobForm.priority,
-          scheduledDate: newJobForm.scheduledDate || null,
-          scheduledTime: newJobForm.scheduledTime,
-          endTime: newJobForm.endTime,
-          location: newJobForm.location,
-          teamRequired: newJobForm.teamRequired,
-          budget: newJobForm.budget,
-          actualCost: 0,
-          description: newJobForm.description,
-          riskLevel: newJobForm.riskLevel,
-          slaDeadline: newJobForm.slaDeadline,
-          estimatedDuration: newJobForm.estimatedDuration,
-          requiredSkills: newJobForm.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-          permits: newJobForm.permits.split(',').map(s => s.trim()).filter(s => s),
-          tags: newJobForm.tags.split(',').map(s => s.trim()).filter(s => s),
-          specialInstructions: newJobForm.specialInstructions,
-          recurring: newJobForm.recurring,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          executionLogs: [],
-          assignedTo: [],
-          reminderEnabled: false,
-          reminderDate: undefined,
+          completedAt: '',
           reminderSent: false,
-          services: newJobForm.services || []
+          overtimeRequired: false,
+          overtimeHours: 0,
+          overtimeReason: '',
+          overtimeApproved: false
         }
 
+        const docRef = await addDoc(collection(db, 'jobs'), newJobData)
+        
+        // Add to local state with Firestore ID
+        const newJob: Job = {
+          id: docRef.id,
+          ...newJobData
+        } as Job
+        
         setJobs([...jobs, newJob])
         alert('Job created successfully!')
       }
+      
       setShowNewJobModal(false)
+      setEditingJobId(null)
     } catch (error) {
+      console.error('Error saving job:', error)
       alert('Error saving job. Please try again.')
     }
   }, [newJobForm, jobs, editingJobId])
 
-  const handleToggleReminder = useCallback((jobId: number) => {
-    setJobs(jobs.map(j => {
-      if (j.id === jobId && j.scheduledDate) {
-        const reminderDate = new Date(j.scheduledDate + 'T00:00:00')
-        reminderDate.setDate(reminderDate.getDate() - 1)
-        return {
-          ...j,
-          reminderEnabled: !j.reminderEnabled,
-          reminderDate: reminderDate.toISOString().split('T')[0]
-        }
+  const handleToggleReminder = useCallback(async (jobId: string) => {
+    try {
+      const job = jobs.find(j => j.id === jobId)
+      if (!job) return
+
+      const newReminderEnabled = !job.reminderEnabled
+      let reminderDate = job.reminderDate
+      
+      if (newReminderEnabled && job.scheduledDate) {
+        const reminder = new Date(job.scheduledDate + 'T00:00:00')
+        reminder.setDate(reminder.getDate() - 1)
+        reminderDate = reminder.toISOString().split('T')[0]
       }
-      return j
-    }))
+
+      // Update in Firebase
+      const jobRef = doc(db, 'jobs', jobId)
+      await updateDoc(jobRef, {
+        reminderEnabled: newReminderEnabled,
+        reminderDate: reminderDate
+      })
+
+      // Update local state
+      setJobs(jobs.map(j => {
+        if (j.id === jobId) {
+          return {
+            ...j,
+            reminderEnabled: newReminderEnabled,
+            reminderDate: reminderDate
+          }
+        }
+        return j
+      }))
+    } catch (error) {
+      console.error('Error updating reminder:', error)
+      alert('Error updating reminder')
+    }
   }, [jobs])
 
-  const handleUpdateJobStatus = useCallback((jobId: number, newStatus: Job['status']) => {
-    setJobs(jobs.map(j =>
-      j.id === jobId
-        ? { ...j, status: newStatus, updatedAt: new Date().toISOString() }
-        : j
-    ))
-    alert(`Job status updated to ${newStatus}`)
+  const handleUpdateJobStatus = useCallback(async (jobId: string, newStatus: Job['status']) => {
+    try {
+      // Update in Firebase
+      const jobRef = doc(db, 'jobs', jobId)
+      await updateDoc(jobRef, {
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      })
+
+      // Update local state
+      setJobs(jobs.map(j =>
+        j.id === jobId
+          ? { ...j, status: newStatus, updatedAt: new Date().toISOString() }
+          : j
+      ))
+      alert(`Job status updated to ${newStatus}`)
+    } catch (error) {
+      console.error('Error updating job status:', error)
+      alert('Error updating job status')
+    }
   }, [jobs])
 
-  const handleDeleteJob = useCallback((jobId: number) => {
-    if (window.confirm('Are you sure you want to delete this job?')) {
+  const handleDeleteJob = useCallback(async (jobId: string) => {
+    if (!window.confirm('Are you sure you want to delete this job?')) return
+
+    try {
+      // Delete from Firebase
+      const jobRef = doc(db, 'jobs', jobId)
+      await deleteDoc(jobRef)
+
+      // Update local state
       setJobs(jobs.filter(j => j.id !== jobId))
       alert('Job deleted successfully')
+    } catch (error) {
+      console.error('Error deleting job:', error)
+      alert('Error deleting job')
     }
   }, [jobs])
 
@@ -525,13 +493,39 @@ export default function JobsPage() {
     setShowExecutionModal(true)
   }
 
-  const handleLogExecution = () => {
+  const handleLogExecution = async () => {
     if (!selectedJobForExecution) return
-    handleUpdateJobStatus(selectedJobForExecution.id, 'In Progress')
-    setShowExecutionModal(false)
+    
+    try {
+      // Update job status in Firebase
+      const jobRef = doc(db, 'jobs', selectedJobForExecution.id)
+      await updateDoc(jobRef, {
+        status: 'In Progress',
+        updatedAt: new Date().toISOString()
+      })
+
+      // Add execution log
+      const executionLog = {
+        timestamp: new Date().toISOString(),
+        checklist: executionChecklist,
+        notes: executionNotes,
+        type: 'execution_started'
+      }
+
+      await updateDoc(jobRef, {
+        executionLogs: [...selectedJobForExecution.executionLogs, executionLog]
+      })
+
+      // Update local state
+      handleUpdateJobStatus(selectedJobForExecution.id, 'In Progress')
+      setShowExecutionModal(false)
+    } catch (error) {
+      console.error('Error logging execution:', error)
+      alert('Error logging execution')
+    }
   }
 
-  const handleSaveNewJob = useCallback((jobData: any) => {
+  const handleSaveNewJob = useCallback(async (jobData: any) => {
     try {
       // Validate required fields
       if (!jobData.title || !jobData.client || !jobData.location) {
@@ -539,23 +533,21 @@ export default function JobsPage() {
         return
       }
 
-      // Create new job with unique ID
-      const newJobId = Math.max(...jobs.map(j => j.id), 0) + 1
-      const newJob: Job = {
-        id: newJobId,
+      // Prepare job data for Firebase
+      const newJobData = {
         title: jobData.title,
         client: jobData.client,
-        clientId: jobData.clientId || 0,
+        clientId: jobData.clientId || '',
         description: jobData.description || '',
         status: 'Pending',
-        priority: (jobData.priority || 'Medium') as Job['priority'],
+        priority: jobData.priority || 'Medium',
         location: jobData.location,
         scheduledDate: jobData.scheduledDate || null,
         scheduledTime: jobData.scheduledTime || '09:00',
         endTime: jobData.endTime || '17:00',
-        estimatedDuration: jobData.estimatedDuration || '8',
+        estimatedDuration: jobData.estimatedDuration || '8 hours',
         slaDeadline: jobData.slaDeadline || '',
-        riskLevel: (jobData.riskLevel || 'Low') as Job['riskLevel'],
+        riskLevel: jobData.riskLevel || 'Low',
         teamRequired: jobData.teamRequired || 1,
         budget: jobData.budget || 0,
         actualCost: 0,
@@ -569,21 +561,42 @@ export default function JobsPage() {
         updatedAt: new Date().toISOString(),
         executionLogs: [],
         assignedTo: [],
-        reminderEnabled: false
+        reminderEnabled: false,
+        reminderSent: false,
+        overtimeRequired: false,
+        overtimeHours: 0,
+        overtimeReason: '',
+        overtimeApproved: false
       }
 
-      // Add new job to jobs array
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, 'jobs'), newJobData)
+      
+      // Add to local state with Firestore ID
+      const newJob: Job = {
+        id: docRef.id,
+        ...newJobData
+      } as Job
+      
       setJobs([...jobs, newJob])
-      
-      // Close form
       setShowNewJobForm(false)
-      
       alert(`Job "${newJob.title}" created successfully`)
     } catch (error) {
       console.error('Error creating job:', error)
       alert('Error creating job. Please try again.')
     }
   }, [jobs])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading jobs...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 pb-8">
@@ -686,7 +699,7 @@ export default function JobsPage() {
             </select>
 
             <button
-              onClick={() => setShowNewJobForm(true)}
+              onClick={handleAddJob}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -719,22 +732,29 @@ export default function JobsPage() {
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">{job.client}</p>
                         </div>
-                          <div className="flex gap-2 flex-wrap justify-end">
-                            <span className={`text-xs font-bold px-3 py-1 border rounded-full ${getPriorityColor(job.priority)}`}>
-                              {job.priority}
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          <span className={`text-xs font-bold px-3 py-1 border rounded-full ${getPriorityColor(job.priority)}`}>
+                            {job.priority}
+                          </span>
+                          <span className={`text-xs font-bold px-3 py-1 border rounded-full ${getStatusColor(job.status)}`}>
+                            {job.status}
+                          </span>
+                          {job.overtimeRequired && (
+                            <span className={`text-xs font-bold px-3 py-1 border rounded-full flex items-center gap-1 ${job.overtimeApproved ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}>
+                              <Zap className="h-3 w-3" /> OT: {job.overtimeHours}h {job.overtimeApproved ? '✓' : ''}
                             </span>
-                            <span className={`text-xs font-bold px-3 py-1 border rounded-full ${getStatusColor(job.status)}`}>
-                              {job.status}
-                            </span>
-                            {job.overtimeRequired && (
-                              <span className={`text-xs font-bold px-3 py-1 border rounded-full flex items-center gap-1 ${job.overtimeApproved ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}>
-                                <Zap className="h-3 w-3" /> OT: {job.overtimeHours}h {job.overtimeApproved ? '✓' : ''}
-                              </span>
-                            )}
+                          )}
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-3">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 shrink-0" />
                           <span>{job.scheduledDate ? new Date(job.scheduledDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'Not scheduled'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          <span>{job.location}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 shrink-0" />
@@ -747,7 +767,7 @@ export default function JobsPage() {
                       </div>
 
                       {job.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">{job.description}</p>
+                        <p className="text-sm text-gray-600 mt-3 line-clamp-2">{job.description}</p>
                       )}
 
                       {/* Team Attendance Status */}
@@ -884,14 +904,12 @@ export default function JobsPage() {
                       </>
                     )}
 
-                    {job.status !== 'Completed' && (
-                      <Link href={`/admin/jobs/${job.id}`}>
-                        <button className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          Details
-                        </button>
-                      </Link>
-                    )}
+                    <Link href={`/admin/jobs/${job.id}`}>
+                      <button className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Details
+                      </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -906,13 +924,13 @@ export default function JobsPage() {
         )}
       </div>
 
-      {/* New Job Side Panel */}
+      {/* New Job Modal */}
       {showNewJobModal && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => setShowNewJobModal(false)}></div>
+          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => { setShowNewJobModal(false); setEditingJobId(null) }}></div>
           <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 bg-linear-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold">{editingJobId ? 'Edit Job' : 'Create New Job'}</h2>
                 <p className="text-blue-100 text-sm mt-1">Complete all job details</p>
@@ -947,7 +965,7 @@ export default function JobsPage() {
                     <select
                       value={newJobForm.clientId || ''}
                       onChange={(e) => {
-                        const selected = AVAILABLE_CLIENTS.find(c => c.id === parseInt(e.target.value))
+                        const selected = clients.find(c => c.id === e.target.value)
                         setNewJobForm({
                           ...newJobForm,
                           clientId: selected?.id || null,
@@ -957,12 +975,15 @@ export default function JobsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="">Select a client</option>
-                      {AVAILABLE_CLIENTS.map((client) => (
+                      {clients.map((client) => (
                         <option key={client.id} value={client.id}>
                           {client.name}
                         </option>
                       ))}
                     </select>
+                    {newJobForm.clientId === null && newJobForm.client && (
+                      <p className="text-sm text-gray-500 mt-1">Client will be saved as: {newJobForm.client}</p>
+                    )}
                   </div>
                 </div>
 
@@ -1169,7 +1190,7 @@ export default function JobsPage() {
                 <button
                   onClick={() => {
                     const newService: JobService = {
-                      id: Math.random(),
+                      id: Math.random().toString(36).substr(2, 9),
                       name: '',
                       quantity: 1,
                       unitPrice: 0,
@@ -1407,14 +1428,6 @@ export default function JobsPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* New Job Form Modal */}
-      {showNewJobForm && (
-        <NewJobForm
-          onClose={() => setShowNewJobForm(false)}
-          onSave={handleSaveNewJob}
-        />
       )}
     </div>
   )
