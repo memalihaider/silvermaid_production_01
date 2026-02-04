@@ -1,4 +1,6 @@
-import { ReactNode } from 'react'
+"use client"
+
+import { ReactNode, useState, useEffect } from 'react'
 import { 
   Phone, Mail, Facebook, Linkedin, Instagram, MessageCircle, ChevronDown,
   Home, Briefcase, Maximize, Sun, Sofa, Layers, Bed, 
@@ -6,25 +8,68 @@ import {
   Fan, Pipette, Utensils, Waves, Dumbbell, PanelTop, ThermometerSnowflake,
   Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight
 } from 'lucide-react'
+import { db } from '@/lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
+  const [profileData, setProfileData] = useState({
+    phone: '80046639675',
+    email: 'services@homeworkuae.com',
+    company: 'homeware'
+  })
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch profile data from Firebase
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const docRef = doc(db, 'profile-setting', 'admin-settings')
+        const docSnap = await getDoc(docRef)
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data()
+          if (data.profile) {
+            setProfileData({
+              phone: data.profile.phone || '80046639675',
+              email: data.profile.email || 'services@homeworkuae.com',
+              company: data.profile.company || 'homeware'
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error)
+        // Keep default values if Firebase fails
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProfileData()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white text-slate-900 transition-colors duration-300">
       {/* Top Bar - Enhanced */}
       <div className="bg-gradient-to-r from-primary via-primary to-pink-700 text-white py-3 hidden md:block border-b border-white/10">
         <div className="container mx-auto px-4 flex justify-between items-center text-xs font-bold">
           <div className="flex items-center gap-8">
-            <a href="tel:80046639675" className="flex items-center gap-2 hover:text-white/90 transition-all group">
+            <a 
+              href={`tel:${profileData.phone}`} 
+              className="flex items-center gap-2 hover:text-white/90 transition-all group"
+            >
               <div className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all">
                 <Phone className="h-3.5 w-3.5" />
               </div>
-              <span className="tracking-wider">80046639675</span>
+              <span className="tracking-wider">{profileData.phone}</span>
             </a>
-            <a href="mailto:services@homeworkuae.com" className="flex items-center gap-2 hover:text-white/90 transition-all group">
+            <a 
+              href={`mailto:${profileData.email}`} 
+              className="flex items-center gap-2 hover:text-white/90 transition-all group"
+            >
               <div className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all">
                 <Mail className="h-3.5 w-3.5" />
               </div>
-              <span className="tracking-wide">services@homeworkuae.com</span>
+              <span className="tracking-wide">{profileData.email}</span>
             </a>
           </div>
           <div className="flex items-center gap-3">
@@ -239,13 +284,13 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-lg">
                     <Phone className="h-4 w-4" />
                   </div>
-                  <a href="tel:80046639675" className="group-hover:text-white transition-colors">80046639675</a>
+                  <a href={`tel:${profileData.phone}`} className="group-hover:text-white transition-colors">{profileData.phone}</a>
                 </li>
                 <li className="flex items-start gap-4 group cursor-pointer">
                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-lg">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <a href="mailto:services@homeworkuae.com" className="group-hover:text-white transition-colors">services@homeworkuae.com</a>
+                  <a href={`mailto:${profileData.email}`} className="group-hover:text-white transition-colors">{profileData.email}</a>
                 </li>
               </ul>
             </div>
@@ -337,7 +382,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         
         {/* Phone Button - Secondary */}
         <a 
-          href="tel:80046639675" 
+          href={`tel:${profileData.phone}`} 
           className="pointer-events-auto group relative"
         >
           {/* Main button */}
@@ -347,13 +392,13 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           
           {/* Tooltip */}
           <div className="absolute -left-44 bottom-0 px-4 py-3 bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-2xl border border-white/10 md:block hidden">
-            📞 Call: 800 4663 9675
+            📞 Call: {profileData.phone}
           </div>
         </a>
 
         {/* Email Button - Tertiary */}
         <a 
-          href="mailto:services@homeworkuae.com" 
+          href={`mailto:${profileData.email}`} 
           className="pointer-events-auto group relative"
         >
           {/* Main button */}

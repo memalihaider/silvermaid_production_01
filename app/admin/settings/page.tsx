@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   User, 
   Bell, 
@@ -9,25 +9,30 @@ import {
   CreditCard, 
   Mail, 
   Smartphone, 
-  Lock,
   Save,
   ChevronRight,
   Moon,
   Sun,
-  Monitor,
-  X
+  Monitor
 } from 'lucide-react'
+import { db } from '@/lib/firebase'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState('profile')
   const [showSave, setShowSave] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  
+  // Profile Data
   const [profileData, setProfileData] = useState({
-    fullName: 'Admin User',
-    email: 'admin@homeware.ae',
-    phone: '+971-50-1234567',
-    company: 'Homework UAE',
+    fullName: '',
+    email: '',
+    phone: '',
+    company: '',
     role: 'Administrator'
   })
+  
+  // Notification Settings
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     smsNotifications: true,
@@ -35,23 +40,98 @@ export default function Settings() {
     jobAlerts: true,
     systemUpdates: false
   })
+  
+  // Security Settings
   const [securitySettings, setSecuritySettings] = useState({
     twoFactor: false,
     sessionTimeout: '30',
     passwordExpiry: '90'
   })
+  
+  // Billing Settings
   const [billingSettings, setBillingSettings] = useState({
-    billingEmail: 'billing@homeware.ae',
+    billingEmail: '',
     paymentMethod: 'Bank Transfer',
     invoiceFrequency: 'Monthly',
     autoRenewal: true
   })
+  
+  // General Settings
   const [generalSettings, setGeneralSettings] = useState({
     theme: 'light',
     language: 'English',
     timezone: 'UAE (GMT+4)',
     dateFormat: 'DD/MM/YYYY'
   })
+
+  // Fetch settings from Firebase on component mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'profile-setting', 'admin-settings')
+        const docSnap = await getDoc(docRef)
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data()
+          
+          // Set profile data
+          if (data.profile) {
+            setProfileData({
+              fullName: data.profile.fullName || '',
+              email: data.profile.email || '',
+              phone: data.profile.phone || '',
+              company: data.profile.company || '',
+              role: data.profile.role || 'Administrator'
+            })
+          }
+          
+          // Set notification settings
+          if (data.notifications) {
+            setNotificationSettings({
+              emailNotifications: data.notifications.emailNotifications !== undefined ? data.notifications.emailNotifications : true,
+              smsNotifications: data.notifications.smsNotifications !== undefined ? data.notifications.smsNotifications : true,
+              meetingReminders: data.notifications.meetingReminders !== undefined ? data.notifications.meetingReminders : true,
+              jobAlerts: data.notifications.jobAlerts !== undefined ? data.notifications.jobAlerts : true,
+              systemUpdates: data.notifications.systemUpdates !== undefined ? data.notifications.systemUpdates : false
+            })
+          }
+          
+          // Set security settings
+          if (data.security) {
+            setSecuritySettings({
+              twoFactor: data.security.twoFactor || false,
+              sessionTimeout: data.security.sessionTimeout || '30',
+              passwordExpiry: data.security.passwordExpiry || '90'
+            })
+          }
+          
+          // Set billing settings
+          if (data.billing) {
+            setBillingSettings({
+              billingEmail: data.billing.billingEmail || '',
+              paymentMethod: data.billing.paymentMethod || 'Bank Transfer',
+              invoiceFrequency: data.billing.invoiceFrequency || 'Monthly',
+              autoRenewal: data.billing.autoRenewal !== undefined ? data.billing.autoRenewal : true
+            })
+          }
+          
+          // Set general settings
+          if (data.general) {
+            setGeneralSettings({
+              theme: data.general.theme || 'light',
+              language: data.general.language || 'English',
+              timezone: data.general.timezone || 'UAE (GMT+4)',
+              dateFormat: data.general.dateFormat || 'DD/MM/YYYY'
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+      }
+    }
+    
+    fetchSettings()
+  }, [])
 
   const sections = [
     { id: 'profile', label: 'Profile Settings', icon: User },
@@ -61,38 +141,57 @@ export default function Settings() {
     { id: 'general', label: 'General', icon: Globe },
   ]
 
-  const handleSaveSettings = useCallback(() => {
-    alert('Settings saved successfully!')
-    setShowSave(false)
-  }, [])
+  // Save all settings to Firebase
+  const handleSaveSettings = async () => {
+    setIsSaving(true)
+    try {
+      const settingsData = {
+        profile: profileData,
+        notifications: notificationSettings,
+        security: securitySettings,
+        billing: billingSettings,
+        general: generalSettings,
+        lastUpdated: new Date()
+      }
+      
+      await setDoc(doc(db, 'profile-setting', 'admin-settings'), settingsData)
+      alert('Settings saved successfully to Firebase!')
+      setShowSave(false)
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      alert('Error saving settings. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
-  const handleProfileChange = useCallback((field: any, value: any) => {
+  const handleProfileChange = (field: string, value: string) => {
     setProfileData({ ...profileData, [field]: value })
     setShowSave(true)
-  }, [profileData])
+  }
 
-  const handleNotificationToggle = useCallback((setting: string) => {
+  const handleNotificationToggle = (setting: string) => {
     setNotificationSettings({
       ...notificationSettings,
-      [setting as keyof typeof notificationSettings]: !(notificationSettings[setting as keyof typeof notificationSettings] as any)
+      [setting]: !notificationSettings[setting as keyof typeof notificationSettings]
     })
     setShowSave(true)
-  }, [notificationSettings])
+  }
 
-  const handleSecurityChange = useCallback((field: any, value: any) => {
+  const handleSecurityChange = (field: string, value: string | boolean) => {
     setSecuritySettings({ ...securitySettings, [field]: value })
     setShowSave(true)
-  }, [securitySettings])
+  }
 
-  const handleBillingChange = useCallback((field: any, value: any) => {
+  const handleBillingChange = (field: string, value: string | boolean) => {
     setBillingSettings({ ...billingSettings, [field]: value })
     setShowSave(true)
-  }, [billingSettings])
+  }
 
-  const handleGeneralChange = useCallback((field: any, value: any) => {
+  const handleGeneralChange = (field: string, value: string) => {
     setGeneralSettings({ ...generalSettings, [field]: value })
     setShowSave(true)
-  }, [generalSettings])
+  }
 
   return (
     <div className="space-y-8">
@@ -140,6 +239,7 @@ export default function Settings() {
                     value={profileData.fullName}
                     onChange={(e) => handleProfileChange('fullName', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="Enter your full name"
                   />
                 </div>
 
@@ -150,6 +250,7 @@ export default function Settings() {
                     value={profileData.email}
                     onChange={(e) => handleProfileChange('email', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="Enter your email address"
                   />
                 </div>
 
@@ -160,6 +261,7 @@ export default function Settings() {
                     value={profileData.phone}
                     onChange={(e) => handleProfileChange('phone', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="Enter your phone number"
                   />
                 </div>
 
@@ -170,30 +272,29 @@ export default function Settings() {
                     value={profileData.company}
                     onChange={(e) => handleProfileChange('company', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="Enter company name"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Role</label>
-                  <select
-                    value={profileData.role}
-                    onChange={(e) => handleProfileChange('role', e.target.value)}
-                    className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                  >
-                    <option>Administrator</option>
-                    <option>Manager</option>
-                    <option>Supervisor</option>
-                    <option>Staff</option>
-                  </select>
-                </div>
-
                 <button
-                  onClick={() => alert('Password change functionality would open a secure dialog')}
-                  className="w-full px-4 py-2 border border-pink-600 text-pink-600 rounded-lg text-sm font-medium hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors mt-4"
+                  onClick={handleSaveSettings}
+                  disabled={isSaving}
+                  className="w-full px-4 py-3 bg-pink-600 text-white rounded-lg text-sm font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <Lock className="inline-block mr-2 h-4 w-4" />
-                  Change Password
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save Profile Information
+                    </>
+                  )}
                 </button>
+                
+              
               </div>
             </div>
           )}
@@ -219,12 +320,12 @@ export default function Settings() {
                     <button
                       onClick={() => handleNotificationToggle(key)}
                       className={`relative w-12 h-6 rounded-full transition-colors ${
-                        (notificationSettings as any)[key] ? 'bg-green-600' : 'bg-gray-300'
+                        notificationSettings[key as keyof typeof notificationSettings] ? 'bg-green-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
                         className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                          (notificationSettings as any)[key] ? 'translate-x-6' : ''
+                          notificationSettings[key as keyof typeof notificationSettings] ? 'translate-x-6' : ''
                         }`}
                       />
                     </button>
@@ -266,10 +367,10 @@ export default function Settings() {
                     onChange={(e) => handleSecurityChange('sessionTimeout', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   >
-                    <option>15</option>
-                    <option>30</option>
-                    <option>60</option>
-                    <option>120</option>
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="60">60</option>
+                    <option value="120">120</option>
                   </select>
                 </div>
 
@@ -280,10 +381,10 @@ export default function Settings() {
                     onChange={(e) => handleSecurityChange('passwordExpiry', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   >
-                    <option>30</option>
-                    <option>60</option>
-                    <option>90</option>
-                    <option>180</option>
+                    <option value="30">30</option>
+                    <option value="60">60</option>
+                    <option value="90">90</option>
+                    <option value="180">180</option>
                   </select>
                 </div>
 
@@ -313,6 +414,7 @@ export default function Settings() {
                     value={billingSettings.billingEmail}
                     onChange={(e) => handleBillingChange('billingEmail', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="Enter billing email address"
                   />
                 </div>
 
@@ -381,9 +483,9 @@ export default function Settings() {
                     onChange={(e) => handleGeneralChange('theme', e.target.value)}
                     className="w-full px-4 py-2 bg-muted border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   >
-                    <option>light</option>
-                    <option>dark</option>
-                    <option>auto</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="auto">Auto</option>
                   </select>
                 </div>
 
@@ -432,16 +534,17 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Global Save Button */}
       {showSave && (
         <div className="fixed bottom-6 right-6 bg-pink-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Save className="h-4 w-4" />
-          <span className="font-medium">Changes detected</span>
+          <span className="font-medium">Unsaved changes</span>
           <button
             onClick={handleSaveSettings}
-            className="ml-4 px-4 py-1.5 bg-white text-pink-600 rounded font-medium text-sm hover:bg-pink-50 transition-colors"
+            disabled={isSaving}
+            className="ml-4 px-4 py-1.5 bg-white text-pink-600 rounded font-medium text-sm hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {isSaving ? 'Saving...' : 'Save All Changes'}
           </button>
         </div>
       )}
