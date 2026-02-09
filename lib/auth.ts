@@ -195,6 +195,8 @@ import { doc, setDoc, getDoc, updateDoc, collection } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
 export interface UserRole {
+  allowedJobs: any
+  allowedJobs: boolean
   id: string
   email: string
   name: string
@@ -215,12 +217,7 @@ export interface SessionData {
 }
 
 export async function createUserWithRole(
-  email: string, 
-  password: string, 
-  name: string, 
-  allowedPages: string[],
-  roleName: string
-) {
+email: string, password: string, name: string, allowedPages: string[], roleName: string, allowedJobs: string[]) {
   try {
     // Firebase authentication mein user create karna
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
