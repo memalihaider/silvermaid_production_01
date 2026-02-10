@@ -195,8 +195,7 @@ import { doc, setDoc, getDoc, updateDoc, collection } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
 export interface UserRole {
-  allowedJobs: any
-  allowedJobs: boolean
+ 
   id: string
   email: string
   name: string
