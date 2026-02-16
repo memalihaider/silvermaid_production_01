@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell, Mail, File, Send, CheckCircle, AlertCircle, RefreshCw, User, Building2, Phone, Calendar, FileText, Loader2, MessageSquare, Smartphone } from 'lucide-react'
+import { Bell, Mail, File, Send, CheckCircle, AlertCircle, RefreshCw, User, Building2, Phone, Calendar, FileText, Loader2, MessageSquare, Smartphone, Filter, X } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore'
 import { getPDFAsBlob } from '@/lib/pdfGenerator'
 import { sendEmailWithAttachment } from '@/lib/gmailService'
-import { sharePDFViaWhatsApp, formatPhoneForWhatsApp } from '@/lib/whatsappService'
+import { openWhatsAppWithQuotation, formatPhoneForWhatsApp } from '@/lib/whatsappService'
 
-interface TodayQuotation {
+interface Quotation {
   id: string;
   quoteNumber: string;
   client: string;
@@ -20,8 +20,22 @@ interface TodayQuotation {
   status: string;
   date: string;
   validUntil: string;
-  services: any[];
-  products: any[];
+  services: Array<{
+    id: string;
+    name: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
+  products: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
   notes: string;
   terms: string;
   subtotal: number;
@@ -31,7 +45,6 @@ interface TodayQuotation {
   discount: number;
   discountType: string;
   location: string;
-  // Missing properties from QuotationData
   dueDate?: string;
   paymentMethods?: any[];
   createdAt?: string | Date;
@@ -39,8 +52,8 @@ interface TodayQuotation {
   createdBy?: string;
 }
 
-// Helper function to convert TodayQuotation to QuotationData format
-const convertToQuotationData = (quotation: TodayQuotation): any => {
+// Helper function to convert Quotation to QuotationData format
+const convertToQuotationData = (quotation: Quotation): any => {
   return {
     id: quotation.id,
     quoteNumber: quotation.quoteNumber,
@@ -64,7 +77,6 @@ const convertToQuotationData = (quotation: TodayQuotation): any => {
     discount: quotation.discount,
     discountType: quotation.discountType,
     location: quotation.location,
-    // Required properties for QuotationData
     dueDate: quotation.dueDate || quotation.validUntil || quotation.date,
     paymentMethods: quotation.paymentMethods || [],
     createdAt: quotation.createdAt || quotation.date || new Date(),
@@ -74,26 +86,37 @@ const convertToQuotationData = (quotation: TodayQuotation): any => {
 }
 
 export default function QuotationReminders() {
-  const [todayQuotations, setTodayQuotations] = useState<TodayQuotation[]>([])
-  const [loading, setLoading] = useState(true)
+  const [quotations, setQuotations] = useState<Quotation[]>([])
+  const [filteredQuotations, setFilteredQuotations] = useState<Quotation[]>([])
   const [sendingEmail, setSendingEmail] = useState<string | null>(null)
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null)
   const [status, setStatus] = useState<Record<string, {
     email?: 'sending' | 'sent' | 'error';
     whatsapp?: 'sending' | 'sent' | 'error';
   }>>({})
+  
+  // Date filter states
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [showDateFilter, setShowDateFilter] = useState(false)
+  
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    sent: 0,
+    draft: 0,
+    approved: 0,
+    rejected: 0,
+    totalValue: 0
+  })
 
-  // Fetch today's quotations
-  const fetchTodayQuotations = async () => {
+  // Fetch all quotations
+  const fetchAllQuotations = async () => {
     try {
-      setLoading(true)
-      const todayDate = new Date().toISOString().split('T')[0]
-      
       const snapshot = await getDocs(collection(db, 'quotations'))
       
-      const allQuotations: TodayQuotation[] = snapshot.docs.map(doc => {
+      const allQuotations: Quotation[] = snapshot.docs.map(doc => {
         const data = doc.data()
-        const quoteDate = data.date || ''
         
         return {
           id: doc.id,
@@ -105,7 +128,7 @@ export default function QuotationReminders() {
           total: data.total || 0,
           currency: data.currency || 'AED',
           status: data.status || 'Draft',
-          date: quoteDate,
+          date: data.date || '',
           validUntil: data.validUntil || '',
           services: data.services || [],
           products: data.products || [],
@@ -118,8 +141,7 @@ export default function QuotationReminders() {
           discount: data.discount || 0,
           discountType: data.discountType || 'percentage',
           location: data.location || '',
-          // Adding missing properties with fallback values
-          dueDate: data.dueDate || data.validUntil || quoteDate,
+          dueDate: data.dueDate || data.validUntil || data.date,
           paymentMethods: data.paymentMethods || [],
           createdAt: data.createdAt || data.date || new Date(),
           updatedAt: data.updatedAt || new Date(),
@@ -127,24 +149,89 @@ export default function QuotationReminders() {
         }
       })
       
-      // Filter for today's quotations
-      const todays = allQuotations.filter(q => q.date === todayDate)
+      // Sort by date (newest first)
+      allQuotations.sort((a, b) => {
+        return (b.date || '').localeCompare(a.date || '')
+      })
       
-      setTodayQuotations(todays)
+      setQuotations(allQuotations)
+      applyDateFilter(allQuotations, startDate, endDate)
+      calculateStats(allQuotations)
       
     } catch (error) {
       console.error('Error fetching quotations:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
+  // Apply date filter
+  const applyDateFilter = (data: Quotation[], start: string, end: string) => {
+    if (!start && !end) {
+      setFilteredQuotations(data)
+      return
+    }
+    
+    const filtered = data.filter(q => {
+      const quoteDate = q.date || ''
+      if (!quoteDate) return false
+      
+      if (start && end) {
+        return quoteDate >= start && quoteDate <= end
+      } else if (start) {
+        return quoteDate >= start
+      } else if (end) {
+        return quoteDate <= end
+      }
+      return true
+    })
+    
+    setFilteredQuotations(filtered)
+  }
+
+  // Handle filter change
+  const handleFilterChange = (start: string, end: string) => {
+    setStartDate(start)
+    setEndDate(end)
+    applyDateFilter(quotations, start, end)
+  }
+
+  // Clear date filter
+  const clearDateFilter = () => {
+    setStartDate('')
+    setEndDate('')
+    setFilteredQuotations(quotations)
+    setShowDateFilter(false)
+  }
+
+  // Calculate statistics
+  const calculateStats = (data: Quotation[]) => {
+    const total = data.length
+    const sent = data.filter(q => q.status === 'Sent').length
+    const draft = data.filter(q => q.status === 'Draft').length
+    const approved = data.filter(q => q.status === 'Approved' || q.status === 'Accepted').length
+    const rejected = data.filter(q => q.status === 'Rejected').length
+    const totalValue = data.reduce((sum, q) => sum + (q.total || 0), 0)
+    
+    setStats({
+      total,
+      sent,
+      draft,
+      approved,
+      rejected,
+      totalValue
+    })
+  }
+
   useEffect(() => {
-    fetchTodayQuotations()
+    fetchAllQuotations()
   }, [])
 
+  // Update stats when quotations change
+  useEffect(() => {
+    calculateStats(quotations)
+  }, [quotations])
+
   // Send email with PDF
-  const handleSendEmail = async (quotation: TodayQuotation) => {
+  const handleSendEmail = async (quotation: Quotation) => {
     if (!quotation.email) {
       alert('Email address not available for this client')
       return
@@ -154,12 +241,11 @@ export default function QuotationReminders() {
       setSendingEmail(quotation.id)
       setStatus(prev => ({ ...prev, [quotation.id]: { ...prev[quotation.id], email: 'sending' } }))
 
-      // Convert to QuotationData before passing to getPDFAsBlob and sendEmailWithAttachment
       const quotationData = convertToQuotationData(quotation)
       const pdfBlob = getPDFAsBlob(quotationData)
       
       await sendEmailWithAttachment(
-        quotationData, // Pass converted data instead of original quotation
+        quotationData,
         pdfBlob,
         // Success callback
         () => {
@@ -186,17 +272,10 @@ export default function QuotationReminders() {
     }
   }
 
-  // Send WhatsApp with PDF
-  const handleSendWhatsApp = async (quotation: TodayQuotation) => {
+  // Send WhatsApp with complete quotation details (NO PDF)
+  const handleSendWhatsApp = async (quotation: Quotation) => {
     if (!quotation.phone) {
       alert('Phone number not available for this client')
-      return
-    }
-
-    // Check if phone number is valid for WhatsApp
-    const formattedPhone = formatPhoneForWhatsApp(quotation.phone)
-    if (!formattedPhone) {
-      alert('Invalid phone number format for WhatsApp')
       return
     }
 
@@ -204,10 +283,10 @@ export default function QuotationReminders() {
       setSendingWhatsApp(quotation.id)
       setStatus(prev => ({ ...prev, [quotation.id]: { ...prev[quotation.id], whatsapp: 'sending' } }))
 
-      // Convert to QuotationData before passing to sharePDFViaWhatsApp
       const quotationData = convertToQuotationData(quotation)
       
-      await sharePDFViaWhatsApp(
+      // Use the new function that opens WhatsApp with pre-filled message
+      openWhatsAppWithQuotation(
         quotationData,
         // Success callback
         () => {
@@ -222,9 +301,9 @@ export default function QuotationReminders() {
       )
 
     } catch (error) {
-      console.error('Error sending WhatsApp:', error)
+      console.error('Error opening WhatsApp:', error)
       setStatus(prev => ({ ...prev, [quotation.id]: { ...prev[quotation.id], whatsapp: 'error' } }))
-      alert('❌ Error sending WhatsApp')
+      alert('❌ Error opening WhatsApp')
     } finally {
       setSendingWhatsApp(null)
     }
@@ -239,6 +318,12 @@ export default function QuotationReminders() {
         sentAt: new Date(),
         updatedAt: new Date()
       })
+      
+      // Update local state
+      setQuotations(prev => prev.map(q => 
+        q.id === quotationId ? { ...q, status } : q
+      ))
+      
     } catch (error) {
       console.error('Error updating quotation status:', error)
     }
@@ -268,33 +353,105 @@ export default function QuotationReminders() {
     } else if (status === 'error') {
       return <AlertCircle className="w-4 h-4" />
     }
-    return type === 'email' ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />
+    return type === 'email' ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />
   }
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-white border border-gray-300 rounded p-4 shadow-none">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-[12px] uppercase font-bold text-black flex items-center gap-2">
               <Bell className="w-4 h-4" />
               Send Quotations via Email & WhatsApp
             </h3>
-            <p className="text-xs text-gray-500">One-click sending with PDF attachment</p>
+            <p className="text-xs text-gray-500">All quotations - Email with PDF, WhatsApp with details</p>
           </div>
           <button 
-            onClick={fetchTodayQuotations}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 bg-black text-white text-[10px] uppercase font-bold rounded hover:bg-gray-800 transition-colors disabled:opacity-50"
+            onClick={fetchAllQuotations}
+            className="flex items-center gap-2 px-3 py-1.5 bg-black text-white text-[10px] uppercase font-bold rounded hover:bg-gray-800 transition-colors"
           >
-            {loading ? (
-              <RefreshCw className="w-3 h-3 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3 h-3" />
-            )}
+            <RefreshCw className="w-3 h-3" />
             Refresh
           </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+          <div className="bg-white border border-gray-200 rounded p-2">
+            <p className="text-[9px] uppercase font-bold text-gray-400">Total</p>
+            <p className="text-lg font-black text-black">{stats.total}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded p-2">
+            <p className="text-[9px] uppercase font-bold text-gray-400">Sent</p>
+            <p className="text-lg font-black text-blue-600">{stats.sent}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded p-2">
+            <p className="text-[9px] uppercase font-bold text-gray-400">Approved</p>
+            <p className="text-lg font-black text-green-600">{stats.approved}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded p-2">
+            <p className="text-[9px] uppercase font-bold text-gray-400">Draft</p>
+            <p className="text-lg font-black text-yellow-600">{stats.draft}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded p-2">
+            <p className="text-[9px] uppercase font-bold text-gray-400">Total Value</p>
+            <p className="text-lg font-black text-black">{formatCurrency(stats.totalValue)} AED</p>
+          </div>
+        </div>
+
+        {/* Date Filter Section */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowDateFilter(!showDateFilter)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-[10px] uppercase font-bold rounded hover:bg-gray-200 transition-colors mb-2"
+          >
+            <Filter className="w-3 h-3" />
+            {showDateFilter ? 'Hide Date Filter' : 'Show Date Filter'}
+          </button>
+          
+          {showDateFilter && (
+            <div className="bg-gray-50 border border-gray-200 rounded p-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-gray-500">From Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleFilterChange(e.target.value, endDate)}
+                    className="px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-gray-500">To Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleFilterChange(startDate, e.target.value)}
+                    className="px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:border-black"
+                  />
+                </div>
+                <button
+                  onClick={clearDateFilter}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 text-[10px] uppercase font-bold rounded hover:bg-red-100 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear Filter
+                </button>
+              </div>
+              
+              {/* Filter Stats */}
+              <div className="mt-2 text-[10px] text-gray-500">
+                Showing {filteredQuotations.length} of {quotations.length} quotations
+                {(startDate || endDate) && (
+                  <span className="ml-1 text-blue-600">
+                    (Filtered: {startDate || '∞'} to {endDate || '∞'})
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Communication Options Banner */}
@@ -310,23 +467,18 @@ export default function QuotationReminders() {
           </div>
           <div className="bg-green-50 border border-green-200 rounded p-3">
             <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-green-600" />
-              <p className="text-xs font-bold text-green-700">WhatsApp with PDF</p>
+              <MessageSquare className="w-4 h-4 text-green-600" />
+              <p className="text-xs font-bold text-green-700">WhatsApp with Details</p>
             </div>
             <p className="text-[11px] text-green-600 mt-1">
-              Opens WhatsApp Web with PDF download
+              Opens WhatsApp with complete quotation details
             </p>
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-8 text-center">
-            <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Loading today's quotations...</p>
-          </div>
-        ) : todayQuotations.length > 0 ? (
+        {filteredQuotations.length > 0 ? (
           <div className="space-y-3">
-            {todayQuotations.map(q => {
+            {filteredQuotations.map(q => {
               const emailStatus = status[q.id]?.email
               const whatsappStatus = status[q.id]?.whatsapp
               const emailSent = emailStatus === 'sent'
@@ -337,6 +489,7 @@ export default function QuotationReminders() {
                   key={q.id} 
                   className={`border rounded p-4 transition-all ${
                     emailSent || whatsappSent ? 'bg-green-50 border-green-200' :
+                    q.status === 'Sent' ? 'bg-blue-50 border-blue-200' :
                     'bg-white border-gray-300 hover:border-black'
                   }`}
                 >
@@ -356,6 +509,12 @@ export default function QuotationReminders() {
                                 Sent
                               </span>
                             )}
+                            {!emailSent && !whatsappSent && q.status === 'Sent' && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-700">
+                                <CheckCircle className="w-3 h-3" />
+                                {q.status}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[13px] font-bold text-gray-700">{q.client}</p>
                           <p className="text-[11px] text-gray-500">{q.company}</p>
@@ -373,9 +532,9 @@ export default function QuotationReminders() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Phone className="w-3 h-3 text-gray-400" />
+                            <MessageSquare className="w-3 h-3 text-gray-400" />
                             <div>
-                              <p className="text-[10px] uppercase font-bold text-gray-400">Phone</p>
+                              <p className="text-[10px] uppercase font-bold text-gray-400">WhatsApp</p>
                               <p className="text-[11px] font-bold text-gray-700">{q.phone || 'No phone'}</p>
                             </div>
                           </div>
@@ -392,8 +551,8 @@ export default function QuotationReminders() {
                           <div className="flex items-center gap-2">
                             <File className="w-3 h-3 text-gray-400" />
                             <div>
-                              <p className="text-[10px] uppercase font-bold text-gray-400">PDF Ready</p>
-                              <p className="text-[11px] font-bold text-gray-700">Professional Format</p>
+                              <p className="text-[10px] uppercase font-bold text-gray-400">Total Amount</p>
+                              <p className="text-[11px] font-bold text-gray-700">{formatCurrency(q.total)} {q.currency}</p>
                             </div>
                           </div>
                         </div>
@@ -433,7 +592,7 @@ export default function QuotationReminders() {
                           {emailSent && <span className="text-[9px]">Sent</span>}
                         </button>
                         
-                        {/* WhatsApp Button */}
+                        {/* WhatsApp Button - Opens with complete details */}
                         <button 
                           onClick={() => handleSendWhatsApp(q)}
                           disabled={sendingWhatsApp === q.id || whatsappSent || !q.phone}
@@ -453,7 +612,7 @@ export default function QuotationReminders() {
                             {getStatusIcon('whatsapp', whatsappStatus)}
                             <span>WhatsApp</span>
                           </div>
-                          {whatsappStatus === 'sending' && <span className="text-[9px]">Sending...</span>}
+                          {whatsappStatus === 'sending' && <span className="text-[9px]">Opening...</span>}
                           {whatsappSent && <span className="text-[9px]">Sent</span>}
                         </button>
                       </div>
@@ -497,7 +656,7 @@ export default function QuotationReminders() {
                               To: <span className="font-bold">{q.phone}</span>
                             </p>
                             <p className="text-[9px] text-gray-500">
-                              PDF download, opens WhatsApp Web
+                              Complete quotation details pre-filled
                             </p>
                           </>
                         ) : (
@@ -513,22 +672,24 @@ export default function QuotationReminders() {
         ) : (
           <div className="py-12 text-center bg-gray-50/30 border-2 border-dashed border-gray-100 rounded">
             <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-bold text-gray-400">No Quotations Today</p>
-            <p className="text-xs text-gray-500 mt-1">Create quotations to send via Email or WhatsApp</p>
+            <p className="text-sm font-bold text-gray-400">No Quotations Found</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {startDate || endDate ? 'Try changing your date filter' : 'Create quotations to send via Email or WhatsApp'}
+            </p>
           </div>
         )}
       </div>
 
-      
       {/* Summary */}
       <div className="bg-white border border-gray-300 rounded p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-gray-700">Communication Summary</p>
             <p className="text-[10px] text-gray-500">
-              Today: {todayQuotations.length} quotations | 
-              Email Ready: {todayQuotations.filter(q => q.email).length} | 
-              WhatsApp Ready: {todayQuotations.filter(q => q.phone).length}
+              Total: {filteredQuotations.length} quotations (filtered) | 
+              Email Ready: {filteredQuotations.filter(q => q.email).length} | 
+              WhatsApp Ready: {filteredQuotations.filter(q => q.phone).length} |
+              Sent Status: {filteredQuotations.filter(q => q.status === 'Sent').length}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -541,10 +702,10 @@ export default function QuotationReminders() {
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1">
-                <Phone className="w-4 h-4 text-green-500" />
-                <p className="text-[11px] font-bold text-gray-700">WhatsApp with PDF</p>
+                <MessageSquare className="w-4 h-4 text-green-500" />
+                <p className="text-[11px] font-bold text-gray-700">WhatsApp Details</p>
               </div>
-              <p className="text-[10px] text-gray-500">Opens WhatsApp Web</p>
+              <p className="text-[10px] text-gray-500">Opens with pre-filled text</p>
             </div>
           </div>
         </div>

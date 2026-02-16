@@ -72,7 +72,7 @@ export const generateEmailTemplate = (quotation: QuotationData): { html: string,
         
         <div class="content">
             <h2 style="color: #333; margin-bottom: 20px;">Dear ${quotation.client},</h2>
-            <p>Please find attached our detailed quotation for your review. This quotation is also provided below for your convenience.</p>
+           
             
             <div class="info-box">
                 <h3 style="margin-top: 0; color: #000;">Client Information</h3>
@@ -144,7 +144,7 @@ export const generateEmailTemplate = (quotation: QuotationData): { html: string,
             ` : ''}
             
             <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-                A detailed PDF copy of this quotation is attached to this email.<br><br>
+              
                 Please review this quotation and let us know if you have any questions.<br>
                 You can reply directly to this email or contact us at your convenience.
             </p>
@@ -158,7 +158,7 @@ export const generateEmailTemplate = (quotation: QuotationData): { html: string,
         
         <div class="footer">
             <p style="margin: 0; font-size: 11px; color: #888;">
-                This is an automated quotation email. Please do not reply to this email address.<br>
+               
                 If you have any questions, please contact us at info@yourcompany.com or call +971 4 123 4567
             </p>
             <p style="margin: 10px 0 0 0; font-size: 10px; color: #aaa;">
@@ -198,7 +198,7 @@ TOTAL AMOUNT: ${quotation.total?.toLocaleString()} AED
 ${quotation.notes ? `NOTES:\n${quotation.notes}\n` : ''}
 ${quotation.terms ? `TERMS & CONDITIONS:\n${quotation.terms}\n` : ''}
 
-A detailed PDF copy of this quotation is attached to this email.
+
 
 Please review this quotation and let us know if you have any questions.
 
@@ -206,7 +206,7 @@ Best regards,
 Your Company Team
 Sales Department
 
-This is an automated quotation email. Please do not reply to this email address.
+
 © ${new Date().getFullYear()} Your Company. All rights reserved.
 `;
 

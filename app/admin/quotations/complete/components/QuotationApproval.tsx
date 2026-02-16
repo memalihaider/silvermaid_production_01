@@ -65,7 +65,7 @@ export default function QuotationApproval() {
   // Fetch all quotations and filter for Draft status
   const fetchQuotations = async () => {
     try {
-      console.log('Fetching quotations from Firebase...')
+      console.log('Fetching quotations ...')
       const snapshot = await getDocs(collection(db, 'quotations'))
       console.log('Total documents:', snapshot.docs.length)
       
@@ -154,7 +154,7 @@ export default function QuotationApproval() {
         approvedAt: new Date()
       })
 
-      console.log('Quotation approved in Firebase:', quotationId)
+      console.log('Quotation approved :', quotationId)
       
       // Remove from local state
       setQuotations(prev => prev.filter(q => q.id !== quotationId))
@@ -185,7 +185,7 @@ export default function QuotationApproval() {
         rejectionReason: reason.trim()
       })
 
-      console.log('Quotation rejected in Firebase:', quotationId)
+      console.log('Quotation rejected :', quotationId)
       
       // Remove from local state
       setQuotations(prev => prev.filter(q => q.id !== quotationId))
@@ -260,7 +260,7 @@ export default function QuotationApproval() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-black mb-1">Draft Quotation Approvals</h2>
-            <p className="text-sm text-gray-500">Review and approve/reject draft quotations from Firebase</p>
+            <p className="text-sm text-gray-500">Review and approve/reject draft quotations </p>
           </div>
           <button 
             onClick={fetchQuotations}
@@ -485,10 +485,7 @@ export default function QuotationApproval() {
                       </button>
                     </div>
                     
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">Firebase ID</p>
-                      <p className="text-[9px] font-mono text-gray-500 truncate max-w-[150px]">{q.id}</p>
-                    </div>
+                   
                   </div>
                 </div>
               </div>
@@ -515,7 +512,7 @@ export default function QuotationApproval() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-black mb-2">Reject Quotation</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Please provide a reason for rejecting this quotation. Status will be changed to "Rejected" in Firebase.
+              Please provide a reason for rejecting this quotation. Status will be changed to "Rejected" 
             </p>
             
             <textarea
@@ -623,13 +620,7 @@ export default function QuotationApproval() {
                   </div>
                 </div>
 
-                {/* Raw Data View */}
-                <div className="bg-gray-900 p-4 rounded border border-gray-800">
-                  <h4 className="text-sm font-bold text-white mb-3">Firebase Data Structure</h4>
-                  <pre className="text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                    {JSON.stringify(selectedQuotation, null, 2)}
-                  </pre>
-                </div>
+              
               </div>
 
               {/* Modal Footer */}

@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { 
   Search, Filter, MoreVertical, Eye, Edit, Trash2, Mail, 
-  Download, CheckCircle, Clock, XCircle, AlertCircle, RefreshCw
+  Download, CheckCircle, Clock, XCircle, AlertCircle, RefreshCw, FileDown
 } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
+import { getPDFAsBlob } from '@/lib/pdfGenerator'
 
 interface FirebaseQuotation {
   id: string;
@@ -67,6 +68,7 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
   const [quotations, setQuotations] = useState<FirebaseQuotation[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   // Fetch real quotations from Firebase
   const fetchQuotations = async () => {
@@ -83,7 +85,6 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
       setQuotations(quotationsData)
     } catch (error) {
       console.error('Error fetching quotations:', error)
-      alert('Error loading quotations ')
     } finally {
       setLoading(false)
     }
@@ -109,21 +110,62 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
     try {
       setDeletingId(id)
       await deleteDoc(doc(db, 'quotations', id))
-      // Remove from local state
       setQuotations(prev => prev.filter(q => q.id !== id))
-      alert('✅ Quotation deleted successfully!')
     } catch (error) {
       console.error('Error deleting quotation:', error)
-      alert('❌ Error deleting quotation. Please try again.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  // Download PDF for quotation
+  const handleDownloadPDF = async (quotation: FirebaseQuotation) => {
+    try {
+      setDownloadingId(quotation.id)
+      
+      // Prepare quotation data for PDF generator
+      const quotationData = {
+        ...quotation,
+        // Add any missing properties with default values
+        createdAt: quotation.createdAt || new Date(),
+        updatedAt: quotation.updatedAt || new Date(),
+        createdBy: quotation.createdBy || 'admin'
+      }
+      
+      // Generate PDF blob
+      const pdfBlob = getPDFAsBlob(quotationData)
+      
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Quotation_${quotation.quoteNumber.replace('#', '')}_${quotation.client.replace(/\s+/g, '_')}.pdf`
+      
+      // Trigger download
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Clean up
+      window.URL.revokeObjectURL(url)
+      
+      // Show success message
+      setTimeout(() => {
+        alert(`✅ PDF downloaded successfully for ${quotation.quoteNumber}!`)
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert('❌ Error downloading PDF. Please try again.')
+    } finally {
+      setDownloadingId(null)
     }
   }
 
   // Get status badge style
   const getStatusBadgeStyle = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'accepted':
+      case 'approved':
         return 'bg-green-100 text-green-700 border border-green-200'
       case 'sent':
         return 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -141,7 +183,7 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
   // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'accepted':
+      case 'approved':
         return <CheckCircle className="w-2.5 h-2.5" />
       case 'sent':
         return <Clock className="w-2.5 h-2.5" />
@@ -214,32 +256,22 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
             <option value="All">All Statuses</option>
             <option value="Draft">Draft</option>
             <option value="Sent">Sent</option>
-            <option value="Accepted">Accepted</option>
+            <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
             <option value="Expired">Expired</option>
           </select>
         </div>
         <button 
           onClick={fetchQuotations}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm font-bold uppercase tracking-tight hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm font-bold uppercase tracking-tight hover:bg-gray-50 transition-colors"
         >
-          {loading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Loading...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </>
-          )}
+          <RefreshCw className="w-4 h-4" />
+          Refresh
         </button>
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         <div className="bg-white p-3 border border-gray-300 rounded shadow-none">
           <p className="text-[10px] uppercase font-bold text-gray-400">Total Quotes</p>
           <p className="text-2xl font-black text-black">{quotations.length}</p>
@@ -257,9 +289,15 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
           </p>
         </div>
         <div className="bg-white p-3 border border-gray-300 rounded shadow-none">
-          <p className="text-[10px] uppercase font-bold text-gray-400">Accepted</p>
+          <p className="text-[10px] uppercase font-bold text-gray-400">Approved</p>
           <p className="text-2xl font-black text-green-700">
-            {quotations.filter(q => q.status === 'Accepted').length}
+            {quotations.filter(q => q.status === 'Approved').length}
+          </p>
+        </div>
+        <div className="bg-white p-3 border border-gray-300 rounded shadow-none">
+          <p className="text-[10px] uppercase font-bold text-gray-400">Reject</p>
+          <p className="text-2xl font-black text-red-700">
+            {quotations.filter(q => q.status === 'Rejected').length}
           </p>
         </div>
       </div>
@@ -279,16 +317,7 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
-                      <p className="text-sm text-gray-500">Loading quotations</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -327,9 +356,6 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
                           -{q.discount}{q.discountType === 'percentage' ? '%' : ' ' + (q.currency || 'AED')} Off
                         </p>
                       )}
-                      <p className="text-[10px] text-gray-400">
-                        Items: {q.services?.length || 0 + q.products?.length || 0}
-                      </p>
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       <p className="text-[11px] font-bold text-gray-700">{formatDate(q.date)}</p>
@@ -345,16 +371,34 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                       
+                        {/* PDF Download Button - NEW */}
+                        <button 
+                          onClick={() => handleDownloadPDF(q)}
+                          disabled={downloadingId === q.id}
+                          title="Download PDF" 
+                          className={`p-1.5 rounded transition-colors ${
+                            downloadingId === q.id 
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'hover:bg-gray-100 text-green-600'
+                          }`}
+                        >
+                          {downloadingId === q.id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <FileDown className="w-4 h-4" />
+                          )}
+                        </button>
+
+                        {/* Edit Button */}
                         <button 
                           onClick={() => onEdit(q)}
                           title="Edit" 
-                          className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors"
+                          className="p-1.5 hover:bg-gray-100 rounded text-blue-600 transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         
-                        <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                        {/* Delete Button */}
                         <button 
                           onClick={() => handleDelete(q.id)}
                           disabled={deletingId === q.id}
@@ -380,16 +424,10 @@ export default function QuotationList({ onEdit, onView, onSend, refreshTrigger }
           </table>
         </div>
       </div>
-
-      {/* Footer Info */}
-      <div className="flex justify-between items-center text-xs text-gray-500">
-       
-      </div>
     </div>
   )
 }
 
-// Add this import if not already present
 const FileText = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

@@ -39,7 +39,6 @@ interface FirebaseQuotation {
 
 export default function QuotationDashboard() {
   const [quotations, setQuotations] = useState<FirebaseQuotation[]>([])
-  const [loading, setLoading] = useState(true)
   const [totalValue, setTotalValue] = useState(0)
   const [stats, setStats] = useState({
     total: 0,
@@ -56,7 +55,6 @@ export default function QuotationDashboard() {
   // Fetch all quotations from Firebase
   const fetchQuotations = async () => {
     try {
-      setLoading(true)
       const snapshot = await getDocs(collection(db, 'quotations'))
       
       const allQuotations: FirebaseQuotation[] = snapshot.docs.map(doc => ({
@@ -80,8 +78,6 @@ export default function QuotationDashboard() {
       
     } catch (error) {
       console.error('Error fetching quotations:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -172,24 +168,14 @@ export default function QuotationDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-black">Quotation Dashboard</h2>
-          <p className="text-sm text-gray-500">Real-time analytics from Firebase</p>
+          <p className="text-sm text-gray-500">Real-time analytics </p>
         </div>
         <button 
           onClick={fetchQuotations}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-bold rounded hover:bg-gray-800 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-bold rounded hover:bg-gray-800 transition-colors"
         >
-          {loading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Loading...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              Refresh Data
-            </>
-          )}
+          <RefreshCw className="w-4 h-4" />
+          Refresh Data
         </button>
       </div>
 
@@ -204,20 +190,19 @@ export default function QuotationDashboard() {
             <span className="text-[10px] uppercase font-bold text-gray-400">Total Quotes</span>
           </div>
           <p className="text-xl font-bold text-black">{stats.total}</p>
-          <p className="text-[10px] text-gray-400 mt-1">From Firebase</p>
         </div>
 
-        {/* Accepted */}
+        {/* Sent - CHANGED: Previously "Accepted" */}
         <div className="bg-white border border-gray-300 rounded p-3 shadow-none">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-green-500 rounded">
-              <CheckCircle className="w-3.5 h-3.5 text-white" />
+            <div className="p-1.5 bg-blue-500 rounded">
+              <Clock className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-[10px] uppercase font-bold text-gray-400">Accepted</span>
+            <span className="text-[10px] uppercase font-bold text-gray-400">Sent</span>
           </div>
-          <p className="text-xl font-bold text-green-600">{stats.accepted}</p>
+          <p className="text-xl font-bold text-blue-600">{stats.sent}</p>
           <p className="text-[10px] text-gray-400 mt-1">
-            {stats.total > 0 ? ((stats.accepted / stats.total) * 100).toFixed(0) : 0}%
+            {stats.total > 0 ? ((stats.sent / stats.total) * 100).toFixed(0) : 0}% of total
           </p>
         </div>
 
@@ -316,12 +301,7 @@ export default function QuotationDashboard() {
             </span>
           </div>
           
-          {loading ? (
-            <div className="py-8 text-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Loading quotations...</p>
-            </div>
-          ) : quotations.length > 0 ? (
+          {quotations.length > 0 ? (
             <div className="space-y-2">
               {quotations.slice(0, 5).map(q => {
                 const statusColor = getStatusColor(q.status)
@@ -435,9 +415,6 @@ export default function QuotationDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Firebase Information */}
-      
     </div>
   )
 }

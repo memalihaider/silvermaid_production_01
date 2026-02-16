@@ -1,4 +1,3 @@
-// lib/pdfGenerator.ts
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -49,18 +48,39 @@ interface QuotationData {
 export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fileName: string, blobUrl: string } => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
   let yPos = margin;
+  let currentPage = 1;
 
-  // Add Logo/Header
-  doc.setFillColor(0, 0, 0);
-  doc.rect(0, 0, pageWidth, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('QUOTATION', pageWidth / 2, 25, { align: 'center' });
+  // Function to check and add new page
+  const checkPageBreak = (requiredSpace: number) => {
+    if (yPos + requiredSpace > pageHeight - 30) {
+      doc.addPage();
+      currentPage++;
+      yPos = margin;
+      return true;
+    }
+    return false;
+  };
 
+  // Header function (call on each page)
+  const addHeader = () => {
+    doc.setFillColor(0, 0, 0);
+    doc.rect(0, 0, pageWidth, 20, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('QUOTATION', pageWidth / 2, 15, { align: 'center' });
+    
+    // Page number
+    doc.setFontSize(8);
+    doc.text(`Page ${currentPage}`, pageWidth - margin, 35, { align: 'right' });
+  };
+
+  // Add header on first page
+  addHeader();
   yPos = 50;
 
   // Quotation Number and Date
@@ -75,6 +95,9 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
 
   yPos += 15;
 
+  // Check space for From/To section
+  checkPageBreak(40);
+
   // From/To Section
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -83,11 +106,11 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   doc.setFont('helvetica', 'bold');
   doc.text('FROM:', margin, yPos);
   doc.setFont('helvetica', 'normal');
-  doc.text('Your Company Name', margin, yPos + 6);
-  doc.text('Your Address', margin, yPos + 12);
+  doc.text('HOMEWORK CLEANING SERVICES', margin, yPos + 6);
+  doc.text('Al Quoz- Dubai - United Arab Emirates ', margin, yPos + 12);
   doc.text('Dubai, UAE', margin, yPos + 18);
-  doc.text('Phone: +971 4 123 4567', margin, yPos + 24);
-  doc.text('Email: info@yourcompany.com', margin, yPos + 30);
+  doc.text('Phone: 80046639675', margin, yPos + 24);
+  doc.text('Email: services@homeworkuae.com', margin, yPos + 30);
 
   // To (Client)
   doc.setFont('helvetica', 'bold');
@@ -101,7 +124,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
 
   yPos += 45;
 
-  // Items Table
+  // Prepare items for table
   const allItems = [
     ...quotation.services.map(service => ({
       type: 'Service',
@@ -114,106 +137,205 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
     ...quotation.products.map(product => ({
       type: 'Product',
       name: product.name,
-      description: product.sku,
+      description: product.sku ? `SKU: ${product.sku}` : '',
       quantity: product.quantity,
       unitPrice: product.unitPrice,
       total: product.total
     }))
   ];
 
+  // Items Table with auto page break
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total']],
+    head: [['#', 'Item Description', 'Qty', 'Unit Price', `Total (${quotation.currency})`]],
     body: allItems.map((item, index) => [
       index + 1,
-      `${item.name}\n${item.description || ''}`,
+      { 
+        content: `${item.name}\n${item.description || ''}`,
+        styles: { valign: 'middle' }
+      },
       item.quantity,
-      `${item.unitPrice.toLocaleString()} ${quotation.currency}`,
-      `${item.total.toLocaleString()} ${quotation.currency}`
+      { 
+        content: `${item.unitPrice.toLocaleString()}`,
+        styles: { halign: 'right' }
+      },
+      { 
+        content: `${item.total.toLocaleString()}`,
+        styles: { halign: 'right' }
+      }
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { cellWidth: 15 },
-      1: { cellWidth: 80 },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 40, halign: 'right' },
-      4: { cellWidth: 40, halign: 'right' }
+    headStyles: { 
+      fillColor: [0, 0, 0], 
+      textColor: [255, 255, 255], 
+      fontStyle: 'bold',
+      fontSize: 9,
+      halign: 'center'
     },
-    margin: { left: margin, right: margin }
+    styles: { 
+      fontSize: 9, 
+      cellPadding: 4,
+      overflow: 'linebreak',
+      cellWidth: 'wrap'
+    },
+    columnStyles: {
+      0: { cellWidth: 15, halign: 'center' },
+      1: { cellWidth: 80, halign: 'left' },
+      2: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 35, halign: 'right' },
+      4: { cellWidth: 35, halign: 'right' }
+    },
+    margin: { left: margin, right: margin },
+    didDrawPage: (data) => {
+      // Add header on new pages
+      if (data.pageNumber > 1) {
+        addHeader();
+      }
+    }
   });
 
   // Get last autoTable position
   yPos = (doc as any).lastAutoTable.finalY + 15;
 
-  // Financial Summary
+  // Check if we need new page for financial summary
+  checkPageBreak(80);
+
+  // Financial Summary Box
+  doc.setFillColor(245, 245, 245);
+  doc.rect(pageWidth - margin - 120, yPos - 5, 120, 75, 'F');
+  doc.setDrawColor(200, 200, 200);
+  doc.rect(pageWidth - margin - 120, yPos - 5, 120, 75, 'S');
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Financial Summary', margin, yPos);
-  
-  yPos += 15;
+  doc.setFontSize(11);
+  doc.text('FINANCIAL SUMMARY', pageWidth - margin - 115, yPos);
+
+  yPos += 8;
   
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
   const lineHeight = 7;
+  let summaryY = yPos;
   
   // Subtotal
-  doc.text('Subtotal:', margin, yPos);
-  doc.text(`${quotation.subtotal.toLocaleString()} ${quotation.currency}`, pageWidth - margin, yPos, { align: 'right' });
-  yPos += lineHeight;
+  doc.setTextColor(80, 80, 80);
+  doc.text('Subtotal:', pageWidth - margin - 115, summaryY);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`${quotation.subtotal.toLocaleString()} ${quotation.currency}`, pageWidth - margin - 15, summaryY, { align: 'right' });
+  summaryY += lineHeight;
   
   // Discount
   if (quotation.discountAmount > 0) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
     const discountText = quotation.discountType === 'percentage' 
-      ? `Discount (${quotation.discount}%):`
+      ? `Discount (${quotation.discount}%):` 
       : 'Discount:';
-    doc.text(discountText, margin, yPos);
-    doc.text(`-${quotation.discountAmount.toLocaleString()} ${quotation.currency}`, pageWidth - margin, yPos, { align: 'right' });
-    yPos += lineHeight;
+    doc.text(discountText, pageWidth - margin - 115, summaryY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(200, 50, 50);
+    doc.text(`-${quotation.discountAmount.toLocaleString()} ${quotation.currency}`, pageWidth - margin - 15, summaryY, { align: 'right' });
+    summaryY += lineHeight;
   }
   
   // Tax
-  doc.text(`Tax (${quotation.taxRate}%):`, margin, yPos);
-  doc.text(`${quotation.taxAmount.toLocaleString()} ${quotation.currency}`, pageWidth - margin, yPos, { align: 'right' });
-  yPos += lineHeight;
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(`VAT (${quotation.taxRate}%):`, pageWidth - margin - 115, summaryY);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`${quotation.taxAmount.toLocaleString()} ${quotation.currency}`, pageWidth - margin - 15, summaryY, { align: 'right' });
+  summaryY += lineHeight + 3;
+  
+  // Line separator
+  doc.setDrawColor(0, 0, 0);
+  doc.line(pageWidth - margin - 115, summaryY - 2, pageWidth - margin - 15, summaryY - 2);
   
   // Total
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('TOTAL AMOUNT:', margin, yPos);
-  doc.text(`${quotation.total.toLocaleString()} ${quotation.currency}`, pageWidth - margin, yPos, { align: 'right' });
-  
-  yPos += 20;
-  
-  // Notes
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text('TOTAL:', pageWidth - margin - 115, summaryY + 2);
+  doc.text(`${quotation.total.toLocaleString()} ${quotation.currency}`, pageWidth - margin - 15, summaryY + 2, { align: 'right' });
+
+  yPos += 85;
+
+  // Notes Section
   if (quotation.notes) {
+    checkPageBreak(30);
+    
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPos - 3, pageWidth - (2 * margin), 8, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Notes:', margin, yPos);
-    yPos += 5;
+    doc.setTextColor(0, 0, 0);
+    doc.text('NOTES', margin + 5, yPos);
+    
+    yPos += 8;
     doc.setFont('helvetica', 'normal');
-    const notesLines = doc.splitTextToSize(quotation.notes, pageWidth - 2 * margin);
-    doc.text(notesLines, margin, yPos);
-    yPos += notesLines.length * 5 + 10;
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    const notesLines = doc.splitTextToSize(quotation.notes, pageWidth - (2 * margin) - 10);
+    
+    // Check if notes need new page
+    if (yPos + (notesLines.length * 5) > pageHeight - 30) {
+      doc.addPage();
+      currentPage++;
+      addHeader();
+      yPos = margin + 10;
+    }
+    
+    doc.text(notesLines, margin + 5, yPos);
+    yPos += notesLines.length * 5 + 15;
   }
   
-  // Terms
+  // Terms Section
   if (quotation.terms) {
+    checkPageBreak(30);
+    
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPos - 3, pageWidth - (2 * margin), 8, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Terms & Conditions:', margin, yPos);
-    yPos += 5;
+    doc.setTextColor(0, 0, 0);
+    doc.text('TERMS & CONDITIONS', margin + 5, yPos);
+    
+    yPos += 8;
     doc.setFont('helvetica', 'normal');
-    const termsLines = doc.splitTextToSize(quotation.terms, pageWidth - 2 * margin);
-    doc.text(termsLines, margin, yPos);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    const termsLines = doc.splitTextToSize(quotation.terms, pageWidth - (2 * margin) - 10);
+    
+    // Check if terms need new page
+    if (yPos + (termsLines.length * 5) > pageHeight - 30) {
+      doc.addPage();
+      currentPage++;
+      addHeader();
+      yPos = margin + 10;
+    }
+    
+    doc.text(termsLines, margin + 5, yPos);
   }
   
-  // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 20;
-  doc.setFontSize(8);
-  doc.setTextColor(128, 128, 128);
-  doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
-  doc.text('For any inquiries, please contact: info@yourcompany.com | +971 4 123 4567', pageWidth / 2, footerY + 5, { align: 'center' });
+  // Add footer on all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    
+    const footerY = pageHeight - 15;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+    
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont('helvetica', 'normal');
+   
+    doc.text('For inquiries: services@homeworkuae.com | 80046639675', pageWidth / 2, footerY + 4, { align: 'center' });
+    
+    // Page number
+    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
+  }
   
   // Generate file name
   const fileName = `Quotation_${quotation.quoteNumber.replace('#', '')}_${quotation.client.replace(/\s+/g, '_')}.pdf`;
@@ -245,3 +367,4 @@ export const getPDFAsBlob = (quotation: QuotationData): Blob => {
   const { pdf } = generateQuotationPDF(quotation);
   return pdf.output('blob');
 };
+

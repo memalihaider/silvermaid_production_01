@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Plus,
   Search,
@@ -34,56 +34,46 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import { db } from '@/lib/firebase'
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy, Timestamp } from 'firebase/firestore'
 
 interface JobExpense {
-  id: number
-  jobId: number
+  id: string
+  jobId: string
   jobTitle: string
   expenseType: string
-  category: 'Labor' | 'Materials' | 'Equipment' | 'Transport' | 'Other'
+  category: string
   amount: number
   date: string
   description: string
   approvedBy?: string
   receipt?: string
   notes: string
+  createdAt?: any
 }
 
 interface Job {
-  id: number
+  id: string
   title: string
   budget: number
   status: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled'
   revenue?: number
 }
 
-const EXPENSE_CATEGORIES = ['Labor', 'Materials', 'Equipment', 'Transport', 'Other']
-
-const SAMPLE_JOBS: Job[] = [
-  { id: 1, title: 'Office Deep Cleaning - Downtown Tower', budget: 5000, status: 'In Progress', revenue: 5500 },
-  { id: 2, title: 'Residential House Cleaning', budget: 3500, status: 'Scheduled', revenue: 4000 },
-  { id: 3, title: 'Commercial Building Maintenance', budget: 12000, status: 'In Progress', revenue: 13000 },
-  { id: 4, title: 'Garden Landscaping Project', budget: 6500, status: 'Pending', revenue: 7200 },
-  { id: 5, title: 'Carpet & Upholstery Cleaning', budget: 2500, status: 'Completed', revenue: 3000 },
-]
-
-const SAMPLE_EXPENSES: JobExpense[] = [
-  { id: 1, jobId: 1, jobTitle: 'Office Deep Cleaning', expenseType: 'Staff Labor', category: 'Labor', amount: 800, date: '2025-01-13', description: 'Day 1 Cleaning Staff', approvedBy: 'Ahmed Al-Mazrouei', notes: '4 workers × 8 hours' },
-  { id: 2, jobId: 1, jobTitle: 'Office Deep Cleaning', expenseType: 'Cleaning Supplies', category: 'Materials', amount: 450, date: '2025-01-13', description: 'Detergents, disinfectants, paper towels', approvedBy: 'Ahmed Al-Mazrouei', notes: 'Bulk purchase' },
-  { id: 3, jobId: 1, jobTitle: 'Office Deep Cleaning', expenseType: 'Equipment Rental', category: 'Equipment', amount: 300, date: '2025-01-12', description: 'Industrial vacuum rental', approvedBy: 'Ahmed Al-Mazrouei', notes: '2-day rental' },
-  { id: 4, jobId: 1, jobTitle: 'Office Deep Cleaning', expenseType: 'Transport', category: 'Transport', amount: 150, date: '2025-01-13', description: 'Vehicle fuel and parking', approvedBy: 'Ahmed Al-Mazrouei', notes: 'Downtown parking fee included' },
-  { id: 5, jobId: 2, jobTitle: 'Residential House Cleaning', expenseType: 'Staff Labor', category: 'Labor', amount: 600, date: '2025-01-14', description: 'Cleaning Staff', approvedBy: 'Fatima Al-Ketbi', notes: '2 workers × 8 hours' },
-  { id: 6, jobId: 2, jobTitle: 'Residential House Cleaning', expenseType: 'Cleaning Supplies', category: 'Materials', amount: 200, date: '2025-01-14', description: 'Residential cleaning products', approvedBy: 'Fatima Al-Ketbi', notes: 'Eco-friendly products' },
-  { id: 7, jobId: 3, jobTitle: 'Commercial Building Maintenance', expenseType: 'Staff Labor', category: 'Labor', amount: 1200, date: '2025-01-13', description: 'Maintenance Technicians', approvedBy: 'Hassan Al-Mazrouei', notes: '3 technicians × 8 hours' },
-  { id: 8, jobId: 3, jobTitle: 'Commercial Building Maintenance', expenseType: 'Replacement Parts', category: 'Materials', amount: 2500, date: '2025-01-12', description: 'HVAC components replacement', approvedBy: 'Hassan Al-Mazrouei', notes: 'High-efficiency parts' },
-  { id: 9, jobId: 3, jobTitle: 'Commercial Building Maintenance', expenseType: 'Permits & Licenses', category: 'Other', amount: 500, date: '2025-01-11', description: 'Work permit for building maintenance', approvedBy: 'Hassan Al-Mazrouei', notes: '' },
-  { id: 10, jobId: 4, jobTitle: 'Garden Landscaping Project', expenseType: 'Materials', category: 'Materials', amount: 1800, date: '2025-01-10', description: 'Plants, soil, fertilizer', approvedBy: 'Omar Khan', notes: 'Bulk landscaping supplies' },
-]
+interface Category {
+  id: string
+  name: string
+  color?: string
+  description?: string
+  itemCount?: number
+}
 
 export default function ExpenseManager() {
   const [activeTab, setActiveTab] = useState<'add' | 'view' | 'analytics'>('view')
-  const [expenses, setExpenses] = useState<JobExpense[]>(SAMPLE_EXPENSES)
-  const [filterJobId, setFilterJobId] = useState<number | null>(null)
+  const [expenses, setExpenses] = useState<JobExpense[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [filterJobId, setFilterJobId] = useState<string | null>(null)
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterDateRange, setFilterDateRange] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -92,13 +82,60 @@ export default function ExpenseManager() {
   const [formData, setFormData] = useState({
     jobId: '',
     expenseType: '',
-    category: 'Materials' as 'Labor' | 'Materials' | 'Equipment' | 'Transport' | 'Other',
+    category: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     description: '',
-    approvedBy: 'Ahmed Al-Mazrouei',
+    approvedBy: '',
     notes: ''
   })
+
+  // Fetch real data from Firebase
+  useEffect(() => {
+    fetchJobs()
+    fetchCategories()
+    fetchExpenses()
+  }, [])
+
+  const fetchJobs = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'jobs'))
+      const jobsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Job[]
+      setJobs(jobsData)
+    } catch (error) {
+      console.error('Error fetching jobs:', error)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'categories'))
+      const categoriesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Category[]
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
+  const fetchExpenses = async () => {
+    try {
+      const q = query(collection(db, 'job-expenses'), orderBy('date', 'desc'))
+      const snapshot = await getDocs(q)
+      const expensesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as JobExpense[]
+      setExpenses(expensesData)
+    } catch (error) {
+      console.error('Error fetching expenses:', error)
+    }
+  }
 
   // Filter expenses based on all criteria
   const filteredExpenses = useMemo(() => {
@@ -106,8 +143,8 @@ export default function ExpenseManager() {
       const matchesJob = filterJobId === null || exp.jobId === filterJobId
       const matchesCategory = filterCategory === 'all' || exp.category === filterCategory
       const matchesSearch = searchTerm === '' || 
-        exp.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        exp.expenseType.toLowerCase().includes(searchTerm.toLowerCase())
+        exp.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exp.expenseType?.toLowerCase().includes(searchTerm.toLowerCase())
       
       // Date range filtering
       let matchesDate = true
@@ -128,10 +165,12 @@ export default function ExpenseManager() {
   // Calculate statistics for filtered expenses
   const stats = useMemo(() => {
     const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
-    const byCategory = EXPENSE_CATEGORIES.map(cat => ({
-      name: cat,
-      value: filteredExpenses.filter(exp => exp.category === cat).reduce((sum, exp) => sum + exp.amount, 0)
-    })).filter(item => item.value > 0)
+    const byCategory = categories
+      .map(cat => ({
+        name: cat.name,
+        value: filteredExpenses.filter(exp => exp.category === cat.name).reduce((sum, exp) => sum + exp.amount, 0)
+      }))
+      .filter(item => item.value > 0)
     
     const expensesByDate: { [key: string]: number } = {}
     filteredExpenses.forEach(exp => {
@@ -144,14 +183,14 @@ export default function ExpenseManager() {
       .map(([date, amount]) => ({ date, amount }))
     
     return { totalExpenses, byCategory, chartData }
-  }, [filteredExpenses])
+  }, [filteredExpenses, categories])
 
   // Calculate job-wise budget vs actual
   const jobWiseSummary = useMemo(() => {
-    return SAMPLE_JOBS.map(job => {
+    return jobs.map(job => {
       const jobExpenses = expenses.filter(exp => exp.jobId === job.id)
       const totalExpense = jobExpenses.reduce((sum, exp) => sum + exp.amount, 0)
-      const remaining = job.budget - totalExpense
+      const remaining = (job.budget || 0) - totalExpense
       const revenue = job.revenue || 0
       const profit = revenue - totalExpense
       const profitMargin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0
@@ -165,79 +204,88 @@ export default function ExpenseManager() {
         expenseCount: jobExpenses.length
       }
     })
-  }, [expenses])
+  }, [expenses, jobs])
 
-  const handleAddExpense = () => {
-    if (!formData.jobId || !formData.expenseType || !formData.amount) {
+  const handleAddExpense = async () => {
+    if (!formData.jobId || !formData.expenseType || !formData.amount || !formData.category) {
       alert('Please fill in all required fields')
       return
     }
 
-    if (editingExpense) {
-      setExpenses(expenses.map(exp =>
-        exp.id === editingExpense.id
-          ? {
-              ...exp,
-              jobId: parseInt(formData.jobId),
-              jobTitle: SAMPLE_JOBS.find(j => j.id === parseInt(formData.jobId))?.title || '',
-              expenseType: formData.expenseType,
-              category: formData.category,
-              amount: parseFloat(formData.amount),
-              date: formData.date,
-              description: formData.description,
-              approvedBy: formData.approvedBy,
-              notes: formData.notes
-            }
-          : exp
-      ))
-      setEditingExpense(null)
-    } else {
-      const newExpense: JobExpense = {
-        id: Math.max(...expenses.map(e => e.id), 0) + 1,
-        jobId: parseInt(formData.jobId),
-        jobTitle: SAMPLE_JOBS.find(j => j.id === parseInt(formData.jobId))?.title || '',
-        expenseType: formData.expenseType,
-        category: formData.category,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        description: formData.description,
-        approvedBy: formData.approvedBy,
-        notes: formData.notes
-      }
-      setExpenses([...expenses, newExpense])
+    const selectedJob = jobs.find(j => j.id === formData.jobId)
+
+    const expenseData = {
+      jobId: formData.jobId,
+      jobTitle: selectedJob?.title || '',
+      expenseType: formData.expenseType,
+      category: formData.category,
+      amount: parseFloat(formData.amount),
+      date: formData.date,
+      description: formData.description,
+      approvedBy: formData.approvedBy || 'Admin',
+      notes: formData.notes,
+      createdAt: Timestamp.now()
     }
 
-    setFormData({
-      jobId: '',
-      expenseType: '',
-      category: 'Materials',
-      amount: '',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      approvedBy: 'Ahmed Al-Mazrouei',
-      notes: ''
-    })
-    alert('Expense ' + (editingExpense ? 'updated' : 'added') + ' successfully!')
+    try {
+      if (editingExpense) {
+        // Update existing expense
+        const expenseRef = doc(db, 'job-expenses', editingExpense.id)
+        await updateDoc(expenseRef, expenseData)
+        setExpenses(expenses.map(exp =>
+          exp.id === editingExpense.id
+            ? { ...expenseData, id: editingExpense.id } as JobExpense
+            : exp
+        ))
+        setEditingExpense(null)
+        alert('Expense updated successfully!')
+      } else {
+        // Add new expense
+        const docRef = await addDoc(collection(db, 'job-expenses'), expenseData)
+        setExpenses([{ ...expenseData, id: docRef.id } as JobExpense, ...expenses])
+        alert('Expense added successfully!')
+      }
+
+      setFormData({
+        jobId: '',
+        expenseType: '',
+        category: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        approvedBy: '',
+        notes: ''
+      })
+    } catch (error) {
+      console.error('Error saving expense:', error)
+      alert('Error saving expense. Please try again.')
+    }
   }
 
   const handleEditExpense = (expense: JobExpense) => {
     setEditingExpense(expense)
     setFormData({
-      jobId: expense.jobId.toString(),
+      jobId: expense.jobId,
       expenseType: expense.expenseType,
       category: expense.category,
       amount: expense.amount.toString(),
       date: expense.date,
       description: expense.description,
-      approvedBy: expense.approvedBy || 'Ahmed Al-Mazrouei',
+      approvedBy: expense.approvedBy || '',
       notes: expense.notes
     })
     setActiveTab('add')
   }
 
-  const handleDeleteExpense = (id: number) => {
+  const handleDeleteExpense = async (id: string) => {
     if (confirm('Delete this expense record?')) {
-      setExpenses(expenses.filter(exp => exp.id !== id))
+      try {
+        await deleteDoc(doc(db, 'job-expenses', id))
+        setExpenses(expenses.filter(exp => exp.id !== id))
+      } catch (error) {
+        console.error('Error deleting expense:', error)
+        alert('Error deleting expense. Please try again.')
+      }
     }
   }
 
@@ -299,9 +347,9 @@ export default function ExpenseManager() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Select a Job...</option>
-                {SAMPLE_JOBS.map(job => (
+                {jobs.map(job => (
                   <option key={job.id} value={job.id}>
-                    {job.title} (Budget: AED {job.budget.toLocaleString()})
+                    {job.title} (Budget: AED {job.budget?.toLocaleString() || 0})
                   </option>
                 ))}
               </select>
@@ -322,11 +370,14 @@ export default function ExpenseManager() {
               <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
               <select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as 'Labor' | 'Materials' | 'Equipment' | 'Transport' | 'Other' })}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                {EXPENSE_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                <option value="">Select a Category...</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name} {cat.description ? `- ${cat.description}` : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -401,11 +452,11 @@ export default function ExpenseManager() {
                   setFormData({
                     jobId: '',
                     expenseType: '',
-                    category: 'Materials',
+                    category: '',
                     amount: '',
                     date: new Date().toISOString().split('T')[0],
                     description: '',
-                    approvedBy: 'Ahmed Al-Mazrouei',
+                    approvedBy: '',
                     notes: ''
                   })
                 }}
@@ -429,11 +480,11 @@ export default function ExpenseManager() {
                 <label className="block text-xs font-bold text-gray-600 mb-2 uppercase">Filter by Job</label>
                 <select
                   value={filterJobId || ''}
-                  onChange={(e) => setFilterJobId(e.target.value ? parseInt(e.target.value) : null)}
+                  onChange={(e) => setFilterJobId(e.target.value || null)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="">All Jobs</option>
-                  {SAMPLE_JOBS.map(job => (
+                  {jobs.map(job => (
                     <option key={job.id} value={job.id}>{job.title}</option>
                   ))}
                 </select>
@@ -447,8 +498,8 @@ export default function ExpenseManager() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="all">All Categories</option>
-                  {EXPENSE_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -655,7 +706,7 @@ export default function ExpenseManager() {
                         <div className="font-bold text-gray-900 text-sm">{job.title}</div>
                         <div className="text-xs text-gray-500">{job.expenseCount} expenses</div>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-gray-700">AED {job.budget.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-700">AED {job.budget?.toLocaleString() || 0}</td>
                       <td className="px-6 py-4 font-semibold text-amber-600">AED {job.totalExpense.toLocaleString()}</td>
                       <td className="px-6 py-4 font-semibold text-gray-700">AED {job.remaining.toLocaleString()}</td>
                       <td className="px-6 py-4 font-semibold text-gray-700">AED {(job.revenue || 0).toLocaleString()}</td>
