@@ -104,7 +104,8 @@ export default function ProductsPage() {
     }
   }, [products, categories, isLoading])
 
-  const handleSaveProduct = (data: Partial<ProductItem>) => {
+  const handleSaveProduct = (data?: Partial<ProductItem>) => {
+    if (!data) return
     if (editingItem) {
       setProducts(prev => prev.map(p => p.id === editingItem.id ? { 
         ...p, 
@@ -300,11 +301,7 @@ export default function ProductsPage() {
             )}
             
             {activeTab === 'CATEGORIES' && (
-              <CategoryManager 
-                categories={categories}
-                onSave={handleSaveCategory}
-                onDelete={handleDeleteCategory}
-              />
+              <CategoryManager />
             )}
           </div>
         )}

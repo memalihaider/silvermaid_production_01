@@ -64,7 +64,7 @@ interface ProductItem {
   categoryId: string;
   categoryName: string;
   status: 'ACTIVE' | 'INACTIVE';
-  imageUrl: string;
+  imageUrl?: string;
   slug?: string;
   isActive?: boolean;
   profitMargin?: number;
@@ -74,7 +74,7 @@ interface ProductItem {
 
 interface ProductBuilderProps {
   product?: ProductItem | null
-  onSave: () => void  // Just refresh, no data needed
+  onSave: (data?: Partial<ProductItem>) => void
   onCancel: () => void
 }
 
@@ -356,7 +356,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
       }
 
       // Call onSave to refresh parent list
-      onSave()
+      onSave(formData)
       
     } catch (error) {
       console.error('❌ Error saving item:', error)

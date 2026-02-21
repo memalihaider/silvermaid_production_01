@@ -486,7 +486,7 @@ export default function EmployeeChatPage() {
   // Filter out deleted messages
   const visibleMessages = messages.filter(msg => {
     const deletedFor = msg.deletedFor || [];
-    return !deletedFor.includes(selectedEmployee?.id) && !msg.deletedForEveryone;
+    return !deletedFor.includes(selectedEmployee?.id as string) && !msg.deletedForEveryone;
   });
 
   // Group messages by date
