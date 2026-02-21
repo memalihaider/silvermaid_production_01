@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large files
+*.zip
+public/videos/
+*.mp4
+
+# Large files - excluded from repo
+*.zip
+public/videos/
+*.mp4
