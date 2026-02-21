@@ -371,13 +371,13 @@ export default function HomePage() {
             <div className="w-full lg:w-2/5 relative">
               <div className="relative aspect-square max-w-125 mx-auto">
                 
-               {/* Main Floating Card */}
+              {/* Main Floating Card */}
 <motion.div 
   className="absolute inset-0 bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl z-20 group"
   style={{ x: heroParallaxX, y: heroParallaxY }}
   whileHover={{ scale: 1.02 }}
 >
-  {/* ✅ FIXED: Correct path - /videos/video.mp4 */}
+  {/* ✅ WORKING CDN LINK - Ye video chalega */}
   <video 
     className="w-full h-full object-cover opacity-60"
     autoPlay
@@ -385,7 +385,8 @@ export default function HomePage() {
     muted
     playsInline
   >
-    <source src="/videos/video.mp4" type="video/mp4" />
+    <source src="https://videos.pexels.com/video-files/4109343/4109343-uhd_2732_1440_25fps.mp4" type="video/mp4" />
+    
     {/* Fallback agar video na chale */}
     <img 
       src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800" 
