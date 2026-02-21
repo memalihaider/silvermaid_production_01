@@ -722,14 +722,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {sidebarOpen && (
             <>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-linear-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-bold text-lg">
                   H
                 </div>
                 <div>
-                  <span className="font-black text-lg tracking-tighter block leading-none">
+                  <span className="font-bold text-base tracking-tight block leading-none">
                     HOMEWARE
                   </span>
-                  <span className="text-[10px] font-bold text-blue-600 tracking-[0.2em] uppercase">
+                  <span className="text-[10px] font-semibold text-[#039ED9] tracking-wider uppercase">
                     Hygiene ERP
                   </span>
                 </div>
@@ -737,7 +737,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </>
           )}
           {!sidebarOpen && (
-            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-bold text-lg">
               H
             </div>
           )}
@@ -773,9 +773,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <>
                     <button
                       onClick={() => toggleMenu(menuItem.key)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                         isGroupActive
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                          ? "bg-[#039ED9] text-white shadow-sm"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       } ${!sidebarOpen && "justify-center"}`}
                       title={!sidebarOpen ? menuItem.label : undefined}
@@ -785,7 +785,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           className={`h-5 w-5 transition-colors shrink-0 ${
                             isGroupActive
                               ? "text-white"
-                              : "text-muted-foreground group-hover:text-blue-600"
+                              : "text-muted-foreground group-hover:text-[#039ED9]"
                           }`}
                         />
                       )}
@@ -821,9 +821,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                               <Link
                                 key={sub.key}
                                 href={subConfig?.href || "#"}
-                                className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 group ${
+                                className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 group ${
                                   isSubActive
-                                    ? "bg-pink-100 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300"
+                                    ? "bg-primary/10 text-primary"
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                 }`}
                               >
@@ -831,8 +831,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                   <SubIcon
                                     className={`h-4 w-4 ${
                                       isSubActive
-                                        ? "text-pink-600"
-                                        : "text-muted-foreground group-hover:text-pink-600"
+                                        ? "text-primary"
+                                        : "text-muted-foreground group-hover:text-primary"
                                     }`}
                                   />
                                 )}
@@ -846,9 +846,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 ) : (
                   <Link
                     href={pageConfig?.href || "#"}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                       isActive
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                        ? "bg-[#039ED9] text-white shadow-sm"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     } ${!sidebarOpen && "justify-center"}`}
                     title={!sidebarOpen ? menuItem.label : undefined}
@@ -858,7 +858,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         className={`h-5 w-5 transition-colors shrink-0 ${
                           isActive
                             ? "text-white"
-                            : "text-muted-foreground group-hover:text-blue-600"
+                            : "text-muted-foreground group-hover:text-[#039ED9]"
                         }`}
                       />
                     )}
@@ -868,7 +868,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           {menuItem.label}
                         </span>
                         {isActive && (
-                          <div className="ml-auto h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                          <div className="ml-auto h-1.5 w-1.5 rounded-full bg-white"></div>
                         )}
                       </>
                     )}
@@ -881,19 +881,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         <div className="p-4 border-t space-y-4">
           {sidebarOpen && (
-            <div className="bg-muted/50 rounded-2xl p-4">
+            <div className="bg-muted/50 rounded-xl p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 rounded-full bg-linear-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 shrink-0">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-semibold shrink-0">
                   {userSession.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">
+                  <p className="text-sm font-semibold truncate">
                     {userSession.name}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {userSession.email}
                   </p>
-                  <p className="text-xs text-blue-600 font-bold truncate mt-1">
+                  <p className="text-xs text-[#039ED9] font-semibold truncate mt-0.5">
                     {userSession.roleName}
                   </p>
                 </div>
@@ -939,9 +939,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <>
                       <button
                         onClick={() => toggleMenu(menuItem.key)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                           isGroupActive
-                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                            ? "bg-[#039ED9] text-white shadow-sm"
                             : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         }`}
                       >
@@ -950,7 +950,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                             className={`h-5 w-5 transition-colors shrink-0 ${
                               isGroupActive
                                 ? "text-white"
-                                : "text-muted-foreground group-hover:text-blue-600"
+                                : "text-muted-foreground group-hover:text-[#039ED9]"
                             }`}
                           />
                         )}
@@ -983,9 +983,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                   key={sub.key}
                                   href={subConfig?.href || "#"}
                                   onClick={() => setSidebarOpen(false)}
-                                  className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 group ${
+                                  className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 group ${
                                     isSubActive
-                                      ? "bg-pink-100 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300"
+                                      ? "bg-primary/10 text-primary"
                                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                   }`}
                                 >
@@ -993,8 +993,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                     <SubIcon
                                       className={`h-4 w-4 ${
                                         isSubActive
-                                          ? "text-pink-600"
-                                          : "text-muted-foreground group-hover:text-pink-600"
+                                          ? "text-primary"
+                                          : "text-muted-foreground group-hover:text-primary"
                                       }`}
                                     />
                                   )}
@@ -1009,9 +1009,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <Link
                       href={pageConfig?.href || "#"}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 group ${
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                         isActive
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                          ? "bg-[#039ED9] text-white shadow-sm"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       }`}
                     >
@@ -1020,7 +1020,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           className={`h-5 w-5 transition-colors shrink-0 ${
                             isActive
                               ? "text-white"
-                              : "text-muted-foreground group-hover:text-blue-600"
+                              : "text-muted-foreground group-hover:text-[#039ED9]"
                           }`}
                         />
                       )}
@@ -1035,31 +1035,31 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-20 border-b bg-card/80 backdrop-blur-xl sticky top-0 z-40 flex items-center justify-between px-8">
-          <div className="flex items-center gap-6 flex-1">
+        <header className="h-16 border-b bg-card/80 backdrop-blur-xl sticky top-0 z-40 flex items-center justify-between px-6">
+          <div className="flex items-center gap-4 flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="hidden lg:flex p-2 hover:bg-accent rounded-lg transition-colors"
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
               {sidebarOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
               )}
             </button>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="lg:hidden p-2 hover:bg-accent rounded-lg"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5" />
             </button>
             <div className="relative max-w-md w-full hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search anything..."
-                className="w-full pl-10 pr-4 py-2.5 bg-muted/50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-muted/50 border-none rounded-lg text-sm focus:ring-2 focus:ring-[#039ED9] outline-none transition-all"
               />
             </div>
           </div>
@@ -1067,18 +1067,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="hidden md:block text-sm text-muted-foreground">
               Logged in as:{" "}
-              <span className="font-bold text-blue-600">
+              <span className="font-semibold text-[#039ED9]">
                 {userSession.name}
               </span>
             </div>
 
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2.5 rounded-xl hover:bg-accent relative transition-colors group"
+              className="p-2 rounded-lg hover:bg-accent relative transition-colors group"
             >
-              <Bell className="h-7 w-7 text-muted-foreground group-hover:text-foreground" />
+              <Bell className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 h-5 w-5 bg-red-600 rounded-full border-2 border-card flex items-center justify-center text-[10px] font-black text-white">
+                <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full border-2 border-card flex items-center justify-center text-[9px] font-bold text-white">
                   {unreadCount}
                 </span>
               )}
@@ -1091,10 +1091,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 className="fixed inset-0 z-40"
                 onClick={() => setShowNotifications(false)}
               />
-              <div className="absolute right-8 top-20 w-96 bg-card border rounded-2xl shadow-2xl z-50 max-h-96 overflow-hidden flex flex-col">
-                <div className="p-4 border-b flex items-center justify-between bg-muted/50">
+              <div className="absolute right-6 top-16 w-96 bg-card border rounded-xl shadow-xl z-50 max-h-96 overflow-hidden flex flex-col">
+                <div className="p-4 border-b flex items-center justify-between">
                   <div>
-                    <h3 className="font-black text-foreground">
+                    <h3 className="font-semibold text-foreground">
                       Notifications
                     </h3>
                     <p className="text-xs text-muted-foreground">
@@ -1105,7 +1105,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllAsRead}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 px-3 py-1 bg-blue-50 rounded-lg"
+                        className="text-xs font-medium text-[#039ED9] hover:text-[#0280b0] px-3 py-1 bg-[#039ED9]/10 rounded-lg"
                       >
                         Mark all read
                       </button>
@@ -1135,9 +1135,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-4 hover:bg-muted/50 transition-colors ${!notification.read ? "bg-blue-50/50" : ""} ${
+                          className={`p-4 hover:bg-muted/50 transition-colors ${!notification.read ? "bg-[#039ED9]/5" : ""} ${
                             notification.bookingId
-                              ? "border-l-4 border-l-green-500"
+                              ? "border-l-3 border-l-green-500"
                               : ""
                           }`}
                         >
@@ -1153,7 +1153,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                   {notification.title}
                                 </h4>
                                 {!notification.read && (
-                                  <span className="h-2 w-2 bg-blue-600 rounded-full shrink-0 mt-1.5"></span>
+                                  <span className="h-2 w-2 bg-[#039ED9] rounded-full shrink-0 mt-1.5"></span>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mb-2">
@@ -1171,7 +1171,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                         handleMarkAsRead(notification.id);
                                         setShowNotifications(false);
                                       }}
-                                      className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                      className="text-xs font-medium text-[#039ED9] hover:text-[#0280b0] flex items-center gap-1"
                                     >
                                       View <ExternalLink className="w-3 h-3" />
                                     </Link>
@@ -1200,7 +1200,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           )}
         </header>
 
-        <main className="flex-1 p-8 overflow-y-auto bg-muted/20">
+        <main className="flex-1 p-6 overflow-y-auto bg-muted/20">
           <div className="w-full">{children}</div>
         </main>
       </div>

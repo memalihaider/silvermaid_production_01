@@ -52,74 +52,69 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 transition-colors duration-300">
-      {/* Top Bar - Enhanced */}
-      <div className="bg-[#039ED9] text-white py-3 hidden md:block border-b border-white/10">
-        <div className="container mx-auto px-4 flex justify-between items-center text-xs font-bold">
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* Top Bar - Premium */}
+      <div className="bg-gradient-to-r from-[#039ED9] via-[#0388be] to-[#039ED9] text-white py-2.5 hidden md:block">
+        <div className="container mx-auto px-6 flex justify-between items-center text-xs font-semibold">
           <div className="flex items-center gap-8">
             <a 
               href={`tel:${profileData.phone}`} 
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
-              <div className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all">
-                <Phone className="h-3.5 w-3.5" />
+              <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
+                <Phone className="h-3 w-3" />
               </div>
-              <span className="tracking-wider">{profileData.phone}</span>
+              <span className="tracking-wide">{profileData.phone}</span>
             </a>
             <a 
               href={`mailto:${profileData.email}`} 
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
-              <div className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-all">
-                <Mail className="h-3.5 w-3.5" />
+              <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
+                <Mail className="h-3 w-3" />
               </div>
               <span className="tracking-wide">{profileData.email}</span>
             </a>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-white/70 text-[10px] uppercase tracking-widest mr-2">Follow Us</span>
-            <a href="#" className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all"><Facebook className="h-3.5 w-3.5" /></a>
-            <a href="#" className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all"><Linkedin className="h-3.5 w-3.5" /></a>
-            <a href="#" className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all"><MessageCircle className="h-3.5 w-3.5" /></a>
-            <a href="#" className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all"><Instagram className="h-3.5 w-3.5" /></a>
-            <a href="#" className="h-7 w-7 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all"><Music2 className="h-3.5 w-3.5" /></a>
+          <div className="flex items-center gap-2.5">
+            <span className="text-white/60 text-[9px] uppercase tracking-[0.2em] mr-2">Follow Us</span>
+            {[Facebook, Linkedin, MessageCircle, Instagram, Music2].map((Icon, i) => (
+              <a key={i} href="#" className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center hover:bg-white/25 transition-all"><Icon className="h-3 w-3" /></a>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Navbar - Enhanced */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/90 backdrop-blur-xl shadow-lg shadow-slate-200/50">
-        <div className="container mx-auto flex h-20 items-center justify-between px-4">
+      {/* Main Navbar - Premium Glass */}
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-2xl border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="container mx-auto flex h-18 items-center justify-between px-6">
           <a href="/" className="flex items-center">
-  <div className="h-55 w-55"> {/* Size increased to 16 */}
-    <img 
-      src="/logo.jpeg" 
-      alt="Logo" 
-      className="w-full h-full object-contain"
-    />
-  </div>
-</a>
+            <div className="h-34 w-34">
+              <img 
+                src="/logo.jpeg" 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </a>
 
-          <nav className="hidden lg:flex items-center space-x-1 text-sm font-bold">
-            <a href="/" className="px-4 py-2 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all">Home</a>
-            <a href="/about" className="px-4 py-2 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all">About</a>
-            <div className="relative group py-8">
-              <a href="/services" className="px-4 py-2 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all flex items-center gap-1.5">
-                Services <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
+          <nav className="hidden lg:flex items-center gap-0.5 text-[13px] font-semibold">
+            <a href="/" className="px-4 py-2 text-slate-600 hover:text-primary rounded-lg transition-colors">Home</a>
+            <a href="/about" className="px-4 py-2 text-slate-600 hover:text-primary rounded-lg transition-colors">About</a>
+            <div className="relative group py-6">
+              <a href="/services" className="px-4 py-2 text-slate-600 hover:text-primary rounded-lg transition-colors flex items-center gap-1">
+                Services <ChevronDown className="h-3.5 w-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-300" />
               </a>
               
-              {/* Dropdown Menu - Mega Menu Style Enhanced */}
-              <div className="absolute top-full -left-80 w-275 bg-white/95 backdrop-blur-xl border border-slate-200/60 shadow-2xl shadow-slate-300/50 rounded-[2.5rem] p-12 opacity-0 translate-y-6 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-500 z-50">
-                <div className="grid grid-cols-3 gap-10">
+              {/* Mega Menu */}
+              <div className="absolute top-full -left-80 w-[720px] bg-white border border-slate-200/80 shadow-xl rounded-2xl p-8 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
+                <div className="grid grid-cols-3 gap-8">
                   {/* Normal Cleaning Section */}
                   <div>
-                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-3 pb-3 border-b-2 border-primary/20">
-                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                        <span className="h-2 w-2 rounded-full bg-primary" />
-                      </div>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 pb-2 border-b border-slate-100">
                       Normal Cleaning
                     </h4>
-                    <div className="grid gap-1">
+                    <div className="grid gap-0.5">
                       {[
                         { name: "Regular Residential", href: "/services/residential-cleaning", icon: Home },
                         { name: "Regular Office", href: "/services/office-cleaning", icon: Briefcase },
@@ -132,11 +127,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                         <a 
                           key={item.href} 
                           href={item.href}
-                          className="group/item flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-primary transition-all py-1 px-2 rounded-xl hover:bg-slate-50"
+                          className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
                         >
-                          <div className="h-8 w-8 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover/item:bg-primary/10 group-hover/item:text-primary transition-colors">
-                            <item.icon className="h-3.5 w-3.5" />
-                          </div>
+                          <item.icon className="h-3.5 w-3.5 text-slate-400 group-hover/item:text-primary transition-colors shrink-0" />
                           {item.name}
                         </a>
                       ))}
@@ -145,11 +138,10 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
 
                   {/* Deep Cleaning Section */}
                   <div>
-                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                      <span className="h-1 w-6 bg-primary rounded-full" />
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 pb-2 border-b border-slate-100">
                       Deep Cleaning
                     </h4>
-                    <div className="grid grid-cols-1 gap-1">
+                    <div className="grid grid-cols-1 gap-0.5">
                       {[
                         { name: "Grout Deep Clean", href: "/services/grout-deep-cleaning", icon: Grid3X3 },
                         { name: "Garage Deep Clean", href: "/services/garage-deep-cleaning", icon: Warehouse },
@@ -169,11 +161,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                         <a 
                           key={item.href} 
                           href={item.href}
-                          className="group/item flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-primary transition-all py-1 px-2 rounded-xl hover:bg-slate-50"
+                          className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
                         >
-                          <div className="h-8 w-8 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover/item:bg-primary/10 group-hover/item:text-primary transition-colors">
-                            <item.icon className="h-3.5 w-3.5" />
-                          </div>
+                          <item.icon className="h-3.5 w-3.5 text-slate-400 group-hover/item:text-primary transition-colors shrink-0" />
                           {item.name}
                         </a>
                       ))}
@@ -182,11 +172,10 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
 
                   {/* Technical Cleaning Section */}
                   <div>
-                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                      <span className="h-1 w-6 bg-primary rounded-full" />
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 pb-2 border-b border-slate-100">
                       Technical Cleaning
                     </h4>
-                    <div className="grid grid-cols-1 gap-1">
+                    <div className="grid grid-cols-1 gap-0.5">
                       {[
                         { name: "AC Duct Cleaning", href: "/services/ac-duct-cleaning", icon: Wind },
                         { name: "AC Coil Cleaning", href: "/services/ac-coil-cleaning", icon: ThermometerSnowflake },
@@ -201,11 +190,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                         <a 
                           key={item.href} 
                           href={item.href}
-                          className="group/item flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-primary transition-all py-1 px-2 rounded-xl hover:bg-slate-50"
+                          className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
                         >
-                          <div className="h-8 w-8 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover/item:bg-primary/10 group-hover/item:text-primary transition-colors">
-                            <item.icon className="h-3.5 w-3.5" />
-                          </div>
+                          <item.icon className="h-3.5 w-3.5 text-slate-400 group-hover/item:text-primary transition-colors shrink-0" />
                           {item.name}
                         </a>
                       ))}
@@ -215,37 +202,28 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            {/* More Link with Mega Dropdown */}
-            <div className="relative group py-4">
-              <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all group">
-                More <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform" />
+            {/* More Link with Dropdown */}
+            <div className="relative group py-6">
+              <button className="flex items-center gap-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:text-primary rounded-lg transition-colors">
+                More <ChevronDown className="h-3.5 w-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-300" />
               </button>
               
-              <div className="absolute top-full -left-20 w-100 bg-white/95 backdrop-blur-xl border border-slate-200/60 shadow-2xl shadow-slate-300/50 rounded-[2rem] p-10 opacity-0 translate-y-6 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-500 z-50">
-                <div className="grid gap-2">
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-3 pb-3 border-b-2 border-primary/20">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                    </div>
-                    Resources
-                  </h4>
-                  
+              <div className="absolute top-full -left-8 w-72 bg-white border border-slate-200/80 shadow-xl rounded-xl p-4 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
+                <div className="grid gap-1">
                   {[
-                    { name: "Testimonials", href: "/testimonials", icon: Star, desc: "See what our premium clients say" },
-                    { name: "FAQs", href: "/faqs", icon: HelpCircle, desc: "Common questions answered" },
-                    { name: "Privacy Policy", href: "/privacy-policy", icon: ShieldCheck, desc: "How we protect your data" }
+                    { name: "Testimonials", href: "/testimonials", icon: Star, desc: "Client reviews" },
+                    { name: "FAQs", href: "/faqs", icon: HelpCircle, desc: "Common questions" },
+                    { name: "Privacy Policy", href: "/privacy-policy", icon: ShieldCheck, desc: "Data protection" }
                   ].map((item) => (
                     <a 
                       key={item.href} 
                       href={item.href}
-                      className="group/item flex items-center gap-4 text-sm font-bold text-slate-600 hover:text-primary transition-all p-3 rounded-2xl hover:bg-slate-50"
+                      className="group/item flex items-center gap-3 text-[13px] font-medium text-slate-600 hover:text-primary transition-colors p-2.5 rounded-lg hover:bg-slate-50"
                     >
-                      <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover/item:bg-primary/10 group-hover/item:text-primary transition-colors">
-                        <item.icon className="h-5 w-5" />
-                      </div>
+                      <item.icon className="h-4 w-4 text-slate-400 group-hover/item:text-primary transition-colors shrink-0" />
                       <div className="flex flex-col">
-                        <span className="text-slate-900 group-hover/item:text-primary transition-colors">{item.name}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">{item.desc}</span>
+                        <span>{item.name}</span>
+                        <span className="text-[11px] text-slate-400">{item.desc}</span>
                       </div>
                     </a>
                   ))}
@@ -253,17 +231,14 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            <a href="/blog" className="px-4 py-2 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all font-bold text-sm">Blog</a>
-            <a href="/contact" className="px-4 py-2 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-xl transition-all font-bold text-sm">Contact</a>
+            <a href="/blog" className="px-4 py-2 text-slate-600 hover:text-primary rounded-lg transition-colors font-semibold text-[13px]">Blog</a>
+            <a href="/contact" className="px-4 py-2 text-slate-600 hover:text-primary rounded-lg transition-colors font-semibold text-[13px]">Contact</a>
           </nav>
 
-          <div className="flex items-center gap-4">
-
-          
-            
+          <div className="flex items-center gap-3">
             <a 
               href="/book-service" 
-              className="inline-flex h-12 items-center justify-center rounded-2xl  bg-pink-700 px-8 text-sm font-black text-white shadow-xl shadow-primary/30 transition-all hover:shadow-2xl hover:shadow-primary/40 hover:scale-105 active:scale-95 tracking-wider border-2 border-white/20"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-7 text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] tracking-wide"
             >
               BOOK NOW
             </a>
@@ -275,17 +250,17 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <footer className="bg-slate-900 text-white pt-20 pb-10">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            <div className="space-y-6">
-              <h4 className="text-sm font-bold uppercase tracking-widest mb-6 text-white underline decoration-primary/20 underline-offset-8">Contact Us</h4>
+      <footer className="bg-slate-950 text-white pt-16 pb-8">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            <div className="space-y-5">
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80 mb-5">Contact Us</h4>
               <ul className="space-y-4 text-sm text-slate-400">
-                <li className="flex items-start gap-4 group cursor-pointer">
-                  <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-lg">
-                    <MapPin className="h-4 w-4" />
+                <li className="flex items-start gap-3 group cursor-pointer">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                    <MapPin className="h-3.5 w-3.5" />
                   </div>
-                  <span className="group-hover:text-white transition-colors uppercase leading-relaxed font-bold text-[11px] tracking-tight">
+                  <span className="group-hover:text-white transition-colors text-[12px] leading-relaxed">
                     {isLoading ? (
                       <span className="animate-pulse bg-slate-800 rounded w-48 h-4 block"></span>
                     ) : (
@@ -293,9 +268,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                     )}
                   </span>
                 </li>
-                <li className="flex items-start gap-4 group cursor-pointer">
-                   <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-lg">
-                    <Phone className="h-4 w-4" />
+                <li className="flex items-start gap-3 group cursor-pointer">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                    <Phone className="h-3.5 w-3.5" />
                   </div>
                   <a href={`tel:${profileData.phone}`} className="group-hover:text-white transition-colors">
                     {isLoading ? (
@@ -305,9 +280,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                     )}
                   </a>
                 </li>
-                <li className="flex items-start gap-4 group cursor-pointer">
-                   <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-lg">
-                    <Mail className="h-4 w-4" />
+                <li className="flex items-start gap-3 group cursor-pointer">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                    <Mail className="h-3.5 w-3.5" />
                   </div>
                   <a href={`mailto:${profileData.email}`} className="group-hover:text-white transition-colors">
                     {isLoading ? (
@@ -321,129 +296,84 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div>
-              <h4 className="text-sm font-bold uppercase tracking-widest mb-6 text-white underline decoration-primary/20 underline-offset-8">Cleaning Services</h4>
-              <ul className="space-y-4 text-sm text-slate-400">
-                <li><a href="/services/residential-cleaning" className="hover:text-primary transition-colors font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Normal Cleaning</a></li>
-                <li><a href="/services/villa-deep-cleaning" className="hover:text-primary transition-colors font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Deep Cleaning</a></li>
-                <li><a href="/services/ac-duct-cleaning" className="hover:text-primary transition-colors font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Technical Cleaning</a></li>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80 mb-5">Cleaning Services</h4>
+              <ul className="space-y-3 text-[13px] text-slate-400">
+                <li><a href="/services/residential-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Normal Cleaning</a></li>
+                <li><a href="/services/villa-deep-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Deep Cleaning</a></li>
+                <li><a href="/services/ac-duct-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Technical Cleaning</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-bold uppercase tracking-widest mb-6 text-white underline decoration-primary/20 underline-offset-8">Quick Links</h4>
-              <ul className="space-y-4 text-sm text-slate-400">
-                <li><a href="/" className="hover:text-white transition-colors flex items-center gap-2">Home</a></li>
-                <li><a href="/about" className="hover:text-white transition-colors flex items-center gap-2">About us</a></li>
-                <li><a href="/testimonials" className="hover:text-white transition-colors flex items-center gap-2">Testimonials</a></li>
-                <li><a href="/faqs" className="hover:text-white transition-colors flex items-center gap-2">FAQs</a></li>
-                <li><a href="/privacy-policy" className="hover:text-white transition-colors flex items-center gap-2">Privacy Policy</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors flex items-center gap-2">Contact us</a></li>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80 mb-5">Quick Links</h4>
+              <ul className="space-y-3 text-[13px] text-slate-400">
+                <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
+                <li><a href="/about" className="hover:text-white transition-colors">About us</a></li>
+                <li><a href="/testimonials" className="hover:text-white transition-colors">Testimonials</a></li>
+                <li><a href="/faqs" className="hover:text-white transition-colors">FAQs</a></li>
+                <li><a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact us</a></li>
               </ul>
             </div>
 
-            <div className="space-y-6">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-white underline decoration-primary/20 underline-offset-8">Newsletter</h4>
-              <p className="text-slate-400 text-sm italic font-medium">Subscribe our newsletter for latest updates</p>
-              <div className="relative group">
+            <div className="space-y-5">
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80">Newsletter</h4>
+              <p className="text-slate-500 text-[13px]">Subscribe for latest updates</p>
+              <div className="relative">
                 <input 
                   type="email" 
-                  placeholder="and updates to your email…" 
-                  className="w-full bg-slate-800 border-none rounded-2xl py-5 px-6 text-xs font-bold focus:ring-2 focus:ring-primary outline-none placeholder:text-slate-500 shadow-inner"
+                  placeholder="Your email address…" 
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-xs focus:ring-1 focus:ring-[#039ED9] outline-none placeholder:text-slate-600"
                 />
-                <button className="absolute right-2 top-2 h-11 w-11 bg-primary rounded-xl flex items-center justify-center hover:bg-pink-600 transition-all shadow-lg hover:scale-110">
-                  <Send className="h-4 w-4" />
+                <button className="absolute right-1.5 top-1.5 h-8 w-8 bg-[#039ED9] rounded-md flex items-center justify-center hover:bg-[#0388be] transition-colors">
+                  <Send className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
           </div>
           
-          <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">Copyright ©2024 Home Work Uae</p>
-            <div className="flex items-center gap-6">
-              <a href="#" className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-primary transition-all hover:scale-110 shadow-lg group">
-                <Facebook className="h-5 w-5 text-slate-400 group-hover:text-white" />
-              </a>
-              <a href="#" className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-primary transition-all hover:scale-110 shadow-lg group">
-                <Instagram className="h-5 w-5 text-slate-400 group-hover:text-white" />
-              </a>
-              <a href="#" className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-primary transition-all hover:scale-110 shadow-lg group">
-                <Music2 className="h-5 w-5 text-slate-400 group-hover:text-white" />
-              </a>
-              <a href="/contact" className="ml-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-primary transition-colors border-l border-white/10 pl-10 h-12 flex items-center">Contact us</a>
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-[11px] text-slate-500 tracking-wide">© 2024 Home Work UAE. All rights reserved.</p>
+            <div className="flex items-center gap-3">
+              {[Facebook, Instagram, Music2].map((Icon, i) => (
+                <a key={i} href="#" className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-[#039ED9] transition-colors group">
+                  <Icon className="h-3.5 w-3.5 text-slate-500 group-hover:text-white" />
+                </a>
+              ))}
             </div>
           </div>
         </div>
       </footer>
 
-     {/* Floating Action Buttons - Professional Uniform Design */}
-<div className="fixed bottom-8 right-8 z-[9999] flex flex-col gap-4 pointer-events-none">
-  
-  {/* WhatsApp Button */}
-  <a 
-    href="https://wa.me/971507177059" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    className="pointer-events-auto group relative"
-  >
-    {/* Pulsing background ring */}
-    <div className="absolute inset-0 h-16 w-16 rounded-full bg-[#25D366] opacity-0 group-hover:opacity-20 animate-ping" />
-    
-    {/* Main button - 16x16 for all */}
-    <div className="relative h-16 w-16 bg-[#25D366] text-white rounded-full shadow-[0_8px_32px_rgba(37,211,102,0.35)] flex items-center justify-center hover:scale-110 transition-transform duration-300 border-4 border-white hover:shadow-[0_12px_48px_rgba(37,211,102,0.5)]">
-      {/* WhatsApp SVG Icon */}
-      <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.006c-1.795 0-3.588.474-5.148 1.37l-.369.221-3.823.954.972-3.855.235-.374A8.871 8.871 0 015.051 2.054 8.916 8.916 0 0113.997 10.5c0 2.408-.937 4.671-2.639 6.373s-3.965 2.639-6.373 2.639"/>
-      </svg>
-      
-      {/* Notification badge */}
-      <div className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-black animate-pulse">
-        !</div>
-    </div>
-    
-    {/* Tooltip */}
-    <div className="absolute -left-48 bottom-2 px-4 py-3 bg-[#25D366] text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-2xl border border-white/20 md:block hidden">
-      💬 Chat on WhatsApp
-    </div>
-  </a>
-  
-  {/* Phone Button - Same size as WhatsApp */}
-  <a 
-    href={`tel:${profileData.phone}`} 
-    className="pointer-events-auto group relative"
-  >
-    {/* Pulsing background ring - subtle */}
-    <div className="absolute inset-0 h-16 w-16 rounded-full bg-blue-600 opacity-0 group-hover:opacity-20 animate-ping" />
-    
-    {/* Main button - 16x16 same as WhatsApp */}
-    <div className="relative h-16 w-16 bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.35)] flex items-center justify-center hover:scale-110 transition-transform duration-300 border-4 border-white hover:shadow-[0_12px_48px_rgba(37,99,235,0.5)]">
-      <Phone className="h-7 w-7" />
-    </div>
-    
-    {/* Tooltip */}
-    <div className="absolute -left-48 bottom-2 px-4 py-3 bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-2xl border border-white/20 md:block hidden">
-      📞 Call: {profileData.phone}
-    </div>
-  </a>
-
-  {/* Email Button - Same size as others */}
-  <a 
-    href={`mailto:${profileData.email}`} 
-    className="pointer-events-auto group relative"
-  >
-    {/* Pulsing background ring - subtle */}
-    <div className="absolute inset-0 h-16 w-16 rounded-full bg-blue-600 opacity-0 group-hover:opacity-20 animate-ping" />
-    
-    {/* Main button - 16x16 same as others */}
-    <div className="relative h-16 w-16 bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.35)] flex items-center justify-center hover:scale-110 transition-transform duration-300 border-4 border-white hover:shadow-[0_12px_48px_rgba(37,99,235,0.5)]">
-      <Mail className="h-7 w-7" />
-    </div>
-    
-    {/* Tooltip */}
-    <div className="absolute -left-48 bottom-2 px-4 py-3 bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-2xl border border-white/20 md:block hidden">
-      ✉ Email: {profileData.email}
-    </div>
-  </a>
-</div>
+      {/* Floating Action Buttons - Clean & Minimal */}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
+        {/* WhatsApp */}
+        <a 
+          href="https://wa.me/971507177059" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="group relative h-12 w-12 bg-[#25D366] text-white rounded-full shadow-lg shadow-[#25D366]/25 flex items-center justify-center hover:scale-105 transition-transform"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.006c-1.795 0-3.588.474-5.148 1.37l-.369.221-3.823.954.972-3.855.235-.374A8.871 8.871 0 015.051 2.054 8.916 8.916 0 0113.997 10.5c0 2.408-.937 4.671-2.639 6.373s-3.965 2.639-6.373 2.639"/>
+          </svg>
+          <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-white" />
+        </a>
+        {/* Phone */}
+        <a 
+          href={`tel:${profileData.phone}`} 
+          className="h-12 w-12 bg-[#039ED9] text-white rounded-full shadow-lg shadow-[#039ED9]/25 flex items-center justify-center hover:scale-105 transition-transform"
+        >
+          <Phone className="h-5 w-5" />
+        </a>
+        {/* Email */}
+        <a 
+          href={`mailto:${profileData.email}`} 
+          className="h-12 w-12 bg-slate-800 text-white rounded-full shadow-lg shadow-slate-800/25 flex items-center justify-center hover:scale-105 transition-transform"
+        >
+          <Mail className="h-5 w-5" />
+        </a>
+      </div>
     </div>
   )
 }
