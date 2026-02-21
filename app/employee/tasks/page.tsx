@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Menu,
@@ -15,10 +15,14 @@ import {
   Calendar,
   Zap,
   ChevronRight,
-  User
+  User,
+  Mail,
+  AlertTriangle
 } from 'lucide-react';
-import { getSession } from '@/lib/auth';
+import { getSession, type SessionData } from '@/lib/auth';
 import { EmployeeSidebar } from '../_components/sidebar';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface Task {
   id: string;
@@ -33,12 +37,22 @@ interface Task {
   description: string;
   assignedDate: string;
   assignedTo: string;
+  assignedToName?: string;
+  assignedToEmail?: string;
   notes?: string;
   progress?: number;
   completed?: boolean;
   duration?: number;
   taskId?: string;
   assignmentId?: string;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  position: string;
 }
 
 interface Toast {
@@ -48,7 +62,8 @@ interface Toast {
 
 export default function EmployeeTasksPage() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<SessionData | null>(null);
+  const [loggedInEmployee, setLoggedInEmployee] = useState<Employee | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,7 +71,9 @@ export default function EmployeeTasksPage() {
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [toast, setToast] = useState<Toast | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Session check and fetch logged-in employee
   useEffect(() => {
     const storedSession = getSession();
     if (!storedSession) {
@@ -64,25 +81,82 @@ export default function EmployeeTasksPage() {
       return;
     }
     setSession(storedSession);
+    
+    // Fetch logged-in employee
+    fetchLoggedInEmployee(storedSession);
   }, [router]);
 
-  // Automatically load tasks when session is available
-  useEffect(() => {
-    if (session?.name) {
-      console.log('Session loaded:', session.name);
-      // Load tasks immediately
-      loadTasks();
+  // Fetch logged-in employee from Firebase
+  const fetchLoggedInEmployee = async (sessionData: SessionData) => {
+    try {
+      console.log('🔍 Fetching logged-in employee for tasks...');
+      
+      let employeeData: Employee | null = null;
+      
+      // Try by employeeId first
+      if (sessionData.employeeId) {
+        const employeeDoc = await getDocs(query(
+          collection(db, 'employees'), 
+          where('__name__', '==', sessionData.employeeId)
+        ));
+        
+        if (!employeeDoc.empty) {
+          const data = employeeDoc.docs[0].data();
+          employeeData = {
+            id: employeeDoc.docs[0].id,
+            name: data.name || '',
+            email: data.email || '',
+            department: data.department || '',
+            position: data.position || ''
+          };
+          console.log('✅ Found employee by ID:', employeeData.name);
+        }
+      }
+      
+      // If not found by ID, try by email
+      if (!employeeData && sessionData.user.email) {
+        const employeesRef = collection(db, 'employees');
+        const q = query(employeesRef, where('email', '==', sessionData.user.email));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          employeeData = {
+            id: snapshot.docs[0].id,
+            name: data.name || '',
+            email: data.email || '',
+            department: data.department || '',
+            position: data.position || ''
+          };
+          console.log('✅ Found employee by email:', employeeData.name);
+        }
+      }
+      
+      setLoggedInEmployee(employeeData);
+      
+      // If employee found, load tasks for them
+      if (employeeData) {
+        loadTasksForEmployee(employeeData.name, employeeData.email);
+      } else {
+        setLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching logged-in employee:', error);
+      setLoading(false);
     }
-  }, [session]);
+  };
 
-  const loadTasks = () => {
-    console.log('Loading tasks for:', session?.name);
+  // Load tasks only for logged-in employee
+  const loadTasksForEmployee = (employeeName: string, employeeEmail: string) => {
+    console.log('Loading tasks assigned to:', employeeName);
     
     // Task assignments data (from Firebase structure)
     const taskAssignmentsData = [
       {
         assignedAt: "2026-02-09T12:31:30.408Z",
         assignedTo: "aimahhh",
+        assignedToEmail: "aimahhh@example.com",
         id: "assignment-0",
         reassignedAt: "2026-02-09T04:31:49.000Z",
         status: "pending",
@@ -92,6 +166,7 @@ export default function EmployeeTasksPage() {
       {
         assignedAt: "2026-02-09T12:31:30.408Z",
         assignedTo: "john doe",
+        assignedToEmail: "john@example.com",
         id: "assignment-1",
         reassignedAt: "2026-02-09T04:31:50.000Z",
         status: "in-progress",
@@ -101,6 +176,7 @@ export default function EmployeeTasksPage() {
       {
         assignedAt: "2026-02-09T12:31:30.408Z",
         assignedTo: "aimahhh",
+        assignedToEmail: "aimahhh@example.com",
         id: "assignment-2",
         reassignedAt: "2026-02-09T04:31:51.000Z",
         status: "completed",
@@ -159,10 +235,19 @@ export default function EmployeeTasksPage() {
       }
     ];
 
-    // Process task assignments to create tasks list
+    // ✅ Filter assignments for logged-in employee only
+    const filteredAssignments = taskAssignmentsData.filter(
+      assignment => 
+        assignment.assignedTo.toLowerCase() === employeeName.toLowerCase() ||
+        assignment.assignedToEmail?.toLowerCase() === employeeEmail.toLowerCase()
+    );
+
+    console.log(`✅ Found ${filteredAssignments.length} tasks for ${employeeName}`);
+
+    // Process filtered task assignments
     const processedTasks: Task[] = [];
 
-    taskAssignmentsData.forEach(assignment => {
+    filteredAssignments.forEach(assignment => {
       // Find the corresponding task
       const taskData = allTasksData.find(t => t.id === assignment.taskId);
       const jobData = jobsData.find(j => j.id === (assignment.taskId.includes('da7b13jx1') ? 'job-1' : 'job-2'));
@@ -172,7 +257,7 @@ export default function EmployeeTasksPage() {
         let status: 'Pending' | 'In Progress' | 'Completed' = 'Pending';
         if (assignment.status === 'completed' || taskData.completed) {
           status = 'Completed';
-        } else if (assignment.status === 'in-progress' || taskData.progress > 0) {
+        } else if (assignment.status === 'in-progress' || (taskData.progress && taskData.progress > 0)) {
           status = 'In Progress';
         }
 
@@ -199,6 +284,8 @@ export default function EmployeeTasksPage() {
           description: taskData.description || 'No description',
           assignedDate: assignment.assignedAt,
           assignedTo: assignment.assignedTo,
+          assignedToName: assignment.assignedTo,
+          assignedToEmail: assignment.assignedToEmail,
           notes: taskData.notes || '',
           progress: taskData.progress || 0,
           completed: taskData.completed || false,
@@ -209,8 +296,9 @@ export default function EmployeeTasksPage() {
       }
     });
 
-    console.log('Tasks loaded:', processedTasks.length);
+    console.log('✅ Tasks loaded for employee:', processedTasks.length);
     setTasks(processedTasks);
+    setLoading(false);
   };
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -236,20 +324,27 @@ export default function EmployeeTasksPage() {
     showToast('Task progress updated!', 'success');
   }, [tasks, showToast]);
 
-  const handleShowAllTasks = () => {
-    // Show all tasks (no filtering by employee)
-    loadTasks();
-  };
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const matchesSearch = searchTerm === '' || 
+                           task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           task.jobTitle.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || task.status === statusFilter;
+      const matchesPriority = priorityFilter === 'All' || task.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [tasks, searchTerm, statusFilter, priorityFilter]);
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = searchTerm === '' || 
-                         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || task.status === statusFilter;
-    const matchesPriority = priorityFilter === 'All' || task.priority === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+  // Calculate statistics
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    completed: tasks.filter(t => t.status === 'Completed').length,
+    inProgress: tasks.filter(t => t.status === 'In Progress').length,
+    pending: tasks.filter(t => t.status === 'Pending').length,
+    hoursWorked: tasks.reduce((sum, t) => sum + t.completedHours, 0),
+    totalHours: tasks.reduce((sum, t) => sum + t.estimatedHours, 0)
+  }), [tasks]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -278,21 +373,51 @@ export default function EmployeeTasksPage() {
     }
   };
 
-  const stats = {
-    total: tasks.length,
-    completed: tasks.filter(t => t.status === 'Completed').length,
-    inProgress: tasks.filter(t => t.status === 'In Progress').length,
-    pending: tasks.filter(t => t.status === 'Pending').length,
-    hoursWorked: tasks.reduce((sum, t) => sum + t.completedHours, 0),
-    totalHours: tasks.reduce((sum, t) => sum + t.estimatedHours, 0),
-    assignedToCurrent: tasks.filter(t => t.assignedTo === session?.name).length,
-    assignedToOthers: tasks.filter(t => t.assignedTo !== session?.name).length
+  // Get user initials
+  const getUserInitials = () => {
+    if (!session?.user?.name) return 'E';
+    return session.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex">
+        <EmployeeSidebar session={session} open={sidebarOpen} onOpenChange={setSidebarOpen} />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500 mx-auto mb-4"></div>
+            <p className="text-slate-400">Loading your tasks...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!loggedInEmployee) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex">
+        <EmployeeSidebar session={session} open={sidebarOpen} onOpenChange={setSidebarOpen} />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md px-6">
+            <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Employee Not Found</h2>
+            <p className="text-slate-400 mb-6">No employee profile linked to your account.</p>
+            <button
+              onClick={() => router.push('/login/employee')}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -313,20 +438,23 @@ export default function EmployeeTasksPage() {
                 {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-white">Task Management</h1>
-                <p className="text-sm text-slate-400">View and manage task assignments</p>
-                <p className="text-xs text-violet-400 mt-1">
-                  Logged in as: {session.name} | Your tasks: {stats.assignedToCurrent}
+                <h1 className="text-2xl font-bold text-white">My Tasks</h1>
+                <p className="text-sm text-slate-400 flex items-center gap-2">
+                  <User className="w-4 h-4 text-violet-400" />
+                  {loggedInEmployee.name} • {loggedInEmployee.department} • {loggedInEmployee.position}
                 </p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={loadTasks}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors"
-              >
-                click to show all task
-              </button>
+            
+            {/* User Info */}
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-violet-900/30 border border-violet-700 rounded-lg">
+                <Mail className="w-4 h-4 text-violet-400" />
+                <span className="text-sm text-violet-300">{loggedInEmployee.email}</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-violet-500/20">
+                {getUserInitials()}
+              </div>
             </div>
           </div>
         </div>
@@ -344,10 +472,16 @@ export default function EmployeeTasksPage() {
 
         {/* Content */}
         <div className="p-6 max-w-7xl mx-auto space-y-6">
+          {/* Welcome Banner */}
+          <div className="bg-gradient-to-r from-violet-600/20 to-purple-600/20 rounded-xl border border-violet-500/30 p-6">
+            <h2 className="text-xl font-bold text-white mb-2">Welcome, {loggedInEmployee.name}!</h2>
+            <p className="text-slate-300">You have {stats.pending} pending tasks and {stats.inProgress} tasks in progress.</p>
+          </div>
+
           {/* Statistics */}
           <div className="grid grid-cols-2 sm:grid-cols-7 gap-4">
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <p className="text-slate-400 text-sm font-medium">Total Tasks</p>
+              <p className="text-slate-400 text-sm font-medium">My Tasks</p>
               <p className="text-3xl font-bold text-white mt-2">{stats.total}</p>
             </div>
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
@@ -363,14 +497,6 @@ export default function EmployeeTasksPage() {
               <p className="text-3xl font-bold text-red-400 mt-2">{stats.pending}</p>
             </div>
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <p className="text-slate-400 text-sm font-medium">Your Tasks</p>
-              <p className="text-3xl font-bold text-violet-400 mt-2">{stats.assignedToCurrent}</p>
-            </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <p className="text-slate-400 text-sm font-medium">Others Tasks</p>
-              <p className="text-3xl font-bold text-blue-400 mt-2">{stats.assignedToOthers}</p>
-            </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
               <p className="text-slate-400 text-sm font-medium">Hours</p>
               <p className="text-3xl font-bold text-cyan-400 mt-2">{stats.hoursWorked}/{stats.totalHours}</p>
             </div>
@@ -378,12 +504,12 @@ export default function EmployeeTasksPage() {
 
           {/* Filters */}
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search by task, job, or employee..."
+                  placeholder="Search by task or job..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
@@ -409,27 +535,16 @@ export default function EmployeeTasksPage() {
                 <option>Medium</option>
                 <option>High</option>
               </select>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('All');
-                  setPriorityFilter('All');
-                  loadTasks();
-                }}
-                className="px-4 py-2 bg-slate-700 border border-slate-600 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
-              >
-                Clear Filters
-              </button>
             </div>
           </div>
 
-          {/* Tasks List */}
+          {/* Tasks List - Only logged-in employee's tasks */}
           {filteredTasks.length > 0 ? (
             <div className="space-y-3">
               {filteredTasks.map(task => (
                 <div
                   key={task.id}
-                  className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden hover:border-slate-600 transition-all "
+                  className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden hover:border-slate-600 transition-all"
                 >
                   <div
                     onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
@@ -440,7 +555,7 @@ export default function EmployeeTasksPage() {
                         {getStatusIcon(task.status)}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <h3 className="text-white font-semibold">{task.title}</h3>
                           <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(task.status)}`}>
                             {task.status}
@@ -448,12 +563,9 @@ export default function EmployeeTasksPage() {
                           <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task.priority)}`}>
                             {task.priority}
                           </span>
-                          <div className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded-lg">
-                            <User className="w-3 h-3 text-slate-300" />
-                            <span className="text-xs text-slate-300">{task.assignedTo}</span>
-                            {task.assignedTo === session.name && (
-                              <span className="text-xs text-violet-400 ml-1">(You)</span>
-                            )}
+                          <div className="flex items-center gap-1 px-2 py-1 bg-violet-900/30 rounded-lg border border-violet-800">
+                            <User className="w-3 h-3 text-violet-400" />
+                            <span className="text-xs text-violet-400">You</span>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-3 text-sm text-slate-400">
@@ -474,10 +586,6 @@ export default function EmployeeTasksPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="">
-                       
-                       
-                      </div>
                       <ChevronRight className={`w-5 h-5 text-slate-500 ml-2 transition-transform ${expandedTask === task.id ? 'rotate-90' : ''}`} />
                     </div>
                   </div>
@@ -487,23 +595,14 @@ export default function EmployeeTasksPage() {
                     <div className="border-t border-slate-700 p-4 bg-slate-700/30 space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <h4 className="fontsemibold text-white mb-2">Task Description</h4>
+                          <h4 className="font-semibold text-white mb-2">Task Description</h4>
                           <p className="text-slate-300 text-sm">{task.description}</p>
                         </div>
                         <div className="bg-slate-800/50 rounded-lg p-3">
-                          <h4 className="font-semibold text-white mb-2">Assignment Details</h4>
+                          <h4 className="font-semibold text-white mb-2">Job Details</h4>
                           <div className="space-y-1 text-sm">
                             <p className="text-slate-300">
-                              <span className="text-slate-400">Assigned to:</span> {task.assignedTo}
-                            </p>
-                            <p className="text-slate-300">
-                              <span className="text-slate-400">Assigned on:</span> {new Date(task.assignedDate).toLocaleString()}
-                            </p>
-                            <p className="text-slate-300">
-                              <span className="text-slate-400">Task ID:</span> {task.taskId}
-                            </p>
-                            <p className="text-slate-300">
-                              <span className="text-slate-400">Assignment ID:</span> {task.assignmentId}
+                              <span className="text-slate-400">Job:</span> {task.jobTitle}
                             </p>
                           </div>
                         </div>
@@ -522,19 +621,17 @@ export default function EmployeeTasksPage() {
                               style={{ width: `${(task.completedHours / task.estimatedHours) * 100}%` }}
                             ></div>
                           </div>
-                          {task.assignedTo === session.name && (
-                            <div className="flex gap-2 mt-3">
-                              <input
-                                type="number"
-                                min="0"
-                                max={task.estimatedHours}
-                                value={task.completedHours}
-                                onChange={(e) => handleUpdateProgress(task.id, parseFloat(e.target.value))}
-                                className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-violet-500"
-                              />
-                              <span className="text-slate-400 text-sm">/ {task.estimatedHours} hours</span>
-                            </div>
-                          )}
+                          <div className="flex gap-2 mt-3">
+                            <input
+                              type="number"
+                              min="0"
+                              max={task.estimatedHours}
+                              value={task.completedHours}
+                              onChange={(e) => handleUpdateProgress(task.id, parseFloat(e.target.value))}
+                              className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-violet-500"
+                            />
+                            <span className="text-slate-400 text-sm">/ {task.estimatedHours} hours</span>
+                          </div>
                         </div>
                       </div>
 
@@ -546,18 +643,13 @@ export default function EmployeeTasksPage() {
                       )}
 
                       <div className="flex gap-3 pt-2">
-                        {task.assignedTo === session.name && task.status !== 'Completed' && (
+                        {task.status !== 'Completed' && (
                           <button
                             onClick={() => handleCompleteTask(task.id)}
                             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
                           >
                             <CheckCircle className="w-4 h-4" />
                             Mark Complete
-                          </button>
-                        )}
-                        {task.assignedTo === session.name && (
-                          <button className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors text-sm">
-                            Add Note
                           </button>
                         )}
                       </div>
@@ -567,11 +659,10 @@ export default function EmployeeTasksPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-             
-              <div className="mt-4">
-                
-              </div>
+            <div className="text-center py-12 bg-slate-800 border border-slate-700 rounded-xl">
+              <CheckSquare className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+              <p className="text-slate-400 text-lg">No tasks found</p>
+              <p className="text-sm text-slate-500 mt-2">You don't have any assigned tasks yet.</p>
             </div>
           )}
         </div>

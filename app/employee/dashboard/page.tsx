@@ -413,14 +413,7 @@ export default function EmployeeDashboard() {
                     </div>
                     
                     <div className="p-2">
-                      <Link
-                        href="/employee/profile"
-                        className="flex items-center gap-3 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 rounded-lg transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <User className="w-4 h-4" />
-                        My Profile
-                      </Link>
+                     
                       <button
                         onClick={() => {
                           setUserMenuOpen(false);

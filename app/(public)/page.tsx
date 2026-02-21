@@ -385,7 +385,7 @@ export default function HomePage() {
     muted
     playsInline
   >
-    {/* <source src="https://videos.pexels.com/video-files/4109343/4109343-uhd_2732_1440_25fps.mp4" type="video/mp4" /> */}
+    <source src="https://videos.pexels.com/video-files/4109343/4109343-uhd_2732_1440_25fps.mp4" type="video/mp4" />
     
     {/* Fallback agar video na chale */}
     <img 

@@ -14,7 +14,8 @@ import {
   Link as LinkIcon,
   Upload,
   Camera,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react'
 import { db, storage } from '@/lib/firebase'
 import { 
@@ -25,7 +26,9 @@ import {
   getDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  serverTimestamp,
+  where
 } from 'firebase/firestore'
 import { 
   ref, 
@@ -33,12 +36,45 @@ import {
   getDownloadURL,
   deleteObject 
 } from 'firebase/storage'
- import { ProductItem, Category } from '@/lib/types'
 
-// ProductBuilder.tsx - interface update karein
+// Types
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+  slug: string;
+  isActive: boolean;
+}
+
+interface ProductItem {
+  id?: string;
+  name: string;
+  sku: string;
+  description: string;
+  type: 'PRODUCT' | 'SERVICE';
+  price: number;
+  cost: number;
+  unit: string;
+  stock?: number;
+  minStock?: number;
+  categoryId: string;
+  categoryName: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  imageUrl: string;
+  slug?: string;
+  isActive?: boolean;
+  profitMargin?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface ProductBuilderProps {
   product?: ProductItem | null
-  onSave: (data: Partial<ProductItem>) => void  // Parameter add karein
+  onSave: () => void  // Just refresh, no data needed
   onCancel: () => void
 }
 
@@ -87,22 +123,20 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
           itemCount: data.itemCount || 0,
           createdAt: data.createdAt || '',
           updatedAt: data.updatedAt || '',
-          slug: '',
-          isActive: false
+          slug: data.slug || '',
+          isActive: data.isActive || true
         })
       })
       setCategories(categoriesList)
       
-      // Set default category if not already set
+      // Set default category if not already set and no product
       if (categoriesList.length > 0 && !formData.categoryId && !product) {
-        setFormData((prev: any) => ({
+        setFormData((prev) => ({
           ...prev,
           categoryId: categoriesList[0].id,
           categoryName: categoriesList[0].name
         }))
       }
-    }, (error) => {
-      console.error('Error fetching categories:', error)
     })
     
     return () => unsubscribe()
@@ -122,15 +156,15 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
     const { name, value } = e.target
     if (name === 'categoryId') {
       const cat = categories.find(c => c.id === value)
-      setFormData((prev: any) => ({ 
+      setFormData((prev) => ({ 
         ...prev, 
         categoryId: value, 
         categoryName: cat?.name || '' 
       }))
     } else {
-      setFormData((prev: any) => ({ 
+      setFormData((prev) => ({ 
         ...prev, 
-        [name]: ['price', 'cost', 'stock', 'minStock'].includes(name) ? Number(value) : value 
+        [name]: ['price', 'cost', 'stock', 'minStock'].includes(name) ? Number(value) || 0 : value 
       }))
     }
   }
@@ -138,7 +172,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
   // Handle image URL input
   const handleImageUrlSubmit = () => {
     if (imageUrlInput.trim()) {
-      setFormData((prev: any) => ({ ...prev, imageUrl: imageUrlInput.trim() }))
+      setFormData((prev) => ({ ...prev, imageUrl: imageUrlInput.trim() }))
       setImagePreview(imageUrlInput.trim())
       setImageUrlInput('')
       setImageUploadMethod(null)
@@ -149,13 +183,11 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // Check if file is an image
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file')
         return
       }
       
-      // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert('Image size should be less than 5MB')
         return
@@ -163,7 +195,6 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
       
       setSelectedImage(file)
       
-      // Create preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
@@ -179,17 +210,11 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
     try {
       setUploadingImage(true)
       
-      // Generate unique filename
       const timestamp = Date.now()
       const fileName = `${formData.type?.toLowerCase() || 'product'}_${timestamp}_${file.name.replace(/\s+/g, '_')}`
-      
-      // Create storage reference
       const storageRef = ref(storage, `product-images/${fileName}`)
       
-      // Upload file
       const snapshot = await uploadBytes(storageRef, file)
-      
-      // Get download URL
       const downloadURL = await getDownloadURL(snapshot.ref)
       
       setUploadingImage(false)
@@ -206,7 +231,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
     if (selectedImage) {
       try {
         const imageUrl = await uploadImageToFirebase(selectedImage)
-        setFormData((prev: any) => ({ ...prev, imageUrl }))
+        setFormData((prev) => ({ ...prev, imageUrl }))
         alert('Image uploaded successfully!')
       } catch (error) {
         alert('Failed to upload image. Please try again.')
@@ -214,11 +239,10 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
     }
   }
 
-  // Remove image from Firebase Storage and form
+  // Remove image
   const handleRemoveImage = async () => {
     if (formData.imageUrl && formData.imageUrl.startsWith('https://firebasestorage.googleapis.com/')) {
       try {
-        // Extract path from URL
         const url = new URL(formData.imageUrl)
         const path = decodeURIComponent(url.pathname.split('/o/')[1]?.split('?')[0] || '')
         
@@ -232,78 +256,119 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
     }
     
     setImagePreview(null)
-    setFormData((prev: any) => ({ ...prev, imageUrl: '' }))
+    setFormData((prev) => ({ ...prev, imageUrl: '' }))
     setSelectedImage(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
-  // Main form submit handler
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setLoading(true)
-  
-  try {
-    if (!formData.categoryId || !formData.categoryName) {
-      alert('Please select a category')
-      setLoading(false)
-      return
-    }
+  // Generate SKU if not provided
+  const generateSKU = () => {
+    if (!formData.name) return
+    
+    const prefix = formData.type === 'PRODUCT' ? 'PROD' : 'SERV'
+    const namePart = formData.name.substring(0, 3).toUpperCase()
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+    const sku = `${prefix}-${namePart}-${random}`
+    
+    setFormData((prev) => ({ ...prev, sku }))
+  }
 
-    const now = new Date().toISOString()
+  // ✅ Main form submit handler - Saves to correct Firebase collection
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     
-    // If new image is selected, upload it first
-    let finalImageUrl = formData.imageUrl || ''
-    
-    // Check if we have a selected image and the current imageUrl is not a Firebase URL
-    if (selectedImage && (!formData.imageUrl || !formData.imageUrl.startsWith('https://'))) {
-      try {
-        finalImageUrl = await uploadImageToFirebase(selectedImage)
-      } catch (error) {
-        alert('Failed to upload image. Please try again.')
+    try {
+      if (!formData.categoryId || !formData.categoryName) {
+        alert('Please select a category')
         setLoading(false)
         return
       }
-    }
 
-    // Prepare item data to pass to parent
-    const itemData: Partial<ProductItem> = {
-      id: product?.id,
-      name: formData.name?.trim() || '',
-      sku: formData.sku?.trim() || '',
-      description: formData.description?.trim() || '',
-      type: formData.type || 'PRODUCT',
-      price: Number(formData.price) || 0,
-      cost: Number(formData.cost) || 0,
-      unit: formData.unit || 'Unit',
-      stock: Number(formData.stock) || 0,
-      minStock: Number(formData.minStock) || 0,
-      categoryId: formData.categoryId || '',
-      categoryName: formData.categoryName || '',
-      status: formData.status || 'ACTIVE',
-      imageUrl: finalImageUrl || '',
-      slug: '', // Default value
-      isActive: true, // Default value
-      profitMargin: 0, // Default value
-      createdAt: product?.createdAt || now,
-      updatedAt: now
-    }
+      if (!formData.name?.trim()) {
+        alert('Please enter item name')
+        setLoading(false)
+        return
+      }
 
-    // Pass data to parent component
-    onSave(itemData)
-    
-    // Alert should be handled by parent component
-  } catch (error) {
-    console.error('Error saving item:', error)
-    alert('Error saving item. Please try again.')
-  } finally {
-    setLoading(false)
+      const now = new Date().toISOString()
+      
+      // Upload image if selected
+      let finalImageUrl = formData.imageUrl || ''
+      if (selectedImage && (!formData.imageUrl || !formData.imageUrl.startsWith('https://'))) {
+        try {
+          finalImageUrl = await uploadImageToFirebase(selectedImage)
+        } catch (error) {
+          alert('Failed to upload image. Please try again.')
+          setLoading(false)
+          return
+        }
+      }
+
+      // Prepare item data
+      const itemData = {
+        name: formData.name?.trim() || '',
+        sku: formData.sku?.trim() || generateSKU() || `${formData.type}_${Date.now()}`,
+        description: formData.description?.trim() || '',
+        type: formData.type || 'PRODUCT',
+        price: Number(formData.price) || 0,
+        cost: Number(formData.cost) || 0,
+        unit: formData.unit || 'Unit',
+        categoryId: formData.categoryId || '',
+        categoryName: formData.categoryName || '',
+        status: formData.status || 'ACTIVE',
+        imageUrl: finalImageUrl || '',
+        slug: formData.name?.toLowerCase().replace(/\s+/g, '-') || '',
+        isActive: formData.status === 'ACTIVE',
+        profitMargin: formData.price && formData.price > 0 
+          ? Math.round(((formData.price - (formData.cost || 0)) / formData.price) * 100) 
+          : 0,
+        updatedAt: now
+      }
+
+      // Add type-specific fields
+      if (formData.type === 'PRODUCT') {
+        Object.assign(itemData, {
+          stock: Number(formData.stock) || 0,
+          minStock: Number(formData.minStock) || 0
+        })
+      }
+
+      // ✅ Save to appropriate Firebase collection
+      if (product?.id) {
+        // Update existing item
+        const collectionName = product.type === 'PRODUCT' ? 'products' : 'services'
+        const docRef = doc(db, collectionName, product.id)
+        await updateDoc(docRef, itemData)
+        console.log(`✅ ${product.type} updated in ${collectionName} collection`)
+        alert(`${product.type} updated successfully!`)
+      } else {
+        // Add new item
+        const collectionName = formData.type === 'PRODUCT' ? 'products' : 'services'
+        const docRef = await addDoc(collection(db, collectionName), {
+          ...itemData,
+          createdAt: now
+        })
+        console.log(`✅ New ${formData.type} added to ${collectionName} collection with ID: ${docRef.id}`)
+        alert(`${formData.type} added successfully!`)
+      }
+
+      // Call onSave to refresh parent list
+      onSave()
+      
+    } catch (error) {
+      console.error('❌ Error saving item:', error)
+      alert('Error saving item. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
-}
+
   // Handle type change
   const handleTypeChange = (type: 'PRODUCT' | 'SERVICE') => {
-    setFormData((prev: any) => ({ ...prev, type }))
+    setFormData((prev) => ({ ...prev, type }))
   }
 
   return (
@@ -320,6 +385,9 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
           <h2 className="text-xl font-black uppercase tracking-tighter">
             {product ? 'Edit Item' : 'Create New Item'}
           </h2>
+          <div className="ml-4 px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest">
+            {formData.type === 'PRODUCT' ? 'Physical Product' : 'Service Fee'}
+          </div>
         </div>
         <div className="flex gap-3">
           <button 
@@ -332,16 +400,16 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
           <button 
             form="product-form"
             type="submit"
-            disabled={loading || uploadingImage || !formData.name?.trim() || !formData.sku?.trim() || !formData.categoryId}
+            disabled={loading || uploadingImage || !formData.name?.trim() || !formData.categoryId}
             className={`px-6 py-2 text-xs font-black uppercase transition-all flex items-center gap-2 tracking-widest ${
-              loading || uploadingImage || !formData.name?.trim() || !formData.sku?.trim() || !formData.categoryId
+              loading || uploadingImage || !formData.name?.trim() || !formData.categoryId
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-black text-white hover:bg-gray-900'
             }`}
           >
             {loading || uploadingImage ? (
               <>
-                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                <RefreshCw className="h-4 w-4 animate-spin" />
                 {uploadingImage ? 'Uploading Image...' : 'Saving...'}
               </>
             ) : (
@@ -465,7 +533,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
                           >
                             {uploadingImage ? (
                               <>
-                                <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></span>
+                                <RefreshCw className="h-3 w-3 animate-spin inline-block mr-2" />
                                 Uploading...
                               </>
                             ) : (
@@ -512,12 +580,16 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
               )}
             </div>
             
-            <div className="p-4 bg-orange-50 border border-orange-100 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
+            <div className="p-4 bg-blue-50 border border-blue-100 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-blue-500 shrink-0" />
               <div>
-                <p className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Image Storage</p>
-                <p className="text-[10px] text-orange-600/80 mt-1">
-                  Images are stored securely in Firebase Storage and accessible via permanent URLs.
+                <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest">
+                  {formData.type === 'PRODUCT' ? 'Products Collection' : 'Services Collection'}
+                </p>
+                <p className="text-[10px] text-blue-600/80 mt-1">
+                  {formData.type === 'PRODUCT' 
+                    ? 'This item will be saved in Firebase "products" collection' 
+                    : 'This item will be saved in Firebase "services" collection'}
                 </p>
               </div>
             </div>
@@ -539,16 +611,24 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">SKU / Code *</label>
-                <input
-                  required
-                  type="text"
-                  name="sku"
-                  value={formData.sku}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-200 focus:border-black outline-none text-sm font-bold uppercase tracking-widest"
-                  placeholder="HW-CLN-001"
-                />
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">SKU / Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="sku"
+                    value={formData.sku}
+                    onChange={handleChange}
+                    className="flex-1 px-4 py-3 border border-gray-200 focus:border-black outline-none text-sm font-bold uppercase tracking-widest"
+                    placeholder="HW-CLN-001"
+                  />
+                  <button
+                    type="button"
+                    onClick={generateSKU}
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-xs font-black uppercase tracking-widest border border-gray-200"
+                  >
+                    Generate
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -681,7 +761,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
                     name="status"
                     value="ACTIVE"
                     checked={formData.status === 'ACTIVE'}
-                    onChange={(e) => setFormData((prev: any) => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
                     className="w-4 h-4"
                   />
                   <span className="text-sm font-bold">Active</span>
@@ -692,7 +772,7 @@ export default function ProductBuilder({ product, onSave, onCancel }: ProductBui
                     name="status"
                     value="INACTIVE"
                     checked={formData.status === 'INACTIVE'}
-                    onChange={(e) => setFormData((prev: any) => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
                     className="w-4 h-4"
                   />
                   <span className="text-sm font-bold">Inactive</span>

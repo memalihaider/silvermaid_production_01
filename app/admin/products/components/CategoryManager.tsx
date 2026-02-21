@@ -8,7 +8,8 @@ import {
   Edit2, 
   Check, 
   X, 
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { 
@@ -19,40 +20,37 @@ import {
   updateDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  getDocs,
+  where
 } from 'firebase/firestore'
-import { Category } from '@/lib/types'
 
-// Define props interface
-interface CategoryManagerProps {
-  categories?: Category[];  // Optional: can be passed or fetched from Firebase
-  onSave?: (data: Partial<Category>) => void;  // Optional: for parent component handling
-  onDelete?: (id: string) => void;  // Optional: for parent component handling
+// Category Interface
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+  slug: string;
+  isActive: boolean;
 }
 
-export default function CategoryManager({ 
-  categories: propCategories, 
-  onSave: propOnSave, 
-  onDelete: propOnDelete 
-}: CategoryManagerProps) {
-  const [categories, setCategories] = useState<Category[]>(propCategories || [])
+export default function CategoryManager() {
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<Partial<Category>>({
     name: '',
     description: '',
-    color: '#000000'
+    color: '#3B82F6'
   })
 
-  // Fetch categories from Firebase if not provided via props
+  // ✅ Fetch categories from Firebase in real-time
   useEffect(() => {
-    // If categories are provided via props, use them
-    if (propCategories && propCategories.length > 0) {
-      setCategories(propCategories)
-      return
-    }
-
-    // Otherwise fetch from Firebase
     const categoriesRef = collection(db, 'categories')
     const q = query(categoriesRef, orderBy('createdAt', 'desc'))
     
@@ -64,112 +62,141 @@ export default function CategoryManager({
           id: doc.id,
           name: data.name || '',
           description: data.description || '',
-          color: data.color || '#000000',
+          color: data.color || '#3B82F6',
           itemCount: data.itemCount || 0,
           createdAt: data.createdAt || '',
           updatedAt: data.updatedAt || '',
-          slug: '',
-          isActive: false
+          slug: data.slug || data.name?.toLowerCase().replace(/\s+/g, '-') || '',
+          isActive: data.isActive !== undefined ? data.isActive : true
         })
       })
       setCategories(categoriesList)
+      setLoading(false)
+    }, (error) => {
+      console.error('Error fetching categories:', error)
+      setLoading(false)
     })
     
     return () => unsubscribe()
-  }, [propCategories])
+  }, [])
 
-  // Save category to Firebase or call parent's onSave
-  const handleSave = async (categoryData: Partial<Category>) => {
+  // ✅ Check if category has products/services
+  const checkCategoryItems = async (categoryId: string): Promise<number> => {
     try {
-      // If parent provided onSave prop, use it
-      if (propOnSave) {
-        propOnSave(categoryData)
+      // Check in products collection
+      const productsRef = collection(db, 'products')
+      const productsQuery = query(productsRef, where('categoryId', '==', categoryId))
+      const productsSnapshot = await getDocs(productsQuery)
+      
+      // Check in services collection
+      const servicesRef = collection(db, 'services')
+      const servicesQuery = query(servicesRef, where('categoryId', '==', categoryId))
+      const servicesSnapshot = await getDocs(servicesQuery)
+      
+      return productsSnapshot.size + servicesSnapshot.size
+    } catch (error) {
+      console.error('Error checking category items:', error)
+      return 0
+    }
+  }
+
+  // ✅ Save category to Firebase
+  const handleSave = async () => {
+    if (!formData.name?.trim()) {
+      alert('Category name is required')
+      return
+    }
+
+    try {
+      const now = new Date().toISOString()
+      const slug = formData.name.toLowerCase().replace(/\s+/g, '-')
+      
+      if (editingId) {
+        // Update existing category
+        const categoryRef = doc(db, 'categories', editingId)
+        await updateDoc(categoryRef, {
+          name: formData.name,
+          description: formData.description || '',
+          color: formData.color || '#3B82F6',
+          slug: slug,
+          updatedAt: now
+        })
+        console.log('✅ Category updated successfully!')
+        alert('Category updated successfully!')
       } else {
-        // Otherwise save directly to Firebase
+        // Add new category
         const categoriesRef = collection(db, 'categories')
-        const now = new Date().toISOString()
-        
-        if (editingId && categoryData.id) {
-          // Update existing category
-          const categoryDoc = doc(db, 'categories', editingId)
-          await updateDoc(categoryDoc, {
-            name: categoryData.name,
-            description: categoryData.description,
-            color: categoryData.color || '#000000',
-            updatedAt: now
-          })
-        } else {
-          // Add new category
-          await addDoc(categoriesRef, {
-            name: categoryData.name,
-            description: categoryData.description,
-            color: categoryData.color || '#000000',
-            itemCount: 0,
-            createdAt: now,
-            updatedAt: now
-          })
-        }
+        await addDoc(categoriesRef, {
+          name: formData.name,
+          description: formData.description || '',
+          color: formData.color || '#3B82F6',
+          itemCount: 0,
+          slug: slug,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now
+        })
+        console.log('✅ Category added successfully!')
+        alert('Category added successfully!')
       }
       
       resetForm()
     } catch (error) {
-      console.error('Error saving category:', error)
+      console.error('❌ Error saving category:', error)
       alert('Error saving category. Please try again.')
     }
   }
 
-  // Delete category from Firebase or call parent's onDelete
+  // ✅ Delete category from Firebase
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category?')) return
+    const category = categories.find(cat => cat.id === id)
+    
+    // Check if category has items
+    const itemCount = await checkCategoryItems(id)
+    if (itemCount > 0) {
+      alert(`Cannot delete category with ${itemCount} items. Please remove items first.`)
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete category "${category?.name}"?`)) return
     
     try {
-      // If parent provided onDelete prop, use it
-      if (propOnDelete) {
-        propOnDelete(id)
-      } else {
-        // Otherwise delete directly from Firebase
-        // First check if this category has any items
-        const category = categories.find(cat => cat.id === id)
-        if (category && (category.itemCount || 0) > 0) {
-          alert('Cannot delete category with items. Please remove items first.')
-          return
-        }
-        
-        await deleteDoc(doc(db, 'categories', id))
-        alert('Category deleted successfully!')
-      }
+      await deleteDoc(doc(db, 'categories', id))
+      console.log('✅ Category deleted successfully!')
+      alert('Category deleted successfully!')
     } catch (error) {
-      console.error('Error deleting category:', error)
+      console.error('❌ Error deleting category:', error)
       alert('Error deleting category. Please try again.')
     }
+  }
+
+  // ✅ Handle edit
+  const handleEdit = (category: Category) => {
+    setFormData({
+      name: category.name,
+      description: category.description,
+      color: category.color
+    })
+    setEditingId(category.id)
+    setIsAdding(false)
   }
 
   const resetForm = () => {
     setFormData({ 
       name: '', 
       description: '', 
-      color: '#000000' 
+      color: '#3B82F6' 
     })
     setIsAdding(false)
     setEditingId(null)
   }
 
-  const handleEdit = (cat: Category) => {
-    setFormData(cat)
-    setEditingId(cat.id)
-    setIsAdding(false)
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name?.trim()) {
-      alert('Category name is required')
-      return
-    }
-    handleSave(formData)
+    handleSave()
   }
 
-  // Generate random color for new categories
+  // Generate random color
   const generateRandomColor = () => {
     const colors = [
       '#3B82F6', // Blue
@@ -180,20 +207,40 @@ export default function CategoryManager({
       '#EC4899', // Pink
       '#14B8A6', // Teal
       '#F97316', // Orange
+      '#48e605', // Green (your existing color)
     ]
-    return colors[Math.floor(Math.random() * colors.length)]
+    setFormData({ ...formData, color: colors[Math.floor(Math.random() * colors.length)] })
+  }
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Left Column - Form */}
       <div className="lg:col-span-4 space-y-6">
         <div className="bg-black text-white p-6">
           <h3 className="text-sm font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            {editingId ? 'Edit category' : 'New category'}
+            {editingId ? 'Edit Category' : 'New Category'}
           </h3>
           <p className="text-[10px] text-white/50 mb-6 uppercase tracking-widest leading-relaxed">
-            Organize your inventory into meaningful segments for better reporting and quotation building.
+            Organize your inventory into meaningful segments.
           </p>
           
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -226,41 +273,42 @@ export default function CategoryManager({
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1 block">
-                  Color
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.color}
-                    onChange={e => setFormData({ ...formData, color: e.target.value })}
-                    className="w-8 h-8 cursor-pointer"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, color: generateRandomColor() })}
-                    className="text-[10px] text-white/60 hover:text-white transition-colors"
-                  >
-                    Random
-                  </button>
-                </div>
+            <div>
+              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1 block">
+                Color
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={formData.color}
+                  onChange={e => setFormData({ ...formData, color: e.target.value })}
+                  className="w-10 h-10 cursor-pointer border-2 border-white/20"
+                />
+                <button
+                  type="button"
+                  onClick={generateRandomColor}
+                  className="text-[10px] text-white/60 hover:text-white transition-colors px-3 py-1 border border-white/20 hover:bg-white/10"
+                >
+                  Random
+                </button>
+                <span className="text-[10px] text-white/40">
+                  {formData.color}
+                </span>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-4">
               <button
                 type="submit"
                 disabled={!formData.name?.trim()}
-                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
                   !formData.name?.trim() 
                     ? 'bg-gray-500 cursor-not-allowed' 
                     : 'bg-white text-black hover:bg-white/90'
                 }`}
               >
                 {editingId ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                {editingId ? 'Update' : 'Create'}
+                {editingId ? 'Update Category' : 'Create Category'}
               </button>
               {(isAdding || editingId) && (
                 <button
@@ -268,7 +316,7 @@ export default function CategoryManager({
                   onClick={resetForm}
                   className="px-4 py-2 border border-white/20 text-white hover:bg-white/10 transition-all"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -278,14 +326,18 @@ export default function CategoryManager({
         <div className="p-4 border border-gray-200 bg-gray-50/50">
           <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4">
             <Check className="h-3 w-3 text-green-500" />
-            Pro Tip
+            Firebase Connected
           </div>
           <p className="text-[10px] text-gray-500 leading-relaxed uppercase tracking-tighter">
-            Categories with high volume items should be placed at the top for faster access in the builder.
+            Categories are saved in Firebase. Total: {categories.length} categories
+          </p>
+          <p className="text-[10px] text-gray-500 leading-relaxed uppercase tracking-tighter mt-2">
+            Last updated: {categories.length > 0 ? formatDate(categories[0]?.updatedAt) : 'N/A'}
           </p>
         </div>
       </div>
 
+      {/* Right Column - Categories List */}
       <div className="lg:col-span-8">
         <div className="bg-white border border-gray-200 overflow-hidden">
           {categories.length === 0 ? (
@@ -314,6 +366,9 @@ export default function CategoryManager({
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
                       Items
                     </th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      Created
+                    </th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">
                       Actions
                     </th>
@@ -325,19 +380,22 @@ export default function CategoryManager({
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div 
-                            className="w-1.5 h-10" 
-                            style={{ backgroundColor: cat.color || '#000000' }} 
+                            className="w-1.5 h-12 rounded-full" 
+                            style={{ backgroundColor: cat.color || '#3B82F6' }} 
                           />
                           <div>
-                            <p className="text-xs font-black text-black uppercase tracking-widest">
+                            <p className="text-sm font-black text-black uppercase tracking-widest">
                               {cat.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-tighter">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-tighter mt-1">
                               {cat.description || 'No description'}
                             </p>
-                            <div className="flex gap-2 mt-1">
+                            <div className="flex gap-3 mt-2">
                               <span className="text-[9px] text-gray-500">
-                                Created: {new Date(cat.createdAt).toLocaleDateString()}
+                                Slug: {cat.slug}
+                              </span>
+                              <span className="text-[9px] text-gray-500">
+                                ID: {cat.id.substring(0, 8)}...
                               </span>
                             </div>
                           </div>
@@ -345,12 +403,17 @@ export default function CategoryManager({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-black">
-                            {cat.itemCount || 0}
+                          <span className="text-sm font-black text-black">
+                            {cat.itemCount}
                           </span>
                           <span className="text-[10px] text-gray-400">
                             items
                           </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-[10px] text-gray-500">
+                          {formatDate(cat.createdAt)}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -360,15 +423,17 @@ export default function CategoryManager({
                             className="p-2 border border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all"
                             title="Edit category"
                           >
-                            <Edit2 className="h-3 w-3" />
+                            <Edit2 className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(cat.id)}
-                            className="p-2 border border-gray-200 hover:border-red-600 hover:bg-red-600 hover:text-white transition-all"
-                            disabled={(cat.itemCount || 0) > 0}
-                            title={(cat.itemCount || 0) > 0 ? "Cannot delete category with items" : "Delete category"}
+                            className={`p-2 border border-gray-200 hover:border-red-600 hover:bg-red-600 hover:text-white transition-all ${
+                              cat.itemCount > 0 ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            disabled={cat.itemCount > 0}
+                            title={cat.itemCount > 0 ? "Cannot delete category with items" : "Delete category"}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -377,10 +442,11 @@ export default function CategoryManager({
                 </tbody>
               </table>
               
-              <div className="px-6 py-4 border-t border-gray-200 text-right">
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
                 <p className="text-[10px] text-gray-500">
-                  Total: {categories.length} categories
+                  Total Categories: {categories.length}
                 </p>
+               
               </div>
             </>
           )}

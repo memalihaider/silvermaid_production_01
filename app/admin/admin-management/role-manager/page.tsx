@@ -19,7 +19,8 @@ import {
   EyeOff,
   Briefcase,
   UserCog,
-  MessageCircle
+  MessageCircle,
+  BarChart3 // ✅ Import Report icon
 } from 'lucide-react'
 import { createUserWithRole, updateUserRole, deleteUserRole, UserRole } from '@/lib/auth'
 import { db } from '@/lib/firebase'
@@ -32,7 +33,8 @@ const ALL_PAGES = [
   'Communications',
   'Clients',
   'Surveys',
-  'process Inquiry',
+  'Report',           // ✅ Changed from 'report' to 'Report' with proper capitalization
+  'Process Inquiry',   // ✅ Fixed capitalization
   'Quotations',
   'Inventory & Services',
   'Jobs',
@@ -59,7 +61,7 @@ const ALL_PAGES = [
   'AI Recommendations',
   'CMS',
   'Settings',
-  'Employee Chat' // ✅ Added Employee Chat to ALL_PAGES
+  'Employee Chat'
 ]
 
 // Portal Types
