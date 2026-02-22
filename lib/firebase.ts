@@ -4,17 +4,15 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
-
 const firebaseConfig = {
-  apiKey: "AIzaSyDU9KZ3r-HtwjcQOxwCFSveprrBk1Mf8lA",
-  authDomain: "homework-a36e3.firebaseapp.com",
-  projectId: "homework-a36e3",
-  storageBucket: "homework-a36e3.firebasestorage.app",
-  messagingSenderId: "476483591829",
-  appId: "1:476483591829:web:336c9ccbb7e23d0049459a",
-  measurementId: "G-NTCTYB9HVY"
+  apiKey: "AIzaSyANdFcMHj29Ay3Rpe21TVceFGVf_cKkDjs",
+  authDomain: "silvermaid-94246.firebaseapp.com",
+  projectId: "silvermaid-94246",
+  storageBucket: "silvermaid-94246.firebasestorage.app",
+  messagingSenderId: "498436955384",
+  appId: "1:498436955384:web:31281713acd4bfeeaaef0d",
+  measurementId: "G-3Q8ETHGW7X"
 };
-
 // ✅ SINGLETON PATTERN: Sirf ek hi baar initialize karein
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
@@ -34,3 +32,4 @@ if (typeof window !== "undefined") {
   }).catch(() => {});
 }
 export { analytics };
+
