@@ -130,7 +130,7 @@ export default function About() {
               <div>
                 <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight uppercase">Our Vision</h3>
                 <p className="text-slate-500 text-lg leading-relaxed font-medium">
-                  To be the first choice to our employees, suppliers and customers in the region we operate.
+                  To be the first choice for customers, employees and suppliers in the region we operate.
                 </p>
               </div>
             </motion.div>
@@ -145,7 +145,7 @@ export default function About() {
               <div>
                 <h3 className="text-3xl font-black text-white mb-4 tracking-tight uppercase">Our Mission</h3>
                 <p className="text-slate-400 text-lg leading-relaxed font-medium">
-                  To provide reliable, flexible and consistent solution to our internal and external stakeholders in our hygiene business.
+                  To provide reliable, flexible and consistent solutions to our internal and external stakeholders in our hygiene business.
                 </p>
               </div>
             </motion.div>
@@ -168,10 +168,10 @@ export default function About() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { title: "Honoring Professional SLAs", desc: "We stick to our commitments and performance standards.", icon: ShieldCheck },
-              { title: "Reliability & Integrity", desc: "Consistent results and honest service every single time.", icon: Zap },
-              { title: "Customer-First Approach", desc: "Your satisfaction is the primary driver of our operations.", icon: Heart },
-              { title: "Excellence and Quality", desc: "Setting the gold standard in every hygiene session.", icon: Award }
+              { title: "Honouring our words", desc: "We honor our commitments and keep our promises consistently.", icon: ShieldCheck },
+              { title: "Trust", desc: "Building trust through transparency and reliable service.", icon: Zap },
+              { title: "Reliability", desc: "Dependable and consistent performance in everything we do.", icon: Heart },
+              { title: "Long term approach", desc: "Building lasting relationships with our stakeholders.", icon: Award }
             ].map((value, i) => (
               <motion.div
                 key={i}

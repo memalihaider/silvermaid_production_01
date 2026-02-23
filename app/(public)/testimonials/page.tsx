@@ -88,7 +88,7 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Mrs. Samantha Jane",
     role: "Resident",
-    content: "It was depressing to sit daily on a badly stained couch. We had trialed 2 cleaning companies in the past. Unfortunately, they didn't fetch us the results. Within one visit, Silver Maid impressed us with the Sofa's transformed look. All it took was one phone call to arrange their service. I have preserved their card.",,
+    content: "It was depressing to sit daily on a badly stained couch. We had trialed 2 cleaning companies in the past. Unfortunately, they didn't fetch us the results. Within one visit, Silver Maid impressed us with the Sofa's transformed look. All it took was one phone call to arrange their service. I have preserved their card.",
     rating: 5
   },
   {

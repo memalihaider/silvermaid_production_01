@@ -473,7 +473,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-2xl font-black mb-3 text-slate-900">Our Vision</h3>
               <p className="text-slate-500 leading-relaxed">
-                To be the first choice for employees, suppliers, and customers in the regions we serve with excellence
+                To be the first choice for customers, employees and suppliers in the region we operate
               </p>
             </motion.div>
             
@@ -490,7 +490,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-2xl font-black mb-3">Our Mission</h3>
               <p className="text-slate-400 leading-relaxed">
-                Delivering reliable, flexible, and consistent hygiene solutions to all stakeholders with dedication
+                To provide reliable, flexible and consistent solutions to our internal and external stakeholders in our hygiene business
               </p>
             </motion.div>
 
@@ -508,10 +508,10 @@ export default function HomePage() {
               <h3 className="text-2xl font-black mb-5 text-slate-900">Core Values</h3>
               <ul className="space-y-3">
                 {[
-                  "Professional Excellence",
-                  "Unwavering Integrity",
-                  "Customer-First Always",
-                  "Quality Without Compromise"
+                  "Honouring our words",
+                  "Trust",
+                  "Reliability",
+                  "Long term approach"
                 ].map((val, i) => (
                   <li key={i} className="flex items-center gap-2.5 text-slate-600">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />

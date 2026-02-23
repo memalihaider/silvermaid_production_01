@@ -262,6 +262,9 @@ export default function AdminDashboard() {
     activeSurveys: 2
   })
 
+  // Current time state for hydration safety
+  const [currentTime, setCurrentTime] = useState<string>('')
+
   // ======================
   // FIREBASE REAL-TIME LISTENERS - OPTIMIZED
   // ======================
@@ -283,6 +286,21 @@ export default function AdminDashboard() {
       unsubscribe()
       clearTimeout(timer)
     }
+  }, [])
+
+  // Set current time for client-side rendering only (prevents hydration mismatch)
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+    }
+    
+    // Set initial time
+    updateTime()
+    
+    // Update time every minute
+    const interval = setInterval(updateTime, 60000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   const setupRealtimeListeners = () => {
@@ -992,7 +1010,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-600 mb-2">Last updated: {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+              <p className="text-xs text-gray-600 mb-2">Last updated: {currentTime || '--:--'}</p>
              
             </div>
           </div>
