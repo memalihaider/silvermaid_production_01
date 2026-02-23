@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -22,7 +24,9 @@ import {
   Wind
 } from 'lucide-react'
 
+
 export default function VillaDeepCleaning() {
+  const { contact } = useContactInfo()
   const categories = [
     {
       title: "Bedroom & Living Room",
@@ -140,10 +144,10 @@ export default function VillaDeepCleaning() {
               >
                 <div className="space-y-6">
                   <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Welcome to <span className="text-primary">Homework Cleaning Services LLC</span>
+                    Welcome to <span className="text-primary">Silver Maid Cleaning Services LLC</span>
                   </h2>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    Is your villa in need of a thorough and meticulous clean? Look no further! At Homework Cleaning Services LLC, we specialize in transforming your villa into a spotless sanctuary. Our professional team uses advanced equipment and eco-friendly cleaning solutions to ensure every corner of your villa shines with brilliance.
+                    Is your villa in need of a thorough and meticulous clean? Look no further! At Silver Maid Cleaning Services LLC, we specialize in transforming your villa into a spotless sanctuary. Our professional team uses advanced equipment and eco-friendly cleaning solutions to ensure every corner of your villa shines with brilliance.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary">
                     <p className="text-slate-700 font-bold italic">
@@ -320,10 +324,10 @@ export default function VillaDeepCleaning() {
               <h4 className="text-4xl md:text-5xl font-black text-white mb-8 tracking-tighter">Your Villa, <span className="text-primary italic">Exquisitely Cleaned</span></h4>
               <p className="text-slate-400 text-lg mb-10 font-bold">Contact us today for a professional villa deep cleaning experience.</p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Email Us
                 </a>
               </div>

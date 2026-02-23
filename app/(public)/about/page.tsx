@@ -40,7 +40,7 @@ export default function About() {
             </span>
             <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
               THE STORY OF <br />
-              <span className="text-primary italic">HOMEWORK</span>
+              <span className="text-primary italic">SILVER MAID</span>
             </h1>
             <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-medium">
               A brainchild of the parent company E-Movers, dedicated to delivering meticulously clean environments pre and post-move.
@@ -69,7 +69,7 @@ export default function About() {
               </h2>
               <div className="space-y-6 text-slate-600 text-lg font-medium leading-relaxed">
                 <p>
-                  Homework is a brainchild of the parent company <span className="text-slate-900 font-bold">E-Movers</span>, who have been in the relocation and moving business for 20+ years. Over the years, E-Movers has seen the need for cleaning services across homes and offices pre and post-moving.
+                  Silver Maid is a brainchild of the parent company <span className="text-slate-900 font-bold">E-Movers</span>, who have been in the relocation and moving business for 20+ years. Over the years, E-Movers has seen the need for cleaning services across homes and offices pre and post-moving.
                 </p>
                 <p>
                   In addition, with COVID-19 in the mist, there has been an increasing need for sanitization and deep cleaning services. We jumped into action to provide the UAE with a hygiene partner they can trust.
@@ -162,7 +162,7 @@ export default function About() {
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-20">
-            <h2 className="text-sm font-black text-primary uppercase tracking-[0.4em] mb-4">The DNA of Homework</h2>
+            <h2 className="text-sm font-black text-primary uppercase tracking-[0.4em] mb-4">The DNA of Silver Maid</h2>
             <h3 className="text-5xl font-black text-slate-900 tracking-tighter">OUR CORE VALUES</h3>
           </div>
 
@@ -200,7 +200,7 @@ export default function About() {
             <div className="space-y-10">
               <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
                 READY FOR THE <br />
-                <span className="text-primary italic">HOMEWORK EXPERIENCE?</span>
+                <span className="text-primary italic">SILVER MAID EXPERIENCE?</span>
               </h2>
               <div className="space-y-6">
                 <div className="flex items-center gap-6 group">
@@ -227,7 +227,7 @@ export default function About() {
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email Support</div>
-                    <div className="text-lg font-bold">services@homeworkuae.com</div>
+                    <div className="text-lg font-bold">info@silvermaid.ae</div>
                   </div>
                 </div>
               </div>

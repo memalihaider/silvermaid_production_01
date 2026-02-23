@@ -52,13 +52,13 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Mr. Hirachand Lalvani",
     role: "Supermarket Chain Owner",
-    content: "Homework sanitized our chain of grocery stores and supermarkets. The team is polite and a pleasure to work with. Apart from an intensive disinfection drive, our premise are totally pathogen-free. They left with valuable tips and guidelines for ongoing sanitization service.",
+    content: "Silver Maid sanitized our chain of grocery stores and supermarkets. The team is polite and a pleasure to work with. Apart from an intensive disinfection drive, our premise are totally pathogen-free. They left with valuable tips and guidelines for ongoing sanitization service.",
     rating: 5
   },
   {
     name: "Mr. Waseem Khan",
     role: "Office Manager",
-    content: "I am a very particular person when it comes to aspects of cleanliness. The Homework crew never disappointed me in this area. The house cleaning team arrived on time and literally cleaned every nook and corner of the office. After they left the entire environment was so refreshing.",
+    content: "I am a very particular person when it comes to aspects of cleanliness. The Silver Maid crew never disappointed me in this area. The house cleaning team arrived on time and literally cleaned every nook and corner of the office. After they left the entire environment was so refreshing.",
     rating: 5
   },
   {
@@ -70,7 +70,7 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Mr. Nafiz Bangara",
     role: "Retail Outlet Manager",
-    content: "We have booked Homework cleaning services to clean our retail outlets since we opened. Apart from a good cleaning service, we found the team to be flexible and accommodating. They have always agreed for extra-cleaning chores even at short notices. I happily recommend them for their exceptional cleaning service.",
+    content: "We have booked Silver Maid cleaning services to clean our retail outlets since we opened. Apart from a good cleaning service, we found the team to be flexible and accommodating. They have always agreed for extra-cleaning chores even at short notices. I happily recommend them for their exceptional cleaning service.",
     rating: 5
   },
   {
@@ -82,31 +82,31 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Ms. Lisa Ray",
     role: "Garden Enthusiast",
-    content: "I love my plants and flower pots dearly. Hence I was finicky when choosing a cleaning company. I assigned the job to Homework based on a friend's recommendation and I was delighted by their service level. The garden was cleaned and plants pruned to perfection with no damage to my plants. I will surely contact them again.",
+    content: "I love my plants and flower pots dearly. Hence I was finicky when choosing a cleaning company. I assigned the job to Silver Maid based on a friend's recommendation and I was delighted by their service level. The garden was cleaned and plants pruned to perfection with no damage to my plants. I will surely contact them again.",
     rating: 5
   },
   {
     name: "Mrs. Samantha Jane",
     role: "Resident",
-    content: "It was depressing to sit daily on a badly stained couch. We had trialed 2 cleaning companies in the past. Unfortunately, they didn't fetch us the results. Within one visit, Homework impressed us with the Sofa's transformed look. All it took was one phone call to arrange their service. I have preserved their card.",
+    content: "It was depressing to sit daily on a badly stained couch. We had trialed 2 cleaning companies in the past. Unfortunately, they didn't fetch us the results. Within one visit, Silver Maid impressed us with the Sofa's transformed look. All it took was one phone call to arrange their service. I have preserved their card.",,
     rating: 5
   },
   {
     name: "Mr. Amir Gaffry",
     role: "Resident",
-    content: "Homework is one of the finest cleaning services in UAE I have ever booked. They delivered an exceptional cleaning job with dedication and utmost professionalism. I really appreciate the expertise, courtesy and candidness the cleaners display.",
+    content: "Silver Maid is one of the finest cleaning services in UAE I have ever booked. They delivered an exceptional cleaning job with dedication and utmost professionalism. I really appreciate the expertise, courtesy and candidness the cleaners display.",
     rating: 5
   },
   {
     name: "Ms. Mariam Roza",
     role: "Resident",
-    content: "Homework did our move in cleaning flawlessly. They left no blemish or dark corner untouched. The tiles were shining when we entered the house. Very professional and incredibly reliable! Thanks to their cleaning services we could move in worry-free.",
+    content: "Silver Maid did our move in cleaning flawlessly. They left no blemish or dark corner untouched. The tiles were shining when we entered the house. Very professional and incredibly reliable! Thanks to their cleaning services we could move in worry-free.",,
     rating: 5
   },
   {
     name: "Mariam Khalid",
     role: "Resident, Dubai",
-    content: "I just gave initial instructions to the house cleaning team and left for a party. When I came back I was amazed by the level of tidiness. Everything was spick and span. I would definitely rebook Homework cleaning services Dubai for any upcoming cleaning sessions.",
+    content: "I just gave initial instructions to the house cleaning team and left for a party. When I came back I was amazed by the level of tidiness. Everything was spick and span. I would definitely rebook Silver Maid cleaning services Dubai for any upcoming cleaning sessions.",,
     rating: 5
   },
   {
@@ -118,13 +118,13 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Mr. Zubaid Abdullah",
     role: "Business Owner",
-    content: "I recently had disinfected and sanitized my home during the holidays. I was 100% satisfied with their service. With the pandemic, we take no chance and will regularly hire Homework cleaning company to sanitize our commercial establishments as well.",
+    content: "I recently had disinfected and sanitized my home during the holidays. I was 100% satisfied with their service. With the pandemic, we take no chance and will regularly hire Silver Maid cleaning company to sanitize our commercial establishments as well.",,
     rating: 5
   },
   {
     name: "Mr. Majid Ahmed",
     role: "Warehouse Manager",
-    content: "I used Homework for the first time to get our old warehouses cleaned and their level of service amazed my team. The premise came up so good that we didn't need as much renovation as we thought. I would highly recommend them to other organizations looking for reliable and efficient commercial cleaning services.",
+    content: "I used Silver Maid for the first time to get our old warehouses cleaned and their level of service amazed my team. The premise came up so good that we didn't need as much renovation as we thought. I would highly recommend them to other organizations looking for reliable and efficient commercial cleaning services.",,
     rating: 5
   }
 ]
@@ -219,7 +219,7 @@ export default function Testimonials() {
               What Our <span className="text-primary italic">Clients</span> Say
             </h1>
             <p className="text-xl text-slate-600 font-medium">
-              Join thousands of satisfied premium clients who trust Homework UAE for their hygiene needs.
+              Join thousands of satisfied premium clients who trust Silver Maid for their hygiene needs.
              
             </p>
           </motion.div>

@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -18,7 +20,9 @@ import {
   Play
 } from 'lucide-react'
 
+
 export default function OfficeCleaning() {
+  const { contact } = useContactInfo()
   const servicesList = [
     { name: "Regular Residential cleaning", slug: "residential-cleaning" },
     { name: "Regular Office cleaning", slug: "office-cleaning" },
@@ -126,10 +130,10 @@ export default function OfficeCleaning() {
               >
                 <div className="space-y-6">
                   <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Welcome to <span className="text-primary">Homework Cleaning Services LLC</span>
+                    Welcome to <span className="text-primary">Silver Maid Cleaning Services LLC</span>
                   </h2>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    A clean and organized office environment is essential for productivity and employee well-being. At Homework Cleaning Services LLC, we offer reliable and comprehensive regular office cleaning services tailored to your specific needs. Our experienced team uses advanced cleaning techniques and eco-friendly products to ensure your office space stays spotless and professional.
+                    A clean and organized office environment is essential for productivity and employee well-being. At Silver Maid Cleaning Services LLC, we offer reliable and comprehensive regular office cleaning services tailored to your specific needs. Our experienced team uses advanced cleaning techniques and eco-friendly products to ensure your office space stays spotless and professional.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary">
                     <p className="text-slate-700 font-bold italic">
@@ -312,10 +316,10 @@ export default function OfficeCleaning() {
               <h4 className="text-4xl md:text-5xl font-black text-white mb-8 tracking-tighter">Ready For A <span className="text-primary italic">Professional Workspace?</span></h4>
               <p className="text-slate-400 text-lg mb-10 font-bold">Contact us today for a corporate cleaning experience you can trust.</p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Email Us
                 </a>
               </div>

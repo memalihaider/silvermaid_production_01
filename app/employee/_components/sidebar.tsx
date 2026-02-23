@@ -73,7 +73,7 @@ export function EmployeeSidebar({ session, open, onOpenChange }: SidebarProps) {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-white">Employee Portal</h1>
-                <p className="text-xs text-violet-300">Homeware</p>
+                <p className="text-xs text-violet-300">Silver Maid</p>
               </div>
             </div>
           </div>

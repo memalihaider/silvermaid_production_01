@@ -38,13 +38,13 @@ export default function UserAccounts() {
   const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', role: 'user', department: 'general', password: '' })
   
   const [users, setUsers] = useState([
-    { id: 1, name: 'Ahmed Al-Maktoum', email: 'ahmed@homeware.ae', phone: '+971501234567', role: 'Super Admin', department: 'Management', status: 'Active', createdDate: '2025-01-01', lastLogin: '2025-02-18 14:30', tempAccessGrants: [] },
-    { id: 2, name: 'Fatima Al-Mansouri', email: 'fatima@homeware.ae', phone: '+971502345678', role: 'Admin', department: 'Operations', status: 'Active', createdDate: '2025-01-05', lastLogin: '2025-02-18 10:15', tempAccessGrants: [] },
-    { id: 3, name: 'Mohammed Al-Nuaimi', email: 'mohammed@homeware.ae', phone: '+971503456789', role: 'Manager', department: 'HR', status: 'Active', createdDate: '2025-01-10', lastLogin: '2025-02-17 16:45', tempAccessGrants: [{ permission: 'Finance:Approve', until: '2025-02-25' }] },
-    { id: 4, name: 'Layla Al-Zaabi', email: 'layla@homeware.ae', phone: '+971504567890', role: 'Manager', department: 'Finance', status: 'Active', createdDate: '2025-01-15', lastLogin: '2025-02-18 11:20', tempAccessGrants: [] },
-    { id: 5, name: 'Khalid Al-Marri', email: 'khalid@homeware.ae', phone: '+971505678901', role: 'Supervisor', department: 'Operations', status: 'Active', createdDate: '2025-01-20', lastLogin: '2025-02-17 09:30', tempAccessGrants: [] },
-    { id: 6, name: 'Noor Al-Hassani', email: 'noor@homeware.ae', phone: '+971506789012', role: 'User', department: 'Sales', status: 'Active', createdDate: '2025-01-25', lastLogin: '2025-02-18 13:50', tempAccessGrants: [] },
-    { id: 7, name: 'Omar Al-Ketbi', email: 'omar@homeware.ae', phone: '+971507890123', role: 'User', department: 'Operations', status: 'Inactive', createdDate: '2025-02-01', lastLogin: '2025-02-10 15:20', tempAccessGrants: [] },
+    { id: 1, name: 'Ahmed Al-Maktoum', email: 'ahmed@silvermaid.ae', phone: '+971501234567', role: 'Super Admin', department: 'Management', status: 'Active', createdDate: '2025-01-01', lastLogin: '2025-02-18 14:30', tempAccessGrants: [] },
+    { id: 2, name: 'Fatima Al-Mansouri', email: 'fatima@silvermaid.ae', phone: '+971502345678', role: 'Admin', department: 'Operations', status: 'Active', createdDate: '2025-01-05', lastLogin: '2025-02-18 10:15', tempAccessGrants: [] },
+    { id: 3, name: 'Mohammed Al-Nuaimi', email: 'mohammed@silvermaid.ae', phone: '+971503456789', role: 'Manager', department: 'HR', status: 'Active', createdDate: '2025-01-10', lastLogin: '2025-02-17 16:45', tempAccessGrants: [{ permission: 'Finance:Approve', until: '2025-02-25' }] },
+    { id: 4, name: 'Layla Al-Zaabi', email: 'layla@silvermaid.ae', phone: '+971504567890', role: 'Manager', department: 'Finance', status: 'Active', createdDate: '2025-01-15', lastLogin: '2025-02-18 11:20', tempAccessGrants: [] },
+    { id: 5, name: 'Khalid Al-Marri', email: 'khalid@silvermaid.ae', phone: '+971505678901', role: 'Supervisor', department: 'Operations', status: 'Active', createdDate: '2025-01-20', lastLogin: '2025-02-17 09:30', tempAccessGrants: [] },
+    { id: 6, name: 'Noor Al-Hassani', email: 'noor@silvermaid.ae', phone: '+971506789012', role: 'User', department: 'Sales', status: 'Active', createdDate: '2025-01-25', lastLogin: '2025-02-18 13:50', tempAccessGrants: [] },
+    { id: 7, name: 'Omar Al-Ketbi', email: 'omar@silvermaid.ae', phone: '+971507890123', role: 'User', department: 'Operations', status: 'Inactive', createdDate: '2025-02-01', lastLogin: '2025-02-10 15:20', tempAccessGrants: [] },
   ])
 
   const filteredUsers = useMemo(() => {
@@ -321,7 +321,7 @@ export default function UserAccounts() {
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Email Address</label>
                   <input
                     type="email"
-                    placeholder="e.g. ahmed@homeware.ae"
+                    placeholder="e.g. ahmed@silvermaid.ae"
                     value={newUser.email}
                     onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-black placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"

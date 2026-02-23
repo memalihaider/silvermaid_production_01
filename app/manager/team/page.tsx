@@ -7,12 +7,12 @@ import { getSession, clearSession, type SessionData } from '@/lib/auth';
 import { Users, Mail, Phone, Briefcase, Clock, AlertCircle, UserPlus, MoreVertical, Badge, Menu, X } from 'lucide-react';
 
 const teamMembers = [
-  { id: '1', name: 'Ahmed Hassan', role: 'Senior Technician', email: 'ahmed.hassan@homeware.ae', phone: '+971501234567', department: 'Operations', status: 'active', joinDate: '2023-06-15', currentJob: 'JOB-2024-001', hoursWorked: 168 },
-  { id: '2', name: 'Sara Al Maktoum', role: 'Project Coordinator', email: 'sara.almaktoum@homeware.ae', phone: '+971501234568', department: 'Projects', status: 'active', joinDate: '2023-08-20', currentJob: 'JOB-2024-002', hoursWorked: 156 },
-  { id: '3', name: 'Mohammed Ali', role: 'Technician', email: 'mohammed.ali@homeware.ae', phone: '+971501234569', department: 'Operations', status: 'active', joinDate: '2023-09-01', currentJob: 'JOB-2024-001', hoursWorked: 172 },
-  { id: '4', name: 'Fatima Khalid', role: 'Quality Inspector', email: 'fatima.khalid@homeware.ae', phone: '+971501234570', department: 'Quality', status: 'on-leave', joinDate: '2023-07-10', currentJob: null, hoursWorked: 140 },
-  { id: '5', name: 'Omar Rashid', role: 'Field Engineer', email: 'omar.rashid@homeware.ae', phone: '+971501234571', department: 'Operations', status: 'active', joinDate: '2023-10-05', currentJob: 'JOB-2024-004', hoursWorked: 168 },
-  { id: '6', name: 'Layla Mansour', role: 'Safety Officer', email: 'layla.mansour@homeware.ae', phone: '+971501234572', department: 'Safety', status: 'active', joinDate: '2023-11-01', currentJob: null, hoursWorked: 160 },
+  { id: '1', name: 'Ahmed Hassan', role: 'Senior Technician', email: 'ahmed.hassan@silvermaid.ae', phone: '+971501234567', department: 'Operations', status: 'active', joinDate: '2023-06-15', currentJob: 'JOB-2024-001', hoursWorked: 168 },
+  { id: '2', name: 'Sara Al Maktoum', role: 'Project Coordinator', email: 'sara.almaktoum@silvermaid.ae', phone: '+971501234568', department: 'Projects', status: 'active', joinDate: '2023-08-20', currentJob: 'JOB-2024-002', hoursWorked: 156 },
+  { id: '3', name: 'Mohammed Ali', role: 'Technician', email: 'mohammed.ali@silvermaid.ae', phone: '+971501234569', department: 'Operations', status: 'active', joinDate: '2023-09-01', currentJob: 'JOB-2024-001', hoursWorked: 172 },
+  { id: '4', name: 'Fatima Khalid', role: 'Quality Inspector', email: 'fatima.khalid@silvermaid.ae', phone: '+971501234570', department: 'Quality', status: 'on-leave', joinDate: '2023-07-10', currentJob: null, hoursWorked: 140 },
+  { id: '5', name: 'Omar Rashid', role: 'Field Engineer', email: 'omar.rashid@silvermaid.ae', phone: '+971501234571', department: 'Operations', status: 'active', joinDate: '2023-10-05', currentJob: 'JOB-2024-004', hoursWorked: 168 },
+  { id: '6', name: 'Layla Mansour', role: 'Safety Officer', email: 'layla.mansour@silvermaid.ae', phone: '+971501234572', department: 'Safety', status: 'active', joinDate: '2023-11-01', currentJob: null, hoursWorked: 160 },
 ];
 
 export default function TeamManagement() {

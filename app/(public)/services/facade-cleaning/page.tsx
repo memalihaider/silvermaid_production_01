@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -28,7 +30,9 @@ import {
   Glasses
 } from 'lucide-react'
 
+
 export default function FacadeCleaning() {
+  const { contact } = useContactInfo()
   const categories = [
     {
       title: "Surface Cleaning Systems",
@@ -152,7 +156,7 @@ export default function FacadeCleaning() {
                     First impressions matter, and a clean facade can make a significant difference. 
                   </p>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    At Homework Cleaning Services LLC, we specialize in professional facade cleaning services to ensure your building’s exterior looks pristine and inviting. Our experienced team uses advanced cleaning techniques and eco-friendly products to remove dirt, grime, and stains, enhancing the appearance and longevity of your building asset in the demanding UAE climate.
+                    At Silver Maid Cleaning Services LLC, we specialize in professional facade cleaning services to ensure your building’s exterior looks pristine and inviting. Our experienced team uses advanced cleaning techniques and eco-friendly products to remove dirt, grime, and stains, enhancing the appearance and longevity of your building asset in the demanding UAE climate.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary shadow-sm">
                     <p className="text-slate-700 font-bold italic text-sm">
@@ -203,7 +207,7 @@ export default function FacadeCleaning() {
 
                 <div className="pt-10 border-t border-slate-100 italic font-medium text-slate-500">
                   <p>
-                    Don’t let dirt and pollution dull your architectural vision. Contact Homework Cleaning Services LLC today for a specialized facade cleaning audit and maintenance plan.
+                    Don’t let dirt and pollution dull your architectural vision. Contact Silver Maid Cleaning Services LLC today for a specialized facade cleaning audit and maintenance plan.
                   </p>
                 </div>
               </motion.div>
@@ -238,7 +242,7 @@ export default function FacadeCleaning() {
                 <div className="mt-12 p-8 bg-primary/10 rounded-3xl border border-primary/20 text-center">
                   <p className="text-sm font-bold text-primary mb-4 uppercase tracking-[0.2em]">Immediate Service</p>
                   <p className="text-2xl font-black text-white tracking-tighter mb-8 italic leading-tight uppercase tracking-widest">RESTORE YOUR<br />SKYLINE</p>
-                  <a href="tel:80046639675" className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
+                  <a href={`tel:${contact.phone}`} className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
                      800 4663 9675
                   </a>
                 </div>
@@ -280,7 +284,7 @@ export default function FacadeCleaning() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-sm font-black text-primary uppercase tracking-[0.4em] mb-4">The Advantage</h2>
-            <h3 className="text-5xl font-black text-slate-900 tracking-tighter uppercase mb-6">WHY HOMEWORK FACADE CARE?</h3>
+            <h3 className="text-5xl font-black text-slate-900 tracking-tighter uppercase mb-6">WHY SILVER MAID FACADE CARE?</h3>
             <p className="text-slate-600 font-bold max-w-2xl mx-auto italic">“A clean building is a healthy building. We restore beauty to every surface we touch.”</p>
           </div>
 
@@ -349,10 +353,10 @@ export default function FacadeCleaning() {
                 Ready for a skyline transformation? Contact us today for a free facade assessment.
               </p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Request Audit
                 </a>
               </div>

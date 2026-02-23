@@ -42,7 +42,7 @@
 //   };
 
 //   const fillDemoCredentials = () => {
-//     setEmail('admin@homeware.ae');
+//     setEmail('admin@silvermaid.ae');
 //     setPassword('Demo@123');
 //   };
 
@@ -92,7 +92,7 @@
 //                 value={email}
 //                 onChange={(e) => setEmail(e.target.value)}
 //                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-//                 placeholder="admin@homeware.ae"
+//                 placeholder="admin@silvermaid.ae"
 //                 required
 //               />
 //             </div>
@@ -165,7 +165,7 @@
 
 //         {/* Support link */}
 //         <p className="text-center text-slate-400 text-sm mt-8">
-//           Need help? <a href="mailto:support@homeware.ae" className="text-blue-400 hover:text-blue-300">Contact support</a>
+//           Need help? <a href="mailto:support@silvermaid.ae" className="text-blue-400 hover:text-blue-300">Contact support</a>
 //         </p>
 //       </div>
 //     </div>
@@ -230,7 +230,7 @@ export default function AdminLogin() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('admin@homeware.ae');
+    setEmail('admin@silvermaid.ae');
     setPassword('Demo@123');
   };
 
@@ -295,7 +295,7 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all pl-11"
-                  placeholder="admin@homeware.ae"
+                  placeholder="admin@silvermaid.ae"
                   required
                   disabled={isLoading}
                 />
@@ -376,7 +376,7 @@ export default function AdminLogin() {
         {/* Support link */}
         <p className="text-center text-slate-500 text-sm mt-8">
           Need help?{' '}
-          <a href="mailto:support@homeware.ae" className="text-purple-400 hover:text-purple-300 transition-colors">
+          <a href="mailto:support@silvermaid.ae" className="text-purple-400 hover:text-purple-300 transition-colors">
             Contact support
           </a>
         </p>

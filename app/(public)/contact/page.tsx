@@ -38,7 +38,7 @@ interface FormData {
 export default function Contact() {
   const [activeTab, setActiveTab] = useState('form')
   const [profileData, setProfileData] = useState({
-    email: 'services@homeworkuae.com',
+    email: 'info@silvermaid.ae',
     phone: '80046639675',
     whatsapp: '+971 50 717 7059'
   })
@@ -63,7 +63,7 @@ export default function Contact() {
           const data = docSnap.data()
           if (data.profile) {
             setProfileData({
-              email: data.profile.email || 'services@homeworkuae.com',
+              email: data.profile.email || 'info@silvermaid.ae',
               phone: data.profile.phone || '80046639675',
               whatsapp: data.profile.whatsapp || '+971 50 717 7059'
             })

@@ -130,7 +130,7 @@ export default function CMS() {
 
   // Default Privacy Policy content
   const defaultPrivacyContent = `Information Collection
-At Homework UAE, we respect your privacy. We collect personal information such as your name, contact details, and address solely for the purpose of providing and coordinating our cleaning services. This data is stored securely and is never shared with third parties for marketing purposes.
+At Silver Maid, we respect your privacy. We collect personal information such as your name, contact details, and address solely for the purpose of providing and coordinating our cleaning services. This data is stored securely and is never shared with third parties for marketing purposes.
 
 Data Security
 We implement industry-standard security measures to protect your personal data from unauthorized access or disclosure. Our online booking system uses SSL encryption to ensure your payment and personal details are handled with the highest level of security.
@@ -1676,7 +1676,7 @@ You have the right to request access to the personal data we hold about you, to 
                 type="button"
                 onClick={() => {
                   // Add heading format
-                  const headingText = `Information Collection\nAt Homework UAE, we respect your privacy...\n\nData Security\nWe implement industry-standard security measures...\n\nUsage Disclosure\nWe use your information to:\n• Schedule and confirm your cleaning appointments\n• Process payments and issue invoices\n• Communicate service updates or changes\n• Enhance our customer support experience\n\nYour Rights\nYou have the right to request access to the personal data...`;
+                  const headingText = `Information Collection\nAt Silver Maid, we respect your privacy...\n\nData Security\nWe implement industry-standard security measures...\n\nUsage Disclosure\nWe use your information to:\n• Schedule and confirm your cleaning appointments\n• Process payments and issue invoices\n• Communicate service updates or changes\n• Enhance our customer support experience\n\nYour Rights\nYou have the right to request access to the personal data...`;
                   setPrivacyForm(prev => ({ ...prev, content: headingText }));
                 }}
                 className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
@@ -1700,7 +1700,7 @@ IMPORTANT: To create headings in your content, follow these rules:
 
 2. TEXT AFTER HEADING: Put the content immediately after the heading on the next line
    Example: Information Collection
-   At Homework UAE, we respect your privacy...
+   At Silver Maid, we respect your privacy...
 
 3. BULLET POINTS: Use • for bullet points
    Example: • Schedule and confirm your cleaning appointments
@@ -1710,7 +1710,7 @@ IMPORTANT: To create headings in your content, follow these rules:
 
 Example structure:
 Information Collection
-At Homework UAE, we respect your privacy...
+At Silver Maid, we respect your privacy...
 
 Data Security
 We implement industry-standard security measures...

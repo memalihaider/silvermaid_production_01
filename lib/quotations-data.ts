@@ -374,7 +374,7 @@ let quotationsData: Quotation[] = [
 // Functions to manage quotations data
 export const getQuotations = (): Quotation[] => {
   // Try to load from localStorage first
-  const saved = localStorage.getItem('homeware_quotations')
+  const saved = localStorage.getItem('silvermaid_quotations')
   if (saved) {
     try {
       return JSON.parse(saved)
@@ -387,7 +387,7 @@ export const getQuotations = (): Quotation[] => {
 
 export const saveQuotations = (quotations: Quotation[]) => {
   quotationsData = quotations
-  localStorage.setItem('homeware_quotations', JSON.stringify(quotations))
+  localStorage.setItem('silvermaid_quotations', JSON.stringify(quotations))
 }
 
 export const addQuotation = (quotation: Quotation) => {
@@ -419,6 +419,6 @@ export const getQuotationById = (id: number): Quotation | undefined => {
 }
 
 // Initialize with default data if localStorage is empty
-if (typeof window !== 'undefined' && !localStorage.getItem('homeware_quotations')) {
-  localStorage.setItem('homeware_quotations', JSON.stringify(quotationsData))
+if (typeof window !== 'undefined' && !localStorage.getItem('silvermaid_quotations')) {
+  localStorage.setItem('silvermaid_quotations', JSON.stringify(quotationsData))
 }

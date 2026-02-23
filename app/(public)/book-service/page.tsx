@@ -535,7 +535,7 @@ export default function BookService() {
                       href="tel:80046639675"
                       className="text-white hover:text-primary transition-colors"
                     >
-                      800-HOMEWORK
+                      800-SILVERMAID
                     </a>
                   </p>
                 </div>

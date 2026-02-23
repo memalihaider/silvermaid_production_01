@@ -2,8 +2,12 @@
 
 import { motion } from 'framer-motion'
 import { CheckCircle2, ArrowRight, Brush, Sparkles, Droplets, ShieldCheck, Play } from 'lucide-react'
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
+
 
 export default function FloorDeepCleaning() {
+  const { contact } = useContactInfo()
   return (
     <div className="flex flex-col overflow-hidden">
       {/* Hero Section */}

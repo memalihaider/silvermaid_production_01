@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -24,7 +26,9 @@ import {
   Scale
 } from 'lucide-react'
 
+
 export default function KitchenHoodCleaning() {
+  const { contact } = useContactInfo()
   const categories = [
     {
       title: "Critical Safety & Risks",
@@ -148,7 +152,7 @@ export default function KitchenHoodCleaning() {
                     When you think of a restaurant’s kitchen, the focus usually goes to the food being prepared. Yet, one crucial component often overlooked is the kitchen hood. Regular cleaning of this system is not just a good practice; it’s essential for safety and compliance.
                   </p>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    At Homework Cleaning Services LLC, we understand that cooking equipment is the leading cause of restaurant fires, accounting for over 50% of all incidents. Grease buildup in kitchen exhaust systems is a major contributor, leading to potential infernos that can devastate your establishment. We help you stay compliant, avoid fines, and protect your bottom line.
+                    At Silver Maid Cleaning Services LLC, we understand that cooking equipment is the leading cause of restaurant fires, accounting for over 50% of all incidents. Grease buildup in kitchen exhaust systems is a major contributor, leading to potential infernos that can devastate your establishment. We help you stay compliant, avoid fines, and protect your bottom line.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary shadow-sm">
                     <p className="text-slate-700 font-bold italic text-sm">
@@ -234,7 +238,7 @@ export default function KitchenHoodCleaning() {
                 <div className="mt-12 p-8 bg-primary/10 rounded-3xl border border-primary/20 text-center">
                   <p className="text-sm font-bold text-primary mb-4 uppercase tracking-[0.2em]">Compliance Check</p>
                   <p className="text-2xl font-black text-white tracking-tighter mb-8 italic leading-tight uppercase">Protect Your<br />Restaurant</p>
-                  <a href="tel:80046639675" className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
+                  <a href={`tel:${contact.phone}`} className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
                      800 4663 9675
                   </a>
                 </div>
@@ -335,10 +339,10 @@ export default function KitchenHoodCleaning() {
                 Schedule your professional kitchen hood cleaning today and stay informed with local health and fire departments.
               </p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Compliance Inquiry
                 </a>
               </div>

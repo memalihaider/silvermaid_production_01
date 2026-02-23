@@ -102,10 +102,10 @@ For average household traffic, professional carpet cleaning should be done every
   },
   {
     id: '3',
-    title: 'Homework UAE Achieves Premium Service Certification',
-    slug: 'homework-uae-premium-certification',
-    excerpt: 'We are proud to announce that Homework UAE has received International Premium Cleaning Service Certification, reinforcing our commitment to excellence.',
-    content: `We are thrilled to announce that Homework UAE has successfully achieved the International Premium Cleaning Service Certification (IPCSC). This prestigious recognition reflects our unwavering commitment to providing world-class cleaning services across the UAE.
+    title: 'Silver Maid Achieves Premium Service Certification',
+    slug: 'silver-maid-premium-certification',
+    excerpt: 'We are proud to announce that Silver Maid has received International Premium Cleaning Service Certification, reinforcing our commitment to excellence.',
+    content: `We are thrilled to announce that Silver Maid has successfully achieved the International Premium Cleaning Service Certification (IPCSC). This prestigious recognition reflects our unwavering commitment to providing world-class cleaning services across the UAE.
 
 What This Means for Our Clients:
 
@@ -129,7 +129,7 @@ Our Commitment Moving Forward:
 
 This certification is not an end point but a beginning. We continue to invest in our people, our equipment, and our processes to maintain these standards and exceed customer expectations.
 
-Thank you for trusting Homework UAE with your cleaning needs. We are honored to serve you with certified excellence.`,
+Thank you for trusting Silver Maid with your cleaning needs. We are honored to serve you with certified excellence.`,
     author: 'Management Team',
     authorImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100',
     category: 'industry-news',

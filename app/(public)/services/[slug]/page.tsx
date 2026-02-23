@@ -381,7 +381,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ slug: 
               >
                 <div className="space-y-6">
                   <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Welcome to <span className="text-primary">Homework Cleaning Services LLC</span>
+                    Welcome to <span className="text-primary">Silver Maid Cleaning Services LLC</span>
                   </h2>
                   
                   {isFirebaseService && serviceData.rawData ? (
@@ -436,7 +436,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ slug: 
                     <div className="space-y-6">
                       <p className="text-slate-600 text-base md:text-lg font-medium leading-relaxed">
                         Keeping your space clean and tidy is essential for a comfortable and healthy environment. 
-                        At Homework Cleaning Services LLC, we offer reliable and comprehensive {serviceData.title.toLowerCase()} 
+                        At Silver Maid Cleaning Services LLC, we offer reliable and comprehensive {serviceData.title.toLowerCase()} 
                         services tailored to your specific needs. Our experienced team uses advanced cleaning techniques 
                         and eco-friendly products to ensure your space stays spotless and inviting.
                       </p>
@@ -645,7 +645,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ slug: 
                   800 4663 9675
                 </a>
                 <a 
-                  href="mailto:services@homeworkuae.com" 
+                  href="mailto:info@silvermaid.ae" 
                   className="bg-white/10 text-white border border-white/20 px-6 md:px-10 py-4 md:py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3"
                 >
                   Email Us

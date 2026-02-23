@@ -119,7 +119,7 @@
 //     doc.setTextColor(0, 0, 0);
 //     doc.setFontSize(10);
 //     doc.setFont('helvetica', 'bold');
-//     doc.text('HOMEWORK', pageWidth - margin, 12, { align: 'right' });
+//     doc.text('SILVER MAID', pageWidth - margin, 12, { align: 'right' });
     
 //     doc.setFontSize(7);
 //     doc.setFont('helvetica', 'light');
@@ -191,7 +191,7 @@
 //   doc.setTextColor(80, 80, 80);
   
 //   let fromY = fromToBaseY + 8;
-//   doc.text('HOMEWORK CLEANING', margin + 4, fromY);
+//   doc.text('SILVER MAID CLEANING', margin + 4, fromY);
 //   fromY += 3;
 //   doc.text('Al Quoz Ind Area 1', margin + 4, fromY);
 //   fromY += 3;
@@ -200,7 +200,7 @@
 //   doc.setTextColor(0, 0, 0);
 //   doc.text('+971 800 4663', margin + 4, fromY);
 //   fromY += 3;
-//   doc.text('services@homeworkuae.com', margin + 4, fromY);
+//   doc.text('info@silvermaid.ae', margin + 4, fromY);
 
 //   doc.setDrawColor(220, 220, 220);
 //   doc.line(pageWidth / 2, fromToBaseY, pageWidth / 2, fromToBaseY + fromToBoxHeight);
@@ -619,7 +619,7 @@
 //     doc.setTextColor(0, 0, 0);
     
 //     const bankDetails = [
-//       ['Account Name:', quotation.bankDetails.accountName || 'HOMEWORK CLEANING SERVICES LLC'],
+//       ['Account Name:', quotation.bankDetails.accountName || 'SILVER MAID CLEANING SERVICES LLC'],
 //       ['Account Number:', quotation.bankDetails.accountNumber || '1234567890123'],
 //       ['Bank Name:', quotation.bankDetails.bankName || 'Emirates NBD'],
 //       ['SWIFT Code:', quotation.bankDetails.swiftCode || 'EBILAEAD'],
@@ -825,7 +825,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('HOMEWORK', pageWidth - margin, 12, { align: 'right' });
+    doc.text('SILVER MAID', pageWidth - margin, 12, { align: 'right' });
     
     doc.setFontSize(7);
     doc.setFont('helvetica', 'light');
@@ -897,7 +897,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   doc.setTextColor(80, 80, 80);
   
   let fromY = fromToBaseY + 8;
-  doc.text('HOMEWORK CLEANING', margin + 4, fromY);
+  doc.text('SILVER MAID CLEANING', margin + 4, fromY);
   fromY += 3;
   doc.text('Al Quoz Ind Area 1', margin + 4, fromY);
   fromY += 3;
@@ -906,7 +906,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   doc.setTextColor(0, 0, 0);
   doc.text('+971 800 4663', margin + 4, fromY);
   fromY += 3;
-  doc.text('services@homeworkuae.com', margin + 4, fromY);
+  doc.text('info@silvermaid.ae', margin + 4, fromY);
 
   doc.setDrawColor(220, 220, 220);
   doc.line(pageWidth / 2, fromToBaseY, pageWidth / 2, fromToBaseY + fromToBoxHeight);
@@ -1378,7 +1378,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
     doc.setTextColor(0, 0, 0);
     
     const bankDetails = [
-      ['Account Name:', quotation.bankDetails.accountName || 'HOMEWORK CLEANING SERVICES LLC'],
+      ['Account Name:', quotation.bankDetails.accountName || 'SILVER MAID CLEANING SERVICES LLC'],
       ['Account Number:', quotation.bankDetails.accountNumber || '1234567890123'],
       ['Bank Name:', quotation.bankDetails.bankName || 'Emirates NBD'],
       ['SWIFT Code:', quotation.bankDetails.swiftCode || 'EBILAEAD'],

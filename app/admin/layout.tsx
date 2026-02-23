@@ -722,24 +722,26 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {sidebarOpen && (
             <>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-bold text-lg">
-                  H
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="Silver Maids Dubai" 
+                  className="h-10 w-10 object-contain"
+                />
                 <div>
-                  <span className="font-bold text-base tracking-tight block leading-none">
-                    HOMEWARE
-                  </span>
-                  <span className="text-[10px] font-semibold text-[#039ED9] tracking-wider uppercase">
-                    Hygiene ERP
+                  
+                  <span className="text-[10px] font-semibold text-[#ea4c8c] tracking-wider uppercase">
+                    Dashboard
                   </span>
                 </div>
               </div>
             </>
           )}
           {!sidebarOpen && (
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-bold text-lg">
-              H
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="Silver Maids Dubai" 
+              className="h-10 w-10 object-contain"
+            />
           )}
         </div>
 
@@ -775,7 +777,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       onClick={() => toggleMenu(menuItem.key)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                         isGroupActive
-                          ? "bg-[#039ED9] text-white shadow-sm"
+                          ? "bg-[#0b7a8e] text-white shadow-sm"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       } ${!sidebarOpen && "justify-center"}`}
                       title={!sidebarOpen ? menuItem.label : undefined}
@@ -785,7 +787,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           className={`h-5 w-5 transition-colors shrink-0 ${
                             isGroupActive
                               ? "text-white"
-                              : "text-muted-foreground group-hover:text-[#039ED9]"
+                              : "text-muted-foreground group-hover:text-[#0b7a8e]"
                           }`}
                         />
                       )}
@@ -848,7 +850,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     href={pageConfig?.href || "#"}
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                       isActive
-                        ? "bg-[#039ED9] text-white shadow-sm"
+                        ? "bg-[#0b7a8e] text-white shadow-sm"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     } ${!sidebarOpen && "justify-center"}`}
                     title={!sidebarOpen ? menuItem.label : undefined}
@@ -858,7 +860,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         className={`h-5 w-5 transition-colors shrink-0 ${
                           isActive
                             ? "text-white"
-                            : "text-muted-foreground group-hover:text-[#039ED9]"
+                            : "text-muted-foreground group-hover:text-[#0b7a8e]"
                         }`}
                       />
                     )}
@@ -883,7 +885,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {sidebarOpen && (
             <div className="bg-muted/50 rounded-xl p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#039ED9] to-[#0280b0] flex items-center justify-center text-white font-semibold shrink-0">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#0b7a8e] to-[#086878] flex items-center justify-center text-white font-semibold shrink-0">
                   {userSession.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -893,7 +895,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <p className="text-xs text-muted-foreground truncate">
                     {userSession.email}
                   </p>
-                  <p className="text-xs text-[#039ED9] font-semibold truncate mt-0.5">
+                  <p className="text-xs text-[#0b7a8e] font-semibold truncate mt-0.5">
                     {userSession.roleName}
                   </p>
                 </div>
@@ -941,7 +943,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         onClick={() => toggleMenu(menuItem.key)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                           isGroupActive
-                            ? "bg-[#039ED9] text-white shadow-sm"
+                            ? "bg-[#0b7a8e] text-white shadow-sm"
                             : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         }`}
                       >
@@ -950,7 +952,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                             className={`h-5 w-5 transition-colors shrink-0 ${
                               isGroupActive
                                 ? "text-white"
-                                : "text-muted-foreground group-hover:text-[#039ED9]"
+                                : "text-muted-foreground group-hover:text-[#0b7a8e]"
                             }`}
                           />
                         )}
@@ -1011,7 +1013,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 group ${
                         isActive
-                          ? "bg-[#039ED9] text-white shadow-sm"
+                          ? "bg-[#0b7a8e] text-white shadow-sm"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       }`}
                     >
@@ -1020,7 +1022,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           className={`h-5 w-5 transition-colors shrink-0 ${
                             isActive
                               ? "text-white"
-                              : "text-muted-foreground group-hover:text-[#039ED9]"
+                              : "text-muted-foreground group-hover:text-[#0b7a8e]"
                           }`}
                         />
                       )}
@@ -1059,7 +1061,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <input
                 type="text"
                 placeholder="Search anything..."
-                className="w-full pl-10 pr-4 py-2 bg-muted/50 border-none rounded-lg text-sm focus:ring-2 focus:ring-[#039ED9] outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-muted/50 border-none rounded-lg text-sm focus:ring-2 focus:ring-[#0b7a8e] outline-none transition-all"
               />
             </div>
           </div>
@@ -1067,7 +1069,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="hidden md:block text-sm text-muted-foreground">
               Logged in as:{" "}
-              <span className="font-semibold text-[#039ED9]">
+              <span className="font-semibold text-[#0b7a8e]">
                 {userSession.name}
               </span>
             </div>
@@ -1105,7 +1107,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllAsRead}
-                        className="text-xs font-medium text-[#039ED9] hover:text-[#0280b0] px-3 py-1 bg-[#039ED9]/10 rounded-lg"
+                        className="text-xs font-medium text-[#0b7a8e] hover:text-[#086878] px-3 py-1 bg-[#0b7a8e]/10 rounded-lg"
                       >
                         Mark all read
                       </button>
@@ -1135,7 +1137,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-4 hover:bg-muted/50 transition-colors ${!notification.read ? "bg-[#039ED9]/5" : ""} ${
+                          className={`p-4 hover:bg-muted/50 transition-colors ${!notification.read ? "bg-[#0b7a8e]/5" : ""} ${
                             notification.bookingId
                               ? "border-l-3 border-l-green-500"
                               : ""
@@ -1153,7 +1155,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                   {notification.title}
                                 </h4>
                                 {!notification.read && (
-                                  <span className="h-2 w-2 bg-[#039ED9] rounded-full shrink-0 mt-1.5"></span>
+                                  <span className="h-2 w-2 bg-[#0b7a8e] rounded-full shrink-0 mt-1.5"></span>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mb-2">
@@ -1171,7 +1173,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                                         handleMarkAsRead(notification.id);
                                         setShowNotifications(false);
                                       }}
-                                      className="text-xs font-medium text-[#039ED9] hover:text-[#0280b0] flex items-center gap-1"
+                                      className="text-xs font-medium text-[#0b7a8e] hover:text-[#086878] flex items-center gap-1"
                                     >
                                       View <ExternalLink className="w-3 h-3" />
                                     </Link>

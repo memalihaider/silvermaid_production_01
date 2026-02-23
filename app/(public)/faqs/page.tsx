@@ -18,12 +18,12 @@ type FirebaseFAQ = {
 // Static FAQs (unchanged)
 const staticFAQs = [
   {
-    question: "1. What services does Homework Cleaning Services offer in the UAE?",
+    question: "1. What services does Silver Maid Cleaning Services offer in the UAE?",
     answer: "We specialize in professional cleaning services for homes and offices, including Regular home cleaning, Deep cleaning, Move-in/move-out cleaning, Office cleaning, Kitchen and bathroom cleaning, Upholstery and carpet cleaning, Yacht Cleaning, Aeroplane Cleaning, and After Event and Exhibition cleaning. Our services are customizable to meet your specific needs."
   },
   {
-    question: "2. How can I book a cleaning service with Homework Cleaning Services?",
-    answer: "You can book directly through our website by clicking the 'BOOK ONLINE' button, or call our customer service hotline at 800-HOMEWORK (800 46639675). Our team is available to assist you with scheduling and selecting the right service for your needs."
+    question: "2. How can I book a cleaning service with Silver Maid Cleaning Services?",
+    answer: "You can book directly through our website by clicking the 'BOOK ONLINE' button, or call our customer service hotline at 800-SILVERMAID (800 46639675). Our team is available to assist you with scheduling and selecting the right service for your needs."
   },
   {
     question: "3. What areas do you serve in the UAE?",

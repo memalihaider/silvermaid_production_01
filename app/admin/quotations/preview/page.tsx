@@ -260,7 +260,7 @@ export default function QuotationPreview() {
                 <div>
                   <h1 className={`text-3xl font-bold mb-1 ${
                     selectedTemplate === 'modern' ? 'text-white' : 'text-slate-900'
-                  }`}>HomeWare Services</h1>
+                  }`}>Silver Maid Services</h1>
                   <p className={`text-sm ${
                     selectedTemplate === 'modern' ? 'text-slate-300' : 'text-slate-600'
                   }`}>Professional Cleaning & Maintenance Solutions</p>
@@ -432,10 +432,10 @@ export default function QuotationPreview() {
                     <div className={`text-xs space-y-1 ${
                       selectedTemplate === 'modern' ? 'text-slate-400' : 'text-slate-500'
                     }`}>
-                      <p>📧 info@homeware.ae</p>
+                      <p>📧 info@silvermaid.ae</p>
                       <p>📱 +971-50-123-4567</p>
                       <p>🏢 Dubai, UAE</p>
-                      <p>🌐 www.homeware.ae</p>
+                      <p>🌐 www.silvermaid.ae</p>
                     </div>
                   </div>
                 </div>
@@ -448,7 +448,7 @@ export default function QuotationPreview() {
                   <p className={`text-xs ${
                     selectedTemplate === 'modern' ? 'text-slate-400' : 'text-slate-500'
                   }`}>
-                    This quotation is valid until {selectedQuotation.expiryDate} • Thank you for choosing HomeWare Services
+                    This quotation is valid until {selectedQuotation.expiryDate} • Thank you for choosing Silver Maid Services
                   </p>
                 </div>
               </div>

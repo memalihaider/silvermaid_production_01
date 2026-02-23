@@ -112,7 +112,7 @@ export const MOCK_PRODUCTS: ProductItem[] = [
 ];
 
 export const STORAGE_KEYS = {
-  PRODUCTS: 'homeware_products_v2',
-  CATEGORIES: 'homeware_categories_v2',
-  PREFERENCES: 'homeware_product_prefs'
+  PRODUCTS: 'silvermaid_products_v2',
+  CATEGORIES: 'silvermaid_categories_v2',
+  PREFERENCES: 'silvermaid_product_prefs'
 };

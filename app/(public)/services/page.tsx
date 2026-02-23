@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   Search, 
@@ -149,7 +151,9 @@ const getIconForService = (serviceName: string) => {
   return Home // Default icon
 }
 
+
 export default function ServicesPage() {
+  const { contact } = useContactInfo()
   const [activeCategory, setActiveCategory] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [firebaseServices, setFirebaseServices] = useState<FirebaseService[]>([])
@@ -289,7 +293,7 @@ export default function ServicesPage() {
         <div className="absolute inset-0 z-0 opacity-40">
           <img 
             src="https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=1600" 
-            alt="Homework UAE Services" 
+            alt="Silver Maid Services" 
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-slate-950/20 to-slate-950" />

@@ -1008,7 +1008,7 @@ export default function QuotationBuilder({ initialData, onSave, onCancel }: Prop
     terms: '',
     confirmationLetter: '', // New field
     bankDetails: { // New field
-      accountName: 'HOMEWORK CLEANING SERVICES LLC',
+      accountName: 'SILVER MAID CLEANING SERVICES LLC',
       accountNumber: '1234567890123',
       bankName: 'Emirates NBD',
       swiftCode: 'EBILAEAD',
@@ -1188,7 +1188,7 @@ export default function QuotationBuilder({ initialData, onSave, onCancel }: Prop
         terms: quotationData.terms,
         confirmationLetter: quotationData.confirmationLetter || '', // New field
         bankDetails: quotationData.bankDetails || { // New field
-          accountName: 'HOMEWORK CLEANING SERVICES LLC',
+          accountName: 'SILVER MAID CLEANING SERVICES LLC',
           accountNumber: '1234567890123',
           bankName: 'Emirates NBD',
           swiftCode: 'EBILAEAD',
@@ -1774,7 +1774,7 @@ export default function QuotationBuilder({ initialData, onSave, onCancel }: Prop
               placeholder="Enter confirmation letter details here... (Optional)
               
 Example:
-I/We [Client Name] confirm the booking of [Service Name] with Homework Cleaning Services. I agree to the terms and conditions and confirm the quotation amount of [Total Amount] AED."
+I/We [Client Name] confirm the booking of [Service Name] with Silver Maid Cleaning Services. I agree to the terms and conditions and confirm the quotation amount of [Total Amount] AED."
               className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-black resize-none"
               value={formData.confirmationLetter || ''}
               onChange={(e) => setFormData({ ...formData, confirmationLetter: e.target.value })}
@@ -1828,7 +1828,7 @@ I/We [Client Name] confirm the booking of [Service Name] with Homework Cleaning 
                 value={formData.bankDetails?.accountName || ''}
                 onChange={(e) => handleBankDetailChange('accountName', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-black"
-                placeholder="HOMEWORK CLEANING SERVICES LLC"
+                placeholder="SILVER MAID CLEANING SERVICES LLC"
               />
             </div>
             

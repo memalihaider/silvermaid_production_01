@@ -293,7 +293,7 @@ export default function PrivacyPolicy() {
                 <div className="pt-10 border-t border-slate-100">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="text-slate-400 text-sm font-bold">
-                      Last Updated: {getLastUpdated()} | Homework UAE Compliance Department
+                      Last Updated: {getLastUpdated()} | Silver Maid Compliance Department
                     </div>
                     
                   </div>

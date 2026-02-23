@@ -134,6 +134,6 @@ export const MOCK_JOBS: Job[] = [
 ];
 
 export const STORAGE_KEYS = {
-  JOBS: 'homeware_jobs_v2',
-  SETTINGS: 'homeware_job_settings'
+  JOBS: 'silvermaid_jobs_v2',
+  SETTINGS: 'silvermaid_job_settings'
 };

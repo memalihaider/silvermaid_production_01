@@ -393,7 +393,7 @@ Services: ${quote.services.join(', ')}
 ${quote.notes ? `Notes: ${quote.notes}` : ''}
 
 Best regards,
-Homeware Team
+Silver Maid Team
       `
       window.location.href = `mailto:${quote.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     } else if (method === 'whatsapp') {

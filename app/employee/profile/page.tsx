@@ -38,7 +38,7 @@ interface EmployeeProfile {
 const mockProfileData: EmployeeProfile = {
   id: 'EMP-001',
   name: 'Ahmed Hassan',
-  email: 'ahmed.hassan@homeware.ae',
+  email: 'ahmed.hassan@silvermaid.ae',
   phone: '+971-50-1234567',
   position: 'Senior Field Technician',
   department: 'Technical Services',

@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -27,7 +29,9 @@ import {
   Users
 } from 'lucide-react'
 
+
 export default function GreaseTrapCleaning() {
+  const { contact } = useContactInfo()
   const categories = [
     {
       title: "Understanding Grease Traps",
@@ -151,7 +155,7 @@ export default function GreaseTrapCleaning() {
                     The accumulation of grease in your plumbing system can lead to significant problems. Grease traps are vital for preventing these issues, but when neglected, they become a hidden threat. 
                   </p>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    At Homework Cleaning Services LLC, we provide municipality-approved grease trap cleaning to protect your business from foul odors, plumbing disasters, and regulatory fines. Regular maintenance of this key system ensures your kitchen remains operational and hygienic.
+                    At Silver Maid Cleaning Services LLC, we provide municipality-approved grease trap cleaning to protect your business from foul odors, plumbing disasters, and regulatory fines. Regular maintenance of this key system ensures your kitchen remains operational and hygienic.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary shadow-sm">
                     <p className="text-slate-700 font-bold italic text-sm">
@@ -202,7 +206,7 @@ export default function GreaseTrapCleaning() {
 
                 <div className="pt-10 border-t border-slate-100 italic font-medium text-slate-500">
                   <p>
-                    Don’t wait for a clog to jeopardize your operations. Contact Homework Cleaning Services LLC today to ensure your plumbing system remains in optimal condition and compliant with local UAE regulations.
+                    Don't wait for a clog to jeopardize your operations. Contact Silver Maid Cleaning Services LLC today to ensure your plumbing system remains in optimal condition and compliant with local UAE regulations.
                   </p>
                 </div>
               </motion.div>
@@ -237,7 +241,7 @@ export default function GreaseTrapCleaning() {
                 <div className="mt-12 p-8 bg-primary/10 rounded-3xl border border-primary/20 text-center">
                   <p className="text-sm font-bold text-primary mb-4 uppercase tracking-[0.2em]">Immediate Service</p>
                   <p className="text-2xl font-black text-white tracking-tighter mb-8 italic leading-tight uppercase tracking-widest">STOP THE<br />ODOR NOW</p>
-                  <a href="tel:80046639675" className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
+                  <a href={`tel:${contact.phone}`} className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
                      800 4663 9675
                   </a>
                 </div>
@@ -338,10 +342,10 @@ export default function GreaseTrapCleaning() {
                 Don’t wait for a disaster. Protect your investment and ensure compliance today.
               </p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Request Service
                 </a>
               </div>

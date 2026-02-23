@@ -89,7 +89,7 @@ export default function UnifiedMeetingsPage() {
   }, [meetings])
 
   const myMeetings = useMemo(() => {
-    const userEmail = 'ahmed@homeware.ae'
+    const userEmail = 'ahmed@silvermaid.ae'
     return meetings.filter(m => 
       m.organizer.toLowerCase().includes('ahmed') || 
       m.attendees.some(a => a.email === userEmail)
@@ -108,7 +108,7 @@ export default function UnifiedMeetingsPage() {
         id: found?.id || `temp-${Date.now()}`,
         name: name,
         role: found?.role || 'Team Member',
-        email: found?.email || `${name.toLowerCase().replace(/\s/g, '.')}@homeware.ae`,
+        email: found?.email || `${name.toLowerCase().replace(/\s/g, '.')}@silvermaid.ae`,
         status: 'Pending' as const
       }
     })

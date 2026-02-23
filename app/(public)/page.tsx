@@ -225,7 +225,7 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50/80 to-pink-50/30" />
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#039ED9]/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#ea4c8c]/5 rounded-full blur-[100px]" />
         </div>
 
         <div className="container mx-auto relative z-20">
@@ -249,7 +249,7 @@ export default function HomePage() {
                     key={textIndex}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl md:text-7xl font-black text-[#039ED9] leading-[0.95] tracking-tight"
+                    className="text-5xl md:text-7xl font-black text-[#0b7a8e] leading-[0.95] tracking-tight"
                   >
                     {heroTexts[textIndex].split('\n')[0]} <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
@@ -325,7 +325,7 @@ export default function HomePage() {
                 >
                   <div className="flex flex-col justify-between h-full">
                     <div className="flex justify-between items-start">
-                      <Wind className="h-5 w-5 text-[#039ED9]" />
+                      <Wind className="h-5 w-5 text-[#ea4c8c]" />
                       <div className="h-2 w-2 rounded-full bg-green-500" />
                     </div>
                     <div>
@@ -379,7 +379,7 @@ export default function HomePage() {
             ].map((stat, i) => (
               <motion.div key={i} variants={fadeUp} custom={i} className="space-y-1.5">
                 <div className="flex items-center gap-2.5">
-                  <stat.icon className="h-4 w-4 text-[#039ED9]" />
+                  <stat.icon className="h-4 w-4 text-[#ea4c8c]" />
                   <span className="text-xl md:text-2xl font-black tracking-tight">{stat.value}</span>
                 </div>
                 <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{stat.label}</div>
@@ -621,7 +621,7 @@ export default function HomePage() {
                   The Difference
                 </span>
                 <h3 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">
-                  Why Choose <span className="text-primary">HomeWork UAE</span>?
+                  Why Choose <span className="text-primary">Silver Maid</span>?
                 </h3>
                 <p className="text-slate-400 text-base leading-relaxed">Elevating hygiene standards with certified excellence and innovation</p>
               </div>

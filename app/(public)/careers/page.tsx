@@ -51,7 +51,7 @@ export default function Careers() {
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <div className="space-y-8">
               <h2 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Our Culture</h2>
-              <h3 className="text-4xl font-black text-slate-900 leading-tight">Why Work at <span className="text-primary">Homework UAE?</span></h3>
+              <h3 className="text-4xl font-black text-slate-900 leading-tight">Why Work at <span className="text-primary">Silver Maid?</span></h3>
               <p className="text-slate-600 text-lg leading-relaxed">
                 We believe that happy employees lead to happy customers. We foster a culture of respect, growth, and excellence.
               </p>

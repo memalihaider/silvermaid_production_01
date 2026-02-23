@@ -62,8 +62,8 @@ const PRODUCT_CATEGORIES: Category[] = [
 ];
 
 const STORAGE_KEYS = {
-  PRODUCTS: 'homeware_products',
-  CATEGORIES: 'homeware_categories'
+  PRODUCTS: 'silvermaid_products',
+  CATEGORIES: 'silvermaid_categories'
 };
 
 export default function ProductsPage() {

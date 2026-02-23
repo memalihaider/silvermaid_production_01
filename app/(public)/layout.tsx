@@ -1,7 +1,7 @@
 
 "use client"
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode } from 'react'
 import { 
   Phone, Mail, Facebook, Linkedin, Instagram, MessageCircle, ChevronDown,
   Home, Briefcase, Maximize, Sun, Sofa, Layers, Bed, 
@@ -9,71 +9,35 @@ import {
   Fan, Pipette, Utensils, Waves, Dumbbell, PanelTop, ThermometerSnowflake,
   Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User
 } from 'lucide-react'
-import { db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
 import Link from 'next/link'
+import { ContactProvider, useContactInfo } from '@/contexts/ContactContext'
 
-export default function PublicLayout({ children }: { children: ReactNode }) {
-  const [profileData, setProfileData] = useState({
-    phone: '80046639675',
-    email: 'services@homeworkuae.com',
-    company: 'homeware',
-    address: 'Office: 201, 2nd Floor, Al Saaha Offices - B, Downtown Dubai - UAE' // Default address
-  })
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Fetch profile data from Firebase
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        const docRef = doc(db, 'profile-setting', 'admin-settings')
-        const docSnap = await getDoc(docRef)
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          if (data.profile) {
-            setProfileData({
-              phone: data.profile.phone || '80046639675',
-              email: data.profile.email || 'services@homeworkuae.com',
-              company: data.profile.company || 'homeware',
-              address: data.profile.address || 'Office: 201, 2nd Floor, Al Saaha Offices - B, Downtown Dubai - UAE' // Fetch address from Firebase
-            })
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching profile data:', error)
-        // Keep default values if Firebase fails
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchProfileData()
-  }, [])
+function PublicLayoutContent({ children }: { children: ReactNode }) {
+  const { contact } = useContactInfo()
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* Top Bar - Premium */}
-      <div className="bg-gradient-to-r from-[#039ED9] via-[#0388be] to-[#039ED9] text-white py-2.5 hidden md:block">
+      <div className="bg-gradient-to-r from-[#ea4c8c] via-[#d43a7a] to-[#ea4c8c] text-white py-2.5 hidden md:block">
         <div className="container mx-auto px-6 flex justify-between items-center text-xs font-semibold">
           <div className="flex items-center gap-8">
             <a 
-              href={`tel:${profileData.phone}`} 
+              href={`tel:${contact.phone}`} 
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
               <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
                 <Phone className="h-3 w-3" />
               </div>
-              <span className="tracking-wide">{profileData.phone}</span>
+              <span className="tracking-wide">{contact.phone}</span>
             </a>
             <a 
-              href={`mailto:${profileData.email}`} 
+              href={`mailto:${contact.email}`} 
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
               <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
                 <Mail className="h-3 w-3" />
               </div>
-              <span className="tracking-wide">{profileData.email}</span>
+              <span className="tracking-wide">{contact.email}</span>
             </a>
           </div>
           <div className="flex items-center gap-2.5">
@@ -88,13 +52,17 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       {/* Main Navbar - Premium Glass */}
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-2xl border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="container mx-auto flex h-18 items-center justify-between px-6">
-          <a href="/" className="flex items-center">
-            <div className="h-34 w-34">
+          <a href="/" className="flex items-center gap-2">
+            <div className="h-12 w-12">
               <img 
-                src="/logo.jpeg" 
-                alt="Logo" 
+                src="/logo.png" 
+                alt="Silver Maids Dubai Logo" 
                 className="w-full h-full object-contain"
               />
+            </div>
+            <div className="hidden sm:flex flex-col">
+              <span className="font-bold text-lg tracking-tight">Silver</span>
+              <span className="text-[#ea4c8c] font-bold text-sm">Maids Dubai</span>
             </div>
           </a>
 
@@ -257,39 +225,27 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80 mb-5">Contact Us</h4>
               <ul className="space-y-4 text-sm text-slate-400">
                 <li className="flex items-start gap-3 group cursor-pointer">
-                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <MapPin className="h-3.5 w-3.5" />
                   </div>
                   <span className="group-hover:text-white transition-colors text-[12px] leading-relaxed">
-                    {isLoading ? (
-                      <span className="animate-pulse bg-slate-800 rounded w-48 h-4 block"></span>
-                    ) : (
-                      profileData.address
-                    )}
+                    {contact.address}
                   </span>
                 </li>
                 <li className="flex items-start gap-3 group cursor-pointer">
-                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <Phone className="h-3.5 w-3.5" />
                   </div>
-                  <a href={`tel:${profileData.phone}`} className="group-hover:text-white transition-colors">
-                    {isLoading ? (
-                      <span className="animate-pulse bg-slate-800 rounded w-32 h-4 block"></span>
-                    ) : (
-                      profileData.phone
-                    )}
+                  <a href={`tel:${contact.phone}`} className="group-hover:text-white transition-colors">
+                    {contact.phone}
                   </a>
                 </li>
                 <li className="flex items-start gap-3 group cursor-pointer">
-                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#039ED9] shrink-0">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <Mail className="h-3.5 w-3.5" />
                   </div>
-                  <a href={`mailto:${profileData.email}`} className="group-hover:text-white transition-colors">
-                    {isLoading ? (
-                      <span className="animate-pulse bg-slate-800 rounded w-40 h-4 block"></span>
-                    ) : (
-                      profileData.email
-                    )}
+                  <a href={`mailto:${contact.email}`} className="group-hover:text-white transition-colors">
+                    {contact.email}
                   </a>
                 </li>
               </ul>
@@ -298,9 +254,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <div>
               <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/80 mb-5">Cleaning Services</h4>
               <ul className="space-y-3 text-[13px] text-slate-400">
-                <li><a href="/services/residential-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Normal Cleaning</a></li>
-                <li><a href="/services/villa-deep-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Deep Cleaning</a></li>
-                <li><a href="/services/ac-duct-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#039ED9]" /> Technical Cleaning</a></li>
+                <li><a href="/services/residential-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#ea4c8c]" /> Normal Cleaning</a></li>
+                <li><a href="/services/villa-deep-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#ea4c8c]" /> Deep Cleaning</a></li>
+                <li><a href="/services/ac-duct-cleaning" className="hover:text-white transition-colors flex items-center gap-2"><ArrowRight className="h-3 w-3 text-[#ea4c8c]" /> Technical Cleaning</a></li>
               </ul>
             </div>
 
@@ -323,9 +279,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
                 <input 
                   type="email" 
                   placeholder="Your email address…" 
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-xs focus:ring-1 focus:ring-[#039ED9] outline-none placeholder:text-slate-600"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-xs focus:ring-1 focus:ring-[#ea4c8c] outline-none placeholder:text-slate-600"
                 />
-                <button className="absolute right-1.5 top-1.5 h-8 w-8 bg-[#039ED9] rounded-md flex items-center justify-center hover:bg-[#0388be] transition-colors">
+                <button className="absolute right-1.5 top-1.5 h-8 w-8 bg-[#ea4c8c] rounded-md flex items-center justify-center hover:bg-[#d43a7a] transition-colors">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -336,7 +292,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <p className="text-[11px] text-slate-500 tracking-wide">© 2024 Home Work UAE. All rights reserved.</p>
             <div className="flex items-center gap-3">
               {[Facebook, Instagram, Music2].map((Icon, i) => (
-                <a key={i} href="#" className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-[#039ED9] transition-colors group">
+                <a key={i} href="#" className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-[#ea4c8c] transition-colors group">
                   <Icon className="h-3.5 w-3.5 text-slate-500 group-hover:text-white" />
                 </a>
               ))}
@@ -361,19 +317,27 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </a>
         {/* Phone */}
         <a 
-          href={`tel:${profileData.phone}`} 
-          className="h-12 w-12 bg-[#039ED9] text-white rounded-full shadow-lg shadow-[#039ED9]/25 flex items-center justify-center hover:scale-105 transition-transform"
+          href={`tel:${contact.phone}`} 
+          className="h-12 w-12 bg-[#0b7a8e] text-white rounded-full shadow-lg shadow-[#0b7a8e]/25 flex items-center justify-center hover:scale-105 transition-transform"
         >
           <Phone className="h-5 w-5" />
         </a>
         {/* Email */}
         <a 
-          href={`mailto:${profileData.email}`} 
+          href={`mailto:${contact.email}`} 
           className="h-12 w-12 bg-slate-800 text-white rounded-full shadow-lg shadow-slate-800/25 flex items-center justify-center hover:scale-105 transition-transform"
         >
           <Mail className="h-5 w-5" />
         </a>
       </div>
     </div>
+  )
+}
+
+export default function PublicLayout({ children }: { children: ReactNode }) {
+  return (
+    <ContactProvider>
+      <PublicLayoutContent>{children}</PublicLayoutContent>
+    </ContactProvider>
   )
 }

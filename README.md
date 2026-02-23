@@ -1,6 +1,6 @@
-# Homeware Hygiene - ERP System
+# Silver Maid - ERP System
 
-A comprehensive Enterprise Resource Planning (ERP) system for Homeware Hygiene, a Dubai-based cleaning services company. This system integrates a public business website, content management system (CMS), and full-featured admin portal with role-based access control.
+A comprehensive Enterprise Resource Planning (ERP) system for Silver Maid, a Dubai-based cleaning services company. This system integrates a public business website, content management system (CMS), and full-featured admin portal with role-based access control.
 
 ## Features
 

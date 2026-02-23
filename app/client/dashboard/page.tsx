@@ -123,7 +123,7 @@ export default function ClientDashboard() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-white">Client Portal</h1>
-                <p className="text-xs text-slate-400">Homeware</p>
+                <p className="text-xs text-slate-400">Silver Maid</p>
               </div>
             </div>
           </div>

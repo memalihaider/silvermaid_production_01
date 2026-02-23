@@ -61,13 +61,13 @@ export interface Meeting {
 
 // Mock team members for real data
 export const TEAM_MEMBERS = [
-  { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@homeware.ae' },
-  { id: 'EMP002', name: 'Maria Rodriguez', role: 'HR Manager', email: 'maria@homeware.ae' },
-  { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@homeware.ae' },
-  { id: 'EMP004', name: 'Sarah Johnson', role: 'Finance Manager', email: 'sarah@homeware.ae' },
-  { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@homeware.ae' },
-  { id: 'EMP006', name: 'Hassan Al-Mansouri', role: 'Senior Technician', email: 'hassan@homeware.ae' },
-  { id: 'EMP007', name: 'Layla Al-Mansouri', role: 'Data Analyst', email: 'layla@homeware.ae' }
+  { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@silvermaid.ae' },
+  { id: 'EMP002', name: 'Maria Rodriguez', role: 'HR Manager', email: 'maria@silvermaid.ae' },
+  { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@silvermaid.ae' },
+  { id: 'EMP004', name: 'Sarah Johnson', role: 'Finance Manager', email: 'sarah@silvermaid.ae' },
+  { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@silvermaid.ae' },
+  { id: 'EMP006', name: 'Hassan Al-Mansouri', role: 'Senior Technician', email: 'hassan@silvermaid.ae' },
+  { id: 'EMP007', name: 'Layla Al-Mansouri', role: 'Data Analyst', email: 'layla@silvermaid.ae' }
 ]
 
 // Mock client list
@@ -92,9 +92,9 @@ export const MOCK_MEETINGS: Meeting[] = [
     location: 'Conference Room A',
     organizer: 'Ahmed Al-Mazrouei',
     attendees: [
-      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@homeware.ae', status: 'Accepted' },
-      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@homeware.ae', status: 'Accepted' },
-      { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@homeware.ae', status: 'Pending' }
+      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@silvermaid.ae', status: 'Pending' }
     ],
     linkedJob: 'JOB-OPS-2026-001',
     status: 'Scheduled',
@@ -126,8 +126,8 @@ export const MOCK_MEETINGS: Meeting[] = [
     meetingLink: 'https://teams.microsoft.com/l/meetup-join/19:meeting_abc123',
     organizer: 'John Smith',
     attendees: [
-      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@homeware.ae', status: 'Accepted' },
-      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@homeware.ae', status: 'Accepted' },
+      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@silvermaid.ae', status: 'Accepted' },
       { id: 'CLIENT-EMP001', name: 'Mr. Hassan Saeed', role: 'Facilities Manager', email: 'hassan.saeed@downtowntower.ae', status: 'Accepted' }
     ],
     linkedJob: 'JOB-DOT-2026-001',
@@ -162,9 +162,9 @@ export const MOCK_MEETINGS: Meeting[] = [
     location: 'HR Office',
     organizer: 'Maria Rodriguez',
     attendees: [
-      { id: 'EMP002', name: 'Maria Rodriguez', role: 'HR Manager', email: 'maria@homeware.ae', status: 'Accepted' },
-      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@homeware.ae', status: 'Pending' },
-      { id: 'EMP004', name: 'Sarah Johnson', role: 'Finance Manager', email: 'sarah@homeware.ae', status: 'Accepted' }
+      { id: 'EMP002', name: 'Maria Rodriguez', role: 'HR Manager', email: 'maria@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@silvermaid.ae', status: 'Pending' },
+      { id: 'EMP004', name: 'Sarah Johnson', role: 'Finance Manager', email: 'sarah@silvermaid.ae', status: 'Accepted' }
     ],
     status: 'Scheduled',
     agenda: '1. Attendance policy updates\n2. Leave management changes\n3. Performance review process\n4. Compliance requirements',
@@ -193,9 +193,9 @@ export const MOCK_MEETINGS: Meeting[] = [
     location: 'Conference Room B',
     organizer: 'Fatima Al-Ketbi',
     attendees: [
-      { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@homeware.ae', status: 'Accepted' },
-      { id: 'EMP006', name: 'Hassan Al-Mansouri', role: 'Senior Technician', email: 'hassan@homeware.ae', status: 'Accepted' },
-      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@homeware.ae', status: 'Pending' }
+      { id: 'EMP005', name: 'Fatima Al-Ketbi', role: 'Team Lead', email: 'fatima@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP006', name: 'Hassan Al-Mansouri', role: 'Senior Technician', email: 'hassan@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@silvermaid.ae', status: 'Pending' }
     ],
     linkedJob: 'JOB-RET-2026-001',
     status: 'Scheduled',
@@ -218,8 +218,8 @@ export const MOCK_MEETINGS: Meeting[] = [
     location: 'Manager Office',
     organizer: 'Ahmed Al-Mazrouei',
     attendees: [
-      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@homeware.ae', status: 'Accepted' },
-      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@homeware.ae', status: 'Accepted' }
+      { id: 'EMP001', name: 'Ahmed Al-Mazrouei', role: 'Operations Manager', email: 'ahmed@silvermaid.ae', status: 'Accepted' },
+      { id: 'EMP003', name: 'John Smith', role: 'Project Manager', email: 'john@silvermaid.ae', status: 'Accepted' }
     ],
     status: 'Scheduled',
     agenda: '1. Performance review\n2. Career goals\n3. Support needed\n4. Feedback exchange',

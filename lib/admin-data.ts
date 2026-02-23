@@ -141,7 +141,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR001',
     name: 'Ahmed Al-Mazrouei',
-    email: 'ahmed.mazrouei@homeware.ae',
+    email: 'ahmed.mazrouei@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Super Admin',
     roleId: 'ROLE001',
@@ -154,7 +154,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR002',
     name: 'Fatima Al-Ketbi',
-    email: 'fatima.ketbi@homeware.ae',
+    email: 'fatima.ketbi@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Admin',
     roleId: 'ROLE002',
@@ -167,7 +167,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR003',
     name: 'Mohammed Hassan',
-    email: 'mohammed.hassan@homeware.ae',
+    email: 'mohammed.hassan@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Manager',
     roleId: 'ROLE003',
@@ -180,7 +180,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR004',
     name: 'Sarah Johnson',
-    email: 'sarah.johnson@homeware.ae',
+    email: 'sarah.johnson@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Manager',
     roleId: 'ROLE003',
@@ -193,7 +193,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR005',
     name: 'Ali Al-Mansoori',
-    email: 'ali.mansoori@homeware.ae',
+    email: 'ali.mansoori@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Supervisor',
     roleId: 'ROLE004',
@@ -206,7 +206,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR006',
     name: 'Nora Al-Kaabi',
-    email: 'nora.kaabi@homeware.ae',
+    email: 'nora.kaabi@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'Supervisor',
     roleId: 'ROLE004',
@@ -219,7 +219,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR007',
     name: 'Karim Al-Raisi',
-    email: 'karim.raisi@homeware.ae',
+    email: 'karim.raisi@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'User',
     roleId: 'ROLE005',
@@ -232,7 +232,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'USR008',
     name: 'Leila Al-Mazrouei',
-    email: 'leila.mazrouei@homeware.ae',
+    email: 'leila.mazrouei@silvermaid.ae',
     phone: '+971-4-XXX-XXXX',
     role: 'User',
     roleId: 'ROLE005',

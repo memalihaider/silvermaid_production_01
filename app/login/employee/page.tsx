@@ -42,7 +42,7 @@ export default function EmployeeLoginPage() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('employee@homeware.ae');
+    setEmail('employee@silvermaid.ae');
     setPassword('Demo@123');
   };
 
@@ -103,7 +103,7 @@ export default function EmployeeLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-white placeholder-slate-400"
-                placeholder="employee@homeware.ae"
+                placeholder="employee@silvermaid.ae"
                 required
               />
             </div>
@@ -155,7 +155,7 @@ export default function EmployeeLoginPage() {
 
         {/* Footer */}
         <p className="text-center text-slate-500 text-sm mt-8">
-          © 2026 Homeware. All rights reserved.
+          © 2026 Silver Maid. All rights reserved.
         </p>
       </div>
     </div>

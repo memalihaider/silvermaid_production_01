@@ -1,5 +1,7 @@
 "use client"
 
+import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
+import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
 import { 
   CheckCircle2, 
@@ -25,7 +27,9 @@ import {
   Filter
 } from 'lucide-react'
 
+
 export default function WaterTankCleaning() {
+  const { contact } = useContactInfo()
   const categories = [
     {
       title: "The Hidden Dangers",
@@ -149,7 +153,7 @@ export default function WaterTankCleaning() {
                     Water tanks are an essential part of many homes and businesses, providing a vital resource for daily needs. However, many people overlook the importance of keeping these tanks clean. 
                   </p>
                   <p className="text-slate-600 text-lg font-medium leading-relaxed">
-                    Dirty water tanks can harbor harmful bacteria, viruses, and parasites. These pathogens can cause various health issues, including gastrointestinal problems, skin infections, and respiratory diseases. At Homework Cleaning Services LLC, we provide municipality-standard disinfection to ensure your family or staff have access to crisp, safe drinking water.
+                    Dirty water tanks can harbor harmful bacteria, viruses, and parasites. These pathogens can cause various health issues, including gastrointestinal problems, skin infections, and respiratory diseases. At Silver Maid Cleaning Services LLC, we provide municipality-standard disinfection to ensure your family or staff have access to crisp, safe drinking water.
                   </p>
                   <div className="p-8 bg-slate-50 rounded-3xl border-l-4 border-primary shadow-sm">
                     <p className="text-slate-700 font-bold italic text-sm">
@@ -235,7 +239,7 @@ export default function WaterTankCleaning() {
                 <div className="mt-12 p-8 bg-primary/10 rounded-3xl border border-primary/20 text-center">
                   <p className="text-sm font-bold text-primary mb-4 uppercase tracking-[0.2em]">Immediate Service</p>
                   <p className="text-2xl font-black text-white tracking-tighter mb-8 italic leading-tight uppercase tracking-widest">DRINK WITH<br />CONFIDENCE</p>
-                  <a href="tel:80046639675" className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
+                  <a href={`tel:${contact.phone}`} className="block w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all shadow-xl shadow-primary/30">
                      800 4663 9675
                   </a>
                 </div>
@@ -336,10 +340,10 @@ export default function WaterTankCleaning() {
                 Schedule your professional water tank cleaning and protect your family’s health.
               </p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href="tel:80046639675" className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
+                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3 shadow-2xl shadow-primary/40">
                    800 4663 9675
                 </a>
-                <a href="mailto:services@homeworkuae.com" className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Book Inspection
                 </a>
               </div>

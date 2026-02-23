@@ -266,10 +266,10 @@ Use lib/admin-data.ts as code reference
 
 ## 📞 DOCUMENT LOCATION
 
-All files are in: `/Users/macbookpro/Desktop/homeware/`
+All files are in: `/Users/macbookpro/Desktop/silvermaid/`
 
 ```
-📁 homeware/
+📁 silvermaid/
 ├── 📄 DATABASE_SCHEMA_COMPLETE.md
 ├── 📄 DATABASE_SCHEMA_QUICK_REFERENCE.md
 ├── 📄 DATABASE_SCHEMA_MIGRATION_PART1.sql
@@ -306,5 +306,5 @@ Option 3 (Full setup)      = 6 weeks
 ---
 
 Generated: 28 January 2026  
-For: Homeware Admin Portal  
+For: Silver Maid Admin Portal  
 Coverage: 100% (87 pages, 14 modules, 73 tables)

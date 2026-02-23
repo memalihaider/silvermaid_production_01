@@ -273,11 +273,11 @@ export default function CommunicationLog() {
   // Templates remain same
   const templates: Template = {
     followUp: {
-      email: "Hi {{name}},\n\nFollowing up on our previous conversation regarding the {{service}} proposal.\n\nWould you be available for a call this week to discuss next steps?\n\nBest regards,\nHomework UAE Sales Team",
+      email: "Hi {{name}},\n\nFollowing up on our previous conversation regarding the {{service}} proposal.\n\nWould you be available for a call this week to discuss next steps?\n\nBest regards,\nSilver Maid Sales Team",
       whatsapp: "Hi {{name}}! 👋 Following up on the proposal I shared earlier. Keen to discuss how we can help with your {{service}} needs. Available for a quick call? 📞"
     },
     proposal: {
-      email: "Dear {{name}},\n\nPlease find attached the customized proposal for {{service}}.\n\nKey highlights:\n• Cost-effective solution\n• 24/7 support\n• Flexible scheduling\n\nLooking forward to your thoughts.\n\nBest regards,\nHomework UAE",
+      email: "Dear {{name}},\n\nPlease find attached the customized proposal for {{service}}.\n\nKey highlights:\n• Cost-effective solution\n• 24/7 support\n• Flexible scheduling\n\nLooking forward to your thoughts.\n\nBest regards,\nSilver Maid",
       whatsapp: "Hi {{name}}! 📋 Sent you the proposal for {{service}}. It covers everything we discussed. Let me know if you have any questions! 💼"
     }
   }
@@ -393,8 +393,8 @@ export default function CommunicationLog() {
         return `https://mail.google.com/mail/?${params.toString()}`;
       };
 
-      const subject = `Communication from Homework UAE - ${lead.name || 'Client'}`;
-      const emailBody = `Dear ${lead.name || 'Client'},\n\n${message}\n\nBest regards,\nHomework UAE Team`;
+      const subject = `Communication from Silver Maid - ${lead.name || 'Client'}`;
+      const emailBody = `Dear ${lead.name || 'Client'},\n\n${message}\n\nBest regards,\nSilver Maid Team`;
       
       const gmailComposeUrl = createGmailComposeUrl(lead.email, subject, emailBody);
       

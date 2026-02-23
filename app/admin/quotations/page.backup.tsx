@@ -302,9 +302,9 @@ export default function Quotations() {
   ])
   useEffect(() => {
     const loadProductData = () => {
-      const savedCategories = localStorage.getItem('homeware_product_categories')
-      const savedServices = localStorage.getItem('homeware_product_services')
-      const savedProducts = localStorage.getItem('homeware_product_products')
+      const savedCategories = localStorage.getItem('silvermaid_product_categories')
+      const savedServices = localStorage.getItem('silvermaid_product_services')
+      const savedProducts = localStorage.getItem('silvermaid_product_products')
 
       if (savedCategories) {
         setAvailableCategories(JSON.parse(savedCategories))
@@ -2448,7 +2448,7 @@ export default function Quotations() {
 
                     const updatedClients = [...sharedClients, client]
                     setSharedClients(updatedClients)
-                    localStorage.setItem('homeware_crm_clients', JSON.stringify(updatedClients))
+                    localStorage.setItem('silvermaid_crm_clients', JSON.stringify(updatedClients))
 
                     setNewQuote({...newQuote, clientId: client.id.toString()})
                     setNewClient({

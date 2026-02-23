@@ -98,7 +98,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
   {
     id: 'EMP001',
     name: 'John Smith',
-    email: 'john@homeware.ae',
+    email: 'john@silvermaid.ae',
     phone: '+971-50-1234567',
     position: 'Senior Supervisor',
     department: 'Operations',
@@ -125,7 +125,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
   {
     id: 'EMP002',
     name: 'Sarah Johnson',
-    email: 'sarah@homeware.ae',
+    email: 'sarah@silvermaid.ae',
     phone: '+971-50-1234568',
     position: 'Senior Cleaner',
     department: 'Operations',
@@ -152,7 +152,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
   {
     id: 'EMP003',
     name: 'Ahmed Hassan',
-    email: 'ahmed@homeware.ae',
+    email: 'ahmed@silvermaid.ae',
     phone: '+971-50-1234569',
     position: 'Cleaner',
     department: 'Operations',
@@ -179,7 +179,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
   {
     id: 'EMP004',
     name: 'Maria Rodriguez',
-    email: 'maria@homeware.ae',
+    email: 'maria@silvermaid.ae',
     phone: '+971-50-1234570',
     position: 'HR Manager',
     department: 'HR',
