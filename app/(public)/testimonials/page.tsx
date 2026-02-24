@@ -100,13 +100,13 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Ms. Mariam Roza",
     role: "Resident",
-    content: "Silver Maid did our move in cleaning flawlessly. They left no blemish or dark corner untouched. The tiles were shining when we entered the house. Very professional and incredibly reliable! Thanks to their cleaning services we could move in worry-free.",,
+    content: "Silver Maid did our move in cleaning flawlessly. They left no blemish or dark corner untouched. The tiles were shining when we entered the house. Very professional and incredibly reliable! Thanks to their cleaning services we could move in worry-free.",
     rating: 5
   },
   {
     name: "Mariam Khalid",
     role: "Resident, Dubai",
-    content: "I just gave initial instructions to the house cleaning team and left for a party. When I came back I was amazed by the level of tidiness. Everything was spick and span. I would definitely rebook Silver Maid cleaning services Dubai for any upcoming cleaning sessions.",,
+    content: "I just gave initial instructions to the house cleaning team and left for a party. When I came back I was amazed by the level of tidiness. Everything was spick and span. I would definitely rebook Silver Maid cleaning services Dubai for any upcoming cleaning sessions.",
     rating: 5
   },
   {
@@ -118,13 +118,13 @@ const staticTestimonials: Omit<TestimonialItem, 'isFirebase'>[] = [
   {
     name: "Mr. Zubaid Abdullah",
     role: "Business Owner",
-    content: "I recently had disinfected and sanitized my home during the holidays. I was 100% satisfied with their service. With the pandemic, we take no chance and will regularly hire Silver Maid cleaning company to sanitize our commercial establishments as well.",,
+    content: "I recently had disinfected and sanitized my home during the holidays. I was 100% satisfied with their service. With the pandemic, we take no chance and will regularly hire Silver Maid cleaning company to sanitize our commercial establishments as well.",
     rating: 5
   },
   {
     name: "Mr. Majid Ahmed",
     role: "Warehouse Manager",
-    content: "I used Silver Maid for the first time to get our old warehouses cleaned and their level of service amazed my team. The premise came up so good that we didn't need as much renovation as we thought. I would highly recommend them to other organizations looking for reliable and efficient commercial cleaning services.",,
+    content: "I used Silver Maid for the first time to get our old warehouses cleaned and their level of service amazed my team. The premise came up so good that we didn't need as much renovation as we thought. I would highly recommend them to other organizations looking for reliable and efficient commercial cleaning services.",
     rating: 5
   }
 ]
