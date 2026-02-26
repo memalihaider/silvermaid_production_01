@@ -193,7 +193,7 @@ export default function BlogPage() {
                   transition={{ delay: i * 0.1 }}
                   className="group rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all border-2 border-slate-200"
                 >
-                  <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
+                  <Link href={`/${post.slug}`} className="flex flex-col h-full">
                     <img 
                       src={post.image} 
                       alt={post.title}
@@ -273,20 +273,28 @@ export default function BlogPage() {
                 All
               </button>
               {BLOG_CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.slug as any)
-                    setCurrentPage(1)
-                  }}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                    selectedCategory === cat.slug
-                      ? 'bg-primary text-white'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:border-primary'
-                  }`}
-                >
-                  {cat.name}
-                </button>
+                <div key={cat.id} className="flex gap-1">
+                  <button
+                    onClick={() => {
+                      setSelectedCategory(cat.slug as any)
+                      setCurrentPage(1)
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                      selectedCategory === cat.slug
+                        ? 'bg-primary text-white'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-primary'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                  <Link
+                    href={`/blog/category/${cat.slug}`}
+                    className="flex items-center justify-center px-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:border-primary hover:text-primary transition-all text-xs"
+                    title={`Browse all ${cat.name}`}
+                  >
+                    →
+                  </Link>
+                </div>
               ))}
             </div>
           </div>
@@ -325,7 +333,7 @@ export default function BlogPage() {
                     transition={{ delay: i * 0.1 }}
                     className="group rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border-2 border-slate-200 flex flex-col"
                   >
-                    <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
+                    <Link href={`/${post.slug}`} className="flex flex-col h-full">
                       <img 
                         src={post.image} 
                         alt={post.title}

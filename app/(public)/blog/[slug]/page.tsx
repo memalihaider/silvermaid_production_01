@@ -334,7 +334,7 @@ export default function BlogDetailPage({ params }: { params: Promise<{ slug: str
                     {relatedPosts.map(relatedPost => (
                       <Link
                         key={relatedPost.id}
-                        href={`/blog/${relatedPost.slug}`}
+                        href={`/${relatedPost.slug}`}
                         className="group flex items-start gap-3 p-4 rounded-lg hover:bg-white transition-colors"
                       >
                         <img 

@@ -2,12 +2,12 @@ import { BlogPost } from './types/blog'
 
 // Blog categories for filtering
 const BLOG_CATEGORIES = [
-  { id: 1, name: 'Technology', slug: 'technology' },
-  { id: 2, name: 'Business', slug: 'business' },
-  { id: 3, name: 'Lifestyle', slug: 'lifestyle' },
-  { id: 4, name: 'Health', slug: 'health' },
-  { id: 5, name: 'Travel', slug: 'travel' },
-  { id: 6, name: 'Food', slug: 'food' },
+  { id: 1, name: 'Cleaning Tips', slug: 'cleaning-tips' },
+  { id: 2, name: 'How-To Guides', slug: 'how-to' },
+  { id: 3, name: 'Industry News', slug: 'industry-news' },
+  { id: 4, name: 'Home Care', slug: 'home-care' },
+  { id: 5, name: 'Deep Cleaning', slug: 'deep-cleaning' },
+  { id: 6, name: 'Customer Stories', slug: 'customer-stories' },
 ] as const
 
 export { BLOG_CATEGORIES }
