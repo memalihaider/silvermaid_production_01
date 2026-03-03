@@ -20,7 +20,7 @@ export default function ReviewRequestPage() {
         reviewText: 'Excellent service! Professional team, arrived on time, and did an amazing job. Highly recommend!',
         rating: 5,
         completedAt: '2025-12-23 18:20',
-        incentiveOffered: '$25 Gift Card',
+        incentiveOffered: 'AED 25 Gift Card',
         incentiveRedeemed: false,
         referralLink: 'https://ref.cleaningpro.com/acme-001',
         referralEarned: false
@@ -41,7 +41,7 @@ export default function ReviewRequestPage() {
         reviewText: '',
         rating: 0,
         completedAt: null,
-        incentiveOffered: '$25 Gift Card',
+        incentiveOffered: 'AED 25 Gift Card',
         incentiveRedeemed: false,
         referralLink: 'https://ref.cleaningpro.com/techsol-002',
         referralEarned: false
@@ -83,7 +83,7 @@ export default function ReviewRequestPage() {
         reviewText: 'Good service, arrived on time. Would have appreciated a heads-up about the scheduling.',
         rating: 4,
         completedAt: '2025-12-21 09:00',
-        incentiveOffered: '$25 Gift Card',
+        incentiveOffered: 'AED 25 Gift Card',
         incentiveRedeemed: true,
         referralLink: 'https://ref.cleaningpro.com/plaza-003',
         referralEarned: true
@@ -95,7 +95,7 @@ export default function ReviewRequestPage() {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewForm, setReviewForm] = useState({
     platform: 'Google',
-    incentiveOffered: '$25 Gift Card'
+    incentiveOffered: 'AED 25 Gift Card'
   })
 
   const selectedJob = jobs.find(j => j.id === selectedJobId) || jobs[0]
@@ -121,8 +121,8 @@ export default function ReviewRequestPage() {
   }
 
   const getIncentiveSuggestion = (job: any) => {
-    if (job.npsScore >= 9) return '$50 Referral Bonus'
-    return '$25 Gift Card'
+    if (job.npsScore >= 9) return 'AED 50 Referral Bonus'
+    return 'AED 25 Gift Card'
   }
 
   const handleSendReviewRequest = () => {
@@ -433,7 +433,7 @@ export default function ReviewRequestPage() {
                   Incentive Offer
                 </label>
                 <div className="space-y-2">
-                  {['No Incentive', '$25 Gift Card', '$50 Referral Bonus'].map(incentive => (
+                  {['No Incentive', 'AED 25 Gift Card', 'AED 50 Referral Bonus'].map(incentive => (
                     <button
                       key={incentive}
                       onClick={() => setReviewForm({ ...reviewForm, incentiveOffered: incentive })}

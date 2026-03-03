@@ -24,7 +24,7 @@ export default function ClientSummaryPage() {
       npsScores: [9, 9, 8, 9, 9],
       qualityScore: 4.8,
       referralTrigger: true,
-      referralReward: 'Sent $50 Bonus',
+      referralReward: 'Sent AED 50 Bonus',
       repeatServiceSuggestion: {
         service: 'Deep Cleaning',
         daysUntilDue: 15,
@@ -88,7 +88,7 @@ export default function ClientSummaryPage() {
       npsScores: [10, 10, 9, 10],
       qualityScore: 4.9,
       referralTrigger: true,
-      referralReward: 'Eligible for $100 bonus',
+      referralReward: 'Eligible for AED 100 bonus',
       repeatServiceSuggestion: {
         service: 'Maintenance Cleaning',
         daysUntilDue: 30,

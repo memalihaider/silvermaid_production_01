@@ -35,7 +35,7 @@ export default function KitchenHoodCleaning() {
       icon: ShieldAlert,
       items: [
         { name: "Fire Hazard Prevention", desc: "Cooking equipment causes 50% of restaurant fires; we eliminate the grease buildup that fuel them." },
-        { name: "Compliance & Fines", desc: "Avoid potential fines of $1,000 to $10,000 and the risk of business license suspension." },
+        { name: "Compliance & Fines", desc: "Avoid potential fines of AED 1,000 to AED 10,000 and the risk of business license suspension." },
         { name: "Insurance Savings", desc: "Poor hood maintenance can increase insurance premiums by up to 30%—we help you save." },
         { name: "Health Code Standards", desc: "Maintain absolute hygiene to pass local municipal and fire safety inspections effortlessly." }
       ]
@@ -203,7 +203,7 @@ export default function KitchenHoodCleaning() {
 
                 <div className="pt-10 border-t border-slate-100 italic font-medium text-slate-500">
                   <p>
-                    Follow local fire and health regulations to avoid fines ranging from $1,000 to $10,000. Don’t wait for a violation or fire incident to take action—prioritize your kitchen hood cleaning today for success and safety.
+                    Follow local fire and health regulations to avoid fines ranging from AED 1,000 to AED 10,000. Don’t wait for a violation or fire incident to take action—prioritize your kitchen hood cleaning today for success and safety.
                   </p>
                 </div>
               </motion.div>
