@@ -271,145 +271,163 @@ useEffect(() => {
   return (
     <div ref={containerRef} className="flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
-      {/* Hero Section - Clean Premium */}
-      <section 
-        className="relative pt-16 pb-24 px-4 md:px-8 min-h-[88vh] flex items-center overflow-hidden"
-      >
-        {/* Subtle background */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50/80 to-pink-50/30" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#ea4c8c]/5 rounded-full blur-[100px]" />
-        </div>
+      {/* Hero Section - Magazine Layout */}
+      <section className="relative py-6 px-4 md:px-8 bg-white overflow-hidden">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-stretch min-h-130">
 
-        <div className="container mx-auto relative z-20">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            
-            {/* Left Content */}
+            {/* Left: Large Image Card */}
             <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
-              className="w-full lg:w-3/5 space-y-8"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="relative rounded-3xl overflow-hidden min-h-105 lg:min-h-130 shadow-2xl"
             >
-              <div>
-                <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 border border-primary/15 mb-6">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                  <span className="text-[11px] font-semibold text-primary uppercase tracking-[0.12em]">Professional Cleaning Solutions</span>
-                </motion.div>
+              {/* Background image */}
+              <img
+                src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=85&w=1400"
+                alt="Premium cleaning service home"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Dark overlay */}
+              <div className="absolute inset-0 bg-linear-to-b from-slate-900/30 via-slate-900/20 to-slate-900/75" />
 
-                <div className="relative">
-                  <motion.h1 
-                    key={textIndex}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl md:text-7xl font-black text-[#0b7a8e] leading-[0.95] tracking-tight"
-                  >
-                    {heroTexts[textIndex].split('\n')[0]} <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
-                      {heroTexts[textIndex].split('\n')[1]}
-                    </span>
-                  </motion.h1>
+              {/* Premium badge */}
+              <div className="absolute top-6 left-6 z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
+                  <Sparkles className="h-3 w-3 text-white" />
+                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Premium Service</span>
+                </div>
+              </div>
+
+              {/* Main headline */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-10">
+                <motion.h1
+                  key={textIndex}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-4xl md:text-6xl font-black text-white leading-none tracking-tight mb-6"
+                >
+                  {heroTexts[textIndex].split('\n')[0]} <br />
+                  {heroTexts[textIndex].split('\n')[1]}
+                </motion.h1>
+
+                {/* Stats row */}
+                <div className="flex flex-wrap items-center gap-1 mb-6">
+                  {[
+                    { value: "18K+", label: "Customers" },
+                    { value: "4.9/5", label: "Rating" },
+                    { value: "7K+", label: "Reviews" },
+                    { value: "12+", label: "Years" },
+                  ].map((stat, i) => (
+                    <div
+                      key={i}
+                      className="flex flex-col items-center justify-center px-4 py-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 min-w-17.5"
+                    >
+                      {i === 0 && <Users className="h-4 w-4 text-white/70 mb-1" />}
+                      {i === 1 && <Star className="h-4 w-4 text-white/70 mb-1" />}
+                      {i === 2 && <BookOpen className="h-4 w-4 text-white/70 mb-1" />}
+                      {i === 3 && <Calendar className="h-4 w-4 text-white/70 mb-1" />}
+                      <span className="text-base font-black text-white leading-tight">{stat.value}</span>
+                      <span className="text-[9px] font-semibold text-white/60 uppercase tracking-wider">{stat.label}</span>
+                    </div>
+                  ))}
                 </div>
 
-                <motion.p variants={fadeUp} className="mt-6 text-base md:text-lg text-slate-500 max-w-lg leading-relaxed">
-                  Experience the future of home wellness with our AI-optimized cleaning schedules and eco-friendly protocols.
-                </motion.p>
-
-                <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-5 mt-10">
-                  <CTAButton 
-                    text="Get Started" 
-                    href="/booking" 
-                    variant="primary" 
-                    icon={ArrowUpRight}
-                  />
-                  <div className="flex -space-x-3">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-10 h-10 rounded-full border-3 border-white overflow-hidden shadow-sm">
-                        <img src={`https://i.pravatar.cc/150?u=${i}`} alt="user" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                    <div className="w-10 h-10 rounded-full border-3 border-white bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">
-                      20K+
-                    </div>
-                  </div>
-                </motion.div>
+                {/* CTA link */}
+                <a
+                  href="/booking"
+                  className="inline-flex items-center gap-2 text-white font-bold text-sm uppercase tracking-widest hover:gap-4 transition-all duration-200"
+                >
+                  Schedule Your Cleaning
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </div>
             </motion.div>
 
-            {/* Right Content: Video Card & Widgets */}
-            <div className="w-full lg:w-2/5 relative">
-              <div className="relative aspect-square max-w-[460px] mx-auto">
-                
-                {/* Main Video Card */}
-                <div className="absolute inset-0 bg-slate-900 rounded-3xl overflow-hidden shadow-2xl z-20">
-                  <video 
-                    className="w-full h-full object-cover opacity-60"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  >
-                    <source src="https://videos.pexels.com/video-files/4109343/4109343-uhd_2732_1440_25fps.mp4" type="video/mp4" />
-                    <img 
-                      src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800" 
-                      className="w-full h-full object-cover opacity-60"
-                      alt="Professional Cleaning Service"
-                    />
-                  </video>
-                  
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
-                  
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map((s) => <Star key={s} className="h-3 w-3 fill-primary text-primary" />)}
-                      </div>
-                      <span className="text-[10px] font-semibold text-white/80 uppercase tracking-wider">Premium Rated</span>
+            {/* Right: Stacked Cards */}
+            <div className="flex flex-col gap-5">
+
+              {/* Air Quality Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
+                className="bg-white rounded-3xl p-6 shadow-lg border border-slate-100 flex-1"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Air quality now</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Dubai, UAE · Real-time</p>
+                  </div>
+                  <div className="h-2 w-2 rounded-full bg-green-400 mt-1" />
+                </div>
+
+                {/* Gauge */}
+                <div className="flex items-center gap-5 my-4">
+                  <div className="relative w-20 h-20 shrink-0">
+                    <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+                      <circle cx="40" cy="40" r="32" fill="none" stroke="#f1f5f9" strokeWidth="7" />
+                      <circle
+                        cx="40" cy="40" r="32" fill="none"
+                        stroke={airQualityStatus === "Good" ? "#22c55e" : airQualityStatus === "Moderate" ? "#f59e0b" : "#ef4444"}
+                        strokeWidth="7"
+                        strokeDasharray={`${(airQuality / 100) * 201} 201`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xl font-black text-slate-900">{airQuality}</span>
                     </div>
+                  </div>
+                  <div>
+                    <p className={`text-base font-black ${airQualityColor}`}>{airQualityStatus}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Updated just now</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Cleaning Service Card */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.35, ease: 'easeOut' }}
+                className="relative rounded-3xl overflow-hidden flex-1 min-h-50 shadow-lg group"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800"
+                  alt="Deep cleaning service"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-900/30 to-transparent" />
+
+                {/* Service tag */}
+                <div className="absolute top-5 left-5 z-10">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
+                    <Sparkles className="h-3 w-3" />
+                    Deep Clean
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="absolute bottom-5 left-5 right-5 z-10">
+                  <p className="text-lg font-black text-white leading-tight">Villa Deep Cleaning</p>
+                  <p className="text-[11px] text-white/60 mt-1 mb-3">Full interior sanitization & sterilization</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-0.5">
+                      {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-primary text-primary" />)}
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/70">4.9 · 2,400+ cleanings</span>
                   </div>
                 </div>
 
-                {/* Air Quality Widget */}
-                <motion.div
-                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' }}
-                  className="absolute -top-8 -right-8 w-40 h-40 bg-white rounded-2xl p-5 shadow-xl z-30 border border-slate-100"
-                >
-                  <div className="flex flex-col justify-between h-full">
-                    <div className="flex justify-between items-start">
-                      <Wind className="h-5 w-5 text-[#ea4c8c]" />
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-black text-slate-900 leading-none">{airQuality}</div>
-                      <div className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-1">Air Quality Index</div>
-                    </div>
-                  </div>
-                </motion.div>
+                {/* Arrow button */}
+                <div className="absolute top-5 right-5 z-10 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                  <ArrowRight className="h-4 w-4 text-white" />
+                </div>
+              </motion.div>
 
-                {/* Verified Badge Widget */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.8, ease: 'easeOut' }}
-                  className="absolute -bottom-6 -left-6 bg-white rounded-xl p-4 shadow-xl z-30 border border-slate-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">Verified Pros</div>
-                      <div className="text-[10px] text-slate-500">Background Checked</div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Subtle Background Glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/10 rounded-full blur-[100px] z-0" />
-              </div>
             </div>
           </div>
         </div>
