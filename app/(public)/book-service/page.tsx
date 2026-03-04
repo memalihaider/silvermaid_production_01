@@ -20,9 +20,11 @@ import {
   X,
   Check,
   PhoneCall,
+  Users,
+  Award,
 } from "lucide-react";
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
-import { db } from '@/lib/firebase'; // Import from centralized config
+import { db } from '@/lib/firebase';
 
 // Firebase service type
 interface FirebaseService {
@@ -34,19 +36,42 @@ interface FirebaseService {
   status: string;
 }
 
+// Employee type
+interface Employee {
+  id: string;
+  name: string;
+  role: string;
+  rating: number;
+  status: string;
+  email?: string;
+  phone?: string;
+}
+
 // Save booking to Firebase function
 const saveBookingToFirebase = async (bookingData: any) => {
   try {
     // Generate booking ID
     const bookingId = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    // Prepare data with metadata
+    // Prepare data with metadata - store both ID and name for service and staff
     const bookingWithMeta = {
       ...bookingData,
       bookingId,
       status: "pending",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      
+      // Ensure we have both serviceId and serviceName
+      serviceId: bookingData.serviceId || bookingData.service || "",
+      serviceName: bookingData.serviceName || "",
+      
+      // Ensure we have both staffId and staffName
+      staffId: bookingData.staffId || "",
+      staffName: bookingData.staffName || "",
+      
+      // Keep original fields for backward compatibility
+      service: bookingData.serviceName || bookingData.service || "",
+      selectedStaff: bookingData.staffName || "",
     };
 
     // Save to Firestore
@@ -91,6 +116,37 @@ const fetchServicesFromFirebase = async (): Promise<FirebaseService[]> => {
     return services;
   } catch (error) {
     console.error("Error fetching services:", error);
+    return [];
+  }
+};
+
+// Fetch employees from Firebase
+const fetchEmployeesFromFirebase = async (): Promise<Employee[]> => {
+  try {
+    const employeesRef = collection(db, "employees");
+    const querySnapshot = await getDocs(employeesRef);
+    
+    const employees: Employee[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Only include active cleaners/staff
+      if (data.status === "Active" && (data.role === "CLEANER" || data.role === "SUPERVISOR" || data.role === "TECHNICIAN")) {
+        employees.push({
+          id: doc.id,
+          name: data.name || "",
+          role: data.role || "CLEANER",
+          rating: data.rating || 4.0,
+          status: data.status || "Active",
+          email: data.email || "",
+          phone: data.phone || "",
+        });
+      }
+    });
+    
+    // Sort by rating (highest first)
+    return employees.sort((a, b) => b.rating - a.rating);
+  } catch (error) {
+    console.error("Error fetching employees:", error);
     return [];
   }
 };
@@ -192,9 +248,21 @@ const SuccessPopup = ({
                     <span className="font-medium text-slate-600">Service</span>
                   </div>
                   <span className="font-bold text-slate-900">
-                    {bookingDetails.service}
+                    {bookingDetails.serviceName || bookingDetails.service}
                   </span>
                 </div>
+
+                {bookingDetails.staffName && (
+                  <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Award className="h-5 w-5 text-slate-400" />
+                      <span className="font-medium text-slate-600">Assigned Staff</span>
+                    </div>
+                    <span className="font-bold text-primary">
+                      {bookingDetails.staffName}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
                   <div className="flex items-center gap-3">
@@ -244,76 +312,49 @@ export default function BookService() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [latestBooking, setLatestBooking] = useState<any>(null);
   const [firebaseServices, setFirebaseServices] = useState<FirebaseService[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    service: "",
+    serviceId: "", // Store service ID
+    serviceName: "", // Store service name
     propertyType: "apartment",
     area: "",
     frequency: "once",
     date: "",
     time: "",
     message: "",
+    staffId: "", // Store staff ID
+    staffName: "", // Store staff name
   });
 
-  // Original hardcoded services (unchanged)
-  const serviceCategories = [
-    {
-      group: "Normal Cleaning",
-      options: [
-        { id: "residential-normal", label: "Residential Cleaning" },
-        { id: "office-normal", label: "Office Cleaning" },
-        { id: "mattress-normal", label: "Mattress Normal Clean" },
-        { id: "window-normal", label: "Window Normal Clean" },
-        { id: "balcony-normal", label: "Balcony Normal Clean" },
-        { id: "sofa-normal", label: "Sofa Normal Clean" },
-        { id: "carpet-normal", label: "Carpet Normal Clean" },
-        { id: "curtains-normal", label: "Curtains Normal Clean" },
-      ],
-    },
-    {
-      group: "Deep Cleaning",
-      options: [
-        { id: "villa-deep", label: "Full Villa Deep Cleaning" },
-        { id: "apartment-deep", label: "Full Apartment Deep Cleaning" },
-        { id: "mattress-deep", label: "Mattress Deep Clean" },
-        { id: "window-deep", label: "Window Deep Clean" },
-        { id: "balcony-deep", label: "Balcony Deep Clean" },
-        { id: "sofa-deep", label: "Sofa Deep Clean" },
-        { id: "carpet-deep", label: "Carpet Deep Clean" },
-        { id: "curtains-deep", label: "Curtains Deep Clean" },
-        { id: "post-construction", label: "Post-Construction Cleaning" },
-      ],
-    },
-    {
-      group: "Technical Services",
-      options: [
-        { id: "ac-duct", label: "AC Duct Cleaning & Sanitization" },
-        { id: "water-tank", label: "Water Tank Cleaning (DM Approved)" },
-        { id: "disinfection", label: "Full Property Disinfection" },
-        { id: "mold-remediation", label: "Mold Remediation" },
-      ],
-    },
-  ];
-
-  // Fetch services from Firebase on component mount
+  // Fetch services and employees from Firebase on component mount
   useEffect(() => {
-    const loadServices = async () => {
+    const loadData = async () => {
       setIsLoadingServices(true);
+      setIsLoadingEmployees(true);
+      
       try {
+        // Fetch services
         const services = await fetchServicesFromFirebase();
         setFirebaseServices(services);
+        
+        // Fetch employees
+        const staff = await fetchEmployeesFromFirebase();
+        setEmployees(staff);
       } catch (error) {
-        console.error("Failed to load services:", error);
+        console.error("Failed to load data:", error);
       } finally {
         setIsLoadingServices(false);
+        setIsLoadingEmployees(false);
       }
     };
     
-    loadServices();
+    loadData();
   }, []);
 
   const totalSteps = 3;
@@ -334,9 +375,10 @@ export default function BookService() {
           !formData.name ||
           !formData.email ||
           !formData.phone ||
-          !formData.service ||
+          !formData.serviceId ||
           !formData.date
         ) {
+          alert("Please fill all required fields");
           return;
         }
 
@@ -345,10 +387,7 @@ export default function BookService() {
 
         if (result.success) {
           // Store latest booking details for popup
-          setLatestBooking({
-            bookingRef: result.bookingRef,
-            ...formData,
-          });
+          setLatestBooking(formData);
 
           // Show success popup
           setShowSuccessPopup(true);
@@ -358,18 +397,22 @@ export default function BookService() {
             name: "",
             email: "",
             phone: "",
-            service: "",
+            serviceId: "",
+            serviceName: "",
             propertyType: "apartment",
             area: "",
             frequency: "once",
             date: "",
             time: "",
             message: "",
+            staffId: "",
+            staffName: "",
           });
           setStep(1);
         }
       } catch (error: any) {
         console.error("Booking error:", error);
+        alert("Booking failed. Please try again.");
       }
     }
   };
@@ -379,25 +422,33 @@ export default function BookService() {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >,
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  // Get service name from ID - Updated to check both hardcoded and Firebase services
-  const getServiceName = (id: string) => {
-    // First check hardcoded services
-    for (const category of serviceCategories) {
-      const service = category.options.find((opt) => opt.id === id);
-      if (service) return service.label;
+    const { name, value } = e.target;
+    
+    // Special handling for service selection
+    if (name === "serviceId") {
+      const selectedService = firebaseServices.find(s => s.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        serviceId: value,
+        serviceName: selectedService?.name || "",
+      }));
     }
-    
-    // Then check Firebase services
-    const firebaseService = firebaseServices.find((service) => service.id === id);
-    if (firebaseService) return firebaseService.name;
-    
-    return id;
+    // Special handling for staff selection
+    else if (name === "staffId") {
+      const selectedStaff = employees.find(e => e.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        staffId: value,
+        staffName: selectedStaff?.name || "",
+      }));
+    }
+    // Regular fields
+    else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   // Group Firebase services by category
@@ -415,16 +466,23 @@ export default function BookService() {
     return grouped;
   };
 
+  // Get role badge color
+  const getRoleBadgeColor = (role: string) => {
+    switch(role) {
+      case "CLEANER": return "bg-blue-100 text-blue-700";
+      case "SUPERVISOR": return "bg-purple-100 text-purple-700";
+      case "TECHNICIAN": return "bg-amber-100 text-amber-700";
+      default: return "bg-slate-100 text-slate-700";
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Success Popup */}
       <SuccessPopup
         isOpen={showSuccessPopup}
         onClose={() => setShowSuccessPopup(false)}
-        bookingDetails={{
-          ...latestBooking,
-          service: latestBooking ? getServiceName(latestBooking.service) : "",
-        }}
+        bookingDetails={latestBooking}
       />
 
       {/* Hero Header */}
@@ -477,7 +535,7 @@ export default function BookService() {
                     <div className="space-y-8">
                       {[
                         { s: 1, label: "CONTACT INFO", icon: User },
-                        { s: 2, label: "SERVICE TYPE", icon: ClipboardList },
+                        { s: 2, label: "SERVICE & STAFF", icon: ClipboardList },
                         { s: 3, label: "DATETIME", icon: Calendar },
                       ].map((item, idx) => (
                         <div
@@ -630,10 +688,10 @@ export default function BookService() {
                       >
                         <div className="space-y-2">
                           <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-                            Services
+                            Services & Staff
                           </h2>
                           <p className="text-slate-400 font-bold italic">
-                            Select the type of hygiene restoration required.
+                            Select service and choose your preferred staff member.
                           </p>
                         </div>
 
@@ -643,30 +701,17 @@ export default function BookService() {
                               Required Service *
                             </label>
                             <select
-                              name="service"
-                              value={formData.service}
+                              name="serviceId"
+                              value={formData.serviceId}
                               onChange={handleChange}
                               required
                               className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none relative z-10"
                             >
                               <option value="">Choose Service...</option>
                               
-                              {/* Hardcoded Services (unchanged) */}
-                              {serviceCategories.map((cat, idx) => (
-                                <optgroup key={`hardcoded-${idx}`} label={cat.group}>
-                                  {cat.options.map((opt) => (
-                                    <option key={`hardcoded-${opt.id}`} value={opt.id}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              ))}
-                              
-                              {/* Firebase Services */}
+                              {/* Only Firebase Services - No Hardcoded */}
                               {isLoadingServices ? (
-                                <option disabled>
-                                  Loading services...
-                                </option>
+                                <option disabled>Loading services...</option>
                               ) : (
                                 Object.entries(groupServicesByCategory()).map(([category, services]) => (
                                   <optgroup key={`firebase-${category}`} label={category}>
@@ -679,9 +724,101 @@ export default function BookService() {
                                 ))
                               )}
                             </select>
+                            
                             {isLoadingServices && (
                               <p className="text-xs text-slate-500 mt-2 italic">
                                 Loading services from database...
+                              </p>
+                            )}
+                            
+                            {!isLoadingServices && firebaseServices.length === 0 && (
+                              <p className="text-xs text-amber-500 mt-2 italic">
+                                No services available at the moment.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Staff Dropdown */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
+                              Select Staff Member (Optional)
+                            </label>
+                            <div className="relative group">
+                              <Users className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
+                              <select
+                                name="staffId"
+                                value={formData.staffId}
+                                onChange={handleChange}
+                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
+                              >
+                                <option value="">Auto-assign best available staff</option>
+                                
+                                {isLoadingEmployees ? (
+                                  <option disabled>Loading staff...</option>
+                                ) : (
+                                  employees.map((employee) => (
+                                    <option key={employee.id} value={employee.id}>
+                                      {employee.name} • {employee.role} • ⭐ {employee.rating}/5
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                            </div>
+                            
+                            {/* Staff Preview - Show selected staff details */}
+                            {formData.staffId && !isLoadingEmployees && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/10"
+                              >
+                                {(() => {
+                                  const selected = employees.find(emp => emp.id === formData.staffId);
+                                  if (!selected) return null;
+                                  
+                                  return (
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                          <Award className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                          <p className="font-bold text-slate-900 text-sm">
+                                            {selected.name}
+                                          </p>
+                                          <div className="flex items-center gap-2">
+                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getRoleBadgeColor(selected.role)}`}>
+                                              {selected.role}
+                                            </span>
+                                            <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+                                              <Star className="h-3 w-3 fill-current" />
+                                              {selected.rating}/5
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        {selected.phone && (
+                                          <p className="text-[10px] text-slate-400">
+                                            {selected.phone}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </motion.div>
+                            )}
+                            
+                            {isLoadingEmployees && (
+                              <p className="text-xs text-slate-500 mt-2 italic">
+                                Loading available staff...
+                              </p>
+                            )}
+                            
+                            {!isLoadingEmployees && employees.length === 0 && (
+                              <p className="text-xs text-amber-500 mt-2 italic">
+                                No staff members available at the moment.
                               </p>
                             )}
                           </div>

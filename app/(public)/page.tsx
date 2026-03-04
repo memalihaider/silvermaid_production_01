@@ -118,59 +118,115 @@ export default function HomePage() {
     if (aqi <= 300) return { status: "Very Unhealthy", color: "text-red-700" }
     return { status: "Hazardous", color: "text-red-900" }
   }
-
-  useEffect(() => {
-    setIsClient(true)
-    let isMounted = true
+useEffect(() => {
+  setIsClient(true)
+  let isMounted = true
+  let retryCount = 0
+  const maxRetries = 2
+  
+  const fetchAirQualityData = async () => {
+    if (!isMounted) return
     
-    const fetchAirQualityData = async () => {
+    try {
+      setLoading(true)
+      
+      // API call with timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
+
+      const response = await fetch(
+        'https://air-quality-api.open-meteo.com/v1/air_quality?latitude=25.2048&longitude=55.2708&current=us_aqi',
+        {
+          signal: controller.signal,
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        }
+      ).catch(err => {
+        if (err.name === 'AbortError') {
+          throw new Error('Request timeout')
+        }
+        throw err
+      })
+
+      clearTimeout(timeoutId)
+      
       if (!isMounted) return
-      try {
-        setLoading(true)
-        const response = await fetch(
-          'https://air-quality-api.open-meteo.com/v1/air_quality?latitude=25.2048&longitude=55.2708&current=us_aqi'
-        )
-        
-        if (!isMounted) return
-        
-        const data = await response.json()
-        
-        if (!isMounted) return
-        
-        const aqi = Math.round(data.current?.us_aqi || 72)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!isMounted) return
+      
+      // Check if data exists and has the expected structure
+      if (data?.current?.us_aqi) {
+        const aqi = Math.round(data.current.us_aqi)
         const { status, color } = getAirQualityStatus(aqi)
         
         setAirQuality(Math.min(aqi, 100))
         setAirQualityStatus(status)
         setAirQualityColor(color)
-        setLoading(false)
-      } catch (error) {
-        if (!isMounted) return
-        console.error('Error fetching air quality:', error)
-        setLoading(false)
+      } else {
+        // Use fallback data if API response is invalid
+        useFallbackData()
       }
-    }
-    
-    fetchAirQualityData()
-    
-    // Fetch real-time air quality every 10 minutes
-    const airQualityInterval = setInterval(() => {
-      if (isMounted) fetchAirQualityData()
-    }, 10 * 60 * 1000)
-
-    // Hero text rotation
-    const textInterval = setInterval(() => {
+      
+    } catch (error) {
+      console.error('Air quality fetch error:', error)
+      
+      if (!isMounted) return
+      
+      // Retry logic
+      if (retryCount < maxRetries) {
+        retryCount++
+        setTimeout(() => {
+          if (isMounted) fetchAirQualityData()
+        }, 1000 * retryCount)
+      } else {
+        // Use fallback data after max retries
+        useFallbackData()
+      }
+    } finally {
       if (isMounted) {
-        setTextIndex((prev) => (prev + 1) % heroTexts.length)
+        setLoading(false)
       }
-    }, 4000)
-    
-    return () => {
-      isMounted = false
-      clearInterval(airQualityInterval)
-      clearInterval(textInterval)
     }
-  }, [])
+  }
+  
+  // Fallback function - ye hamesha kaam karega chahe API fail ho
+  const useFallbackData = () => {
+    console.log('Using fallback air quality data')
+    setAirQuality(72)
+    setAirQualityStatus("Moderate")
+    setAirQualityColor("text-amber-500")
+  }
+  
+  // Call the function
+  fetchAirQualityData()
+  
+  // Refresh every 10 minutes
+  const airQualityInterval = setInterval(() => {
+    if (isMounted) {
+      retryCount = 0 // Reset retry count
+      fetchAirQualityData()
+    }
+  }, 10 * 60 * 1000)
+
+  // Hero text rotation (ye to chalta hi rahega)
+  const textInterval = setInterval(() => {
+    if (isMounted) {
+      setTextIndex((prev) => (prev + 1) % heroTexts.length)
+    }
+  }, 4000)
+  
+  return () => {
+    isMounted = false
+    clearInterval(airQualityInterval)
+    clearInterval(textInterval)
+  }
+}, []) // Empty dependency array - sirf ek baar run hoga
 
   // Auto-scroll services slider to the left (slow speed)
   useEffect(() => {
