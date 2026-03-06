@@ -71,5 +71,3 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ slug: 
 }
 
 
-// Firebase service type
-type FirebaseService = {
