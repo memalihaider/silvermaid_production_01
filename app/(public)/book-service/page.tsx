@@ -69,6 +69,11 @@ const saveBookingToFirebase = async (bookingData: any) => {
       staffId: bookingData.staffId || "",
       staffName: bookingData.staffName || "",
       
+      // New fields
+      serviceDuration: bookingData.serviceDuration || "2",
+      numberOfMaids: Number(bookingData.numberOfMaids) || 1,
+      frequency: bookingData.frequency || "once",
+      
       // Keep original fields for backward compatibility
       service: bookingData.serviceName || bookingData.service || "",
       selectedStaff: bookingData.staffName || "",
@@ -325,6 +330,8 @@ export default function BookService() {
     propertyType: "apartment",
     area: "",
     frequency: "once",
+    serviceDuration: "2", // Duration in hours
+    numberOfMaids: "1", // Number of maids needed
     date: "",
     time: "",
     message: "",
@@ -442,6 +449,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           propertyType: "apartment",
           area: "",
           frequency: "once",
+          serviceDuration: "2",
+          numberOfMaids: "1",
           date: "",
           time: "",
           message: "",
@@ -892,7 +901,52 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 <option value="once">One-Time</option>
                                 <option value="weekly">Weekly</option>
                                 <option value="biweekly">Bi-Weekly</option>
+                                <option value="monthly">Monthly</option>
                               </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
+                                Service Duration
+                              </label>
+                              <div className="relative group">
+                                <Clock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
+                                <select
+                                  name="serviceDuration"
+                                  value={formData.serviceDuration}
+                                  onChange={handleChange}
+                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
+                                >
+                                  <option value="1">1 Hour</option>
+                                  <option value="2">2 Hours</option>
+                                  <option value="3">3 Hours</option>
+                                  <option value="4">4 Hours</option>
+                                  <option value="6">6 Hours</option>
+                                  <option value="8">8 Hours</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
+                                No. of Maids Needed
+                              </label>
+                              <div className="relative group">
+                                <Users className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
+                                <select
+                                  name="numberOfMaids"
+                                  value={formData.numberOfMaids}
+                                  onChange={handleChange}
+                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
+                                >
+                                  <option value="1">1 Maid</option>
+                                  <option value="2">2 Maids</option>
+                                  <option value="3">3 Maids</option>
+                                  <option value="4">4 Maids</option>
+                                  <option value="5">5+ Maids</option>
+                                </select>
+                              </div>
                             </div>
                           </div>
 

@@ -3,6 +3,7 @@
 import { ContactPhone, ContactEmail } from '@/components/ContactDisplay'
 import { useContactInfo } from '@/contexts/ContactContext'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { 
   CheckCircle2, 
   Star, 
@@ -24,14 +25,11 @@ import {
 export default function WindowCleaning() {
   const { contact } = useContactInfo()
   const servicesList = [
-    { name: "Regular Residential cleaning", slug: "residential-cleaning" },
-    { name: "Regular Office cleaning", slug: "office-cleaning" },
-    { name: "Floor deep cleaning", slug: "floor-deep-cleaning" },
-    { name: "Window cleaning", slug: "window-cleaning" },
-    { name: "Balcony Deep Cleaning", slug: "balcony-deep-cleaning" },
-    { name: "Sofa Deep Cleaning", slug: "sofa-deep-cleaning" },
-    { name: "Carpets Deep Cleaning", slug: "carpets-deep-cleaning" },
-    { name: "Mattress Deep Cleaning", slug: "mattress-deep-cleaning" }
+    { name: "Maid Service", slug: "maids-service" },
+    { name: "Deep Cleaning", slug: "deep-cleaning" },
+    { name: "Home Cleaning", slug: "home-cleaning" },
+    { name: "Furniture Cleaning", slug: "furniture-cleaning" },
+    { name: "Glass / Window Cleaning", slug: "window-cleaning" },
   ]
 
   const categories = [
@@ -171,30 +169,30 @@ export default function WindowCleaning() {
                 viewport={{ once: true }}
                 className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-3xl sticky top-24"
               >
-                <h4 className="text-2xl font-black mb-8 tracking-tight italic">Other Services</h4>
+                <h4 className="text-2xl font-black mb-8 tracking-tight italic">Our Services</h4>
                 <div className="space-y-4">
                   {servicesList.map((service, i) => (
-                    <a 
-                      key={i} 
-                      href={`/services/${service.slug}`} 
+                    <Link
+                      key={i}
+                      href={`/services/${service.slug}`}
                       className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                        service.slug === "window-cleaning" 
-                        ? 'bg-primary border-primary text-white font-black' 
+                        service.slug === "window-cleaning"
+                        ? 'bg-primary border-primary text-white font-black'
                         : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
                       }`}
                     >
                       <span className="text-xs uppercase tracking-widest">{service.name}</span>
                       <ArrowRight className="h-4 w-4" />
-                    </a>
+                    </Link>
                   ))}
                 </div>
 
                 <div className="mt-12 p-8 bg-white/5 rounded-3xl border border-white/10 text-center">
-                  <p className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">Pricing</p>
+                  <p className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">Get a Quote</p>
                   <p className="text-4xl font-black text-primary tracking-tighter mb-8 italic">Contact Us</p>
-                  <a href="/book-service" className="w-full bg-white text-slate-900 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-primary hover:text-white transition-all inline-block">
-                    Custom Quote
-                  </a>
+                  <Link href="/book-service" className="w-full bg-white text-slate-900 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-primary hover:text-white transition-all inline-block">
+                    Book Now
+                  </Link>
                 </div>
               </motion.div>
             </div>

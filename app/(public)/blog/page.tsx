@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Search, ChevronRight, Clock, User, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { INITIAL_BLOG_POSTS, BLOG_CATEGORIES } from '@/lib/blog-data'
+import { BLOG_CATEGORIES } from '@/lib/blog-data'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 
@@ -95,8 +95,7 @@ export default function BlogPage() {
       featured: post.featured || false
     }))
 
-    // Return combined array (Firebase posts first, then dummy posts)
-    return [...convertedFirebasePosts, ...INITIAL_BLOG_POSTS]
+    return [...convertedFirebasePosts]
   }, [firebasePosts])
 
   const filteredPosts = useMemo(() => {
@@ -132,14 +131,6 @@ export default function BlogPage() {
         publishedAt: post.publishedAt || new Date().toISOString(),
         featured: true
       }))
-    
-    // If we don't have enough featured posts from Firebase, add from dummy
-    if (firebaseFeatured.length < 2) {
-      const dummyFeatured = INITIAL_BLOG_POSTS
-        .filter(p => p.featured)
-        .slice(0, 2 - firebaseFeatured.length)
-      return [...firebaseFeatured, ...dummyFeatured]
-    }
     
     return firebaseFeatured.slice(0, 2)
   }, [firebasePosts])
@@ -193,7 +184,7 @@ export default function BlogPage() {
                   transition={{ delay: i * 0.1 }}
                   className="group rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all border-2 border-slate-200"
                 >
-                  <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
+                  <Link href={`/${post.slug}`} className="flex flex-col h-full">
                     <img 
                       src={post.image} 
                       alt={post.title}
@@ -298,22 +289,7 @@ export default function BlogPage() {
         <div className="container mx-auto px-4">
           {paginatedPosts.length > 0 ? (
             <>
-              {/* Show Firebase posts indicator if available */}
-              {firebasePosts.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  className="mb-6"
-                >
-                  <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider">
-                    📝 Latest from Blog
-                  </span>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Showing {firebasePosts.length} real blog post{firebasePosts.length !== 1 ? 's' : ''} from Firebase + {INITIAL_BLOG_POSTS.length} sample posts
-                  </p>
-                </motion.div>
-              )}
+
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
                 {paginatedPosts.map((post, i) => (
@@ -325,7 +301,7 @@ export default function BlogPage() {
                     transition={{ delay: i * 0.1 }}
                     className="group rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border-2 border-slate-200 flex flex-col"
                   >
-                    <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
+                    <Link href={`/${post.slug}`} className="flex flex-col h-full">
                       <img 
                         src={post.image} 
                         alt={post.title}

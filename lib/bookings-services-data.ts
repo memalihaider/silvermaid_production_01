@@ -25,6 +25,9 @@ export interface Booking {
   bookingDate: string
   bookingTime: string
   duration: number // in hours
+  serviceDuration?: string // user-selected duration e.g. "2 Hours"
+  frequency?: 'once' | 'weekly' | 'biweekly' | 'monthly'
+  numberOfMaids?: number
   estimatedPrice: number
   status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled'
   notes?: string

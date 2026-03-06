@@ -7,7 +7,7 @@ import {
   Home, Briefcase, Maximize, Sun, Sofa, Layers, Bed, 
   Wind, Grid3X3, Warehouse, CookingPot, HardHat, Building, Truck, Brush,
   Fan, Pipette, Utensils, Waves, Dumbbell, PanelTop, ThermometerSnowflake,
-  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User
+  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User, Lock
 } from 'lucide-react'
 import Link from 'next/link'
 import { ContactProvider, useContactInfo } from '@/contexts/ContactContext'
@@ -77,23 +77,19 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               {/* Mega Menu */}
               <div className="absolute top-full -left-80 w-[720px] bg-white border border-slate-200/80 shadow-xl rounded-2xl p-8 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
                 <div className="grid grid-cols-3 gap-8">
-                  {/* Normal Cleaning Section */}
+                  {/* Cleaning Services Section */}
                   <div>
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 pb-2 border-b border-slate-100">
-                      Normal Cleaning
+                      Cleaning Services
                     </h4>
                     <div className="grid gap-0.5">
                       {[
-                        { name: "Regular Residential", href: "/services/residential-cleaning", icon: Home },
-                        { name: "Regular Office", href: "/services/office-cleaning", icon: Briefcase },
-                        { name: "Window cleaning", href: "/services/window-cleaning", icon: Maximize },
-                        { name: "Balcony Cleaning", href: "/services/balcony-deep-cleaning", icon: Sun },
-                        { name: "Sofa Cleaning", href: "/services/sofa-deep-cleaning", icon: Sofa },
-                        { name: "Carpets Cleaning", href: "/services/carpets-deep-cleaning", icon: Layers },
-                        { name: "Mattress Cleaning", href: "/services/mattress-deep-cleaning", icon: Bed }
+                        { name: "Maid Service", href: "/services/maids-service/", icon: User },
+                        { name: "Home Cleaning", href: "/services/home-cleaning/", icon: Home },
+                        { name: "Glass & Window", href: "/services/window-cleaning/", icon: Maximize },
                       ].map((item) => (
-                        <a 
-                          key={item.href} 
+                        <a
+                          key={item.href}
                           href={item.href}
                           className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
                         >
@@ -101,6 +97,25 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                           {item.name}
                         </a>
                       ))}
+                      <div className="mt-2 pt-2 border-t border-slate-100 grid gap-0.5">
+                        {[
+                          { name: "Regular Residential", icon: Home },
+                          { name: "Regular Office", icon: Briefcase },
+                          { name: "Balcony Cleaning", icon: Sun },
+                          { name: "Sofa Cleaning", icon: Sofa },
+                          { name: "Carpets Cleaning", icon: Layers },
+                          { name: "Mattress Cleaning", icon: Bed },
+                        ].map((item) => (
+                          <div
+                            key={item.name}
+                            className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
+                          >
+                            <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                            <span>{item.name}</span>
+                            <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -111,23 +126,11 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                     </h4>
                     <div className="grid grid-cols-1 gap-0.5">
                       {[
-                        { name: "Grout Deep Clean", href: "/services/grout-deep-cleaning", icon: Grid3X3 },
-                        { name: "Garage Deep Clean", href: "/services/garage-deep-cleaning", icon: Warehouse },
-                        { name: "Kitchen Deep Clean", href: "/services/kitchen-deep-cleaning", icon: CookingPot },
-                        { name: "Post Construction", href: "/services/post-construction-cleaning", icon: HardHat },
-                        { name: "Office Deep Clean", href: "/services/office-deep-cleaning", icon: Briefcase },
-                        { name: "Apartment Deep", href: "/services/apartment-deep-cleaning", icon: Building },
-                        { name: "Move In/Out", href: "/services/move-in-out-cleaning", icon: Truck },
-                        { name: "Villa Deep Clean", href: "/services/villa-deep-cleaning", icon: Home },
-                        { name: "Mattress Deep", href: "/services/mattress-deep-cleaning", icon: Bed },
-                        { name: "Carpets Deep", href: "/services/carpets-deep-cleaning", icon: Layers },
-                        { name: "Sofa Deep Clean", href: "/services/sofa-deep-cleaning", icon: Sofa },
-                        { name: "Balcony Deep", href: "/services/balcony-deep-cleaning", icon: Sun },
-                        { name: "Window cleaning", href: "/services/window-cleaning", icon: Maximize },
-                        { name: "Floor Deep Clean", href: "/services/floor-deep-cleaning", icon: Brush }
+                        { name: "Deep Cleaning", href: "/services/deep-cleaning/", icon: Layers },
+                        { name: "Furniture Cleaning", href: "/services/furniture-cleaning/", icon: Sofa },
                       ].map((item) => (
-                        <a 
-                          key={item.href} 
+                        <a
+                          key={item.href}
                           href={item.href}
                           className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
                         >
@@ -135,6 +138,27 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                           {item.name}
                         </a>
                       ))}
+                      <div className="mt-2 pt-2 border-t border-slate-100 grid gap-0.5">
+                        {[
+                          { name: "Kitchen Deep Clean", icon: CookingPot },
+                          { name: "Post Construction", icon: HardHat },
+                          { name: "Office Deep Clean", icon: Briefcase },
+                          { name: "Apartment Deep", icon: Building },
+                          { name: "Move In/Out", icon: Truck },
+                          { name: "Villa Deep Clean", icon: Home },
+                          { name: "Floor Deep Clean", icon: Brush },
+                          { name: "Garage Deep Clean", icon: Warehouse },
+                        ].map((item) => (
+                          <div
+                            key={item.name}
+                            className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
+                          >
+                            <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                            <span>{item.name}</span>
+                            <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -145,24 +169,24 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                     </h4>
                     <div className="grid grid-cols-1 gap-0.5">
                       {[
-                        { name: "AC Duct Cleaning", href: "/services/ac-duct-cleaning", icon: Wind },
-                        { name: "AC Coil Cleaning", href: "/services/ac-coil-cleaning", icon: ThermometerSnowflake },
-                        { name: "Kitchen Hood Clean", href: "/services/kitchen-hood-cleaning", icon: Fan },
-                        { name: "Grease Trap Clean", href: "/services/grease-trap-cleaning", icon: Pipette },
-                        { name: "Restaurant Clean", href: "/services/restaurant-cleaning", icon: Utensils },
-                        { name: "Water Tank Clean", href: "/services/water-tank-cleaning", icon: Waves },
-                        { name: "Swimming Pool", href: "/services/swimming-pool-cleaning", icon: Waves },
-                        { name: "Gym Deep Clean", href: "/services/gym-deep-cleaning", icon: Dumbbell },
-                        { name: "Facade Cleaning", href: "/services/facade-cleaning", icon: PanelTop }
+                        { name: "AC Duct Cleaning", icon: Wind },
+                        { name: "AC Coil Cleaning", icon: ThermometerSnowflake },
+                        { name: "Kitchen Hood Clean", icon: Fan },
+                        { name: "Grease Trap Clean", icon: Pipette },
+                        { name: "Restaurant Clean", icon: Utensils },
+                        { name: "Water Tank Clean", icon: Waves },
+                        { name: "Swimming Pool", icon: Waves },
+                        { name: "Gym Deep Clean", icon: Dumbbell },
+                        { name: "Facade Cleaning", icon: PanelTop },
                       ].map((item) => (
-                        <a 
-                          key={item.href} 
-                          href={item.href}
-                          className="group/item flex items-center gap-2.5 text-[12.5px] font-medium text-slate-600 hover:text-primary transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-50"
+                        <div
+                          key={item.name}
+                          className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
                         >
-                          <item.icon className="h-3.5 w-3.5 text-slate-400 group-hover/item:text-primary transition-colors shrink-0" />
-                          {item.name}
-                        </a>
+                          <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                          <span>{item.name}</span>
+                          <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
+                        </div>
                       ))}
                     </div>
                   </div>

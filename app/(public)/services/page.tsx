@@ -63,9 +63,11 @@ const DUMMY_SERVICE_CATEGORIES = [
     label: "Normal Cleaning",
     icon: Sparkles,
     services: [
+      { name: "Maid Service", slug: "maids-service", icon: Home, desc: "Professional vetted maids — daily, weekly, monthly and on-demand household care." },
+      { name: "Home Cleaning", slug: "home-cleaning", icon: Home, desc: "Thorough residential cleaning for apartments, villas, and family homes across the UAE." },
+      { name: "Glass & Window Cleaning", slug: "window-cleaning", icon: Maximize, desc: "Streak-free exterior and interior window restoration with professional-grade equipment." },
       { name: "Regular Residential", slug: "residential-cleaning", icon: Home, desc: "Standard home cleaning for maintaining a fresh living space." },
       { name: "Regular Office", slug: "office-cleaning", icon: Briefcase, desc: "Professional workspace cleaning for productive environments." },
-      { name: "Window cleaning", slug: "window-cleaning", icon: Maximize, desc: "Streak-free exterior and interior window restoration." },
       { name: "Balcony Cleaning", slug: "balcony-deep-cleaning", icon: Sun, desc: "Removing dust and sand from your outdoor relaxation areas." },
       { name: "Sofa Cleaning", slug: "sofa-deep-cleaning", icon: Sofa, desc: "Professional fabric and leather upholstery sanitization." },
       { name: "Carpets Cleaning", slug: "carpets-deep-cleaning", icon: Layers, desc: "Deep extraction cleaning for all types of carpet fibers." },
@@ -77,6 +79,8 @@ const DUMMY_SERVICE_CATEGORIES = [
     label: "Deep Cleaning",
     icon: Zap,
     services: [
+      { name: "Deep Cleaning", slug: "deep-cleaning", icon: Zap, desc: "Comprehensive top-to-bottom deep cleaning — kitchen, bathrooms, bedrooms and all surfaces." },
+      { name: "Furniture Cleaning", slug: "furniture-cleaning", icon: Sofa, desc: "Professional sofa, carpet, mattress and hard furniture cleaning and restoration." },
       { name: "Grout Deep Clean", slug: "grout-deep-cleaning", icon: Grid3X3, desc: "Specialized floor tile and grout line restoration." },
       { name: "Garage Deep Clean", slug: "garage-deep-cleaning", icon: Warehouse, desc: "Heavy-duty cleaning for garage floors and storage areas." },
       { name: "Kitchen Deep Clean", slug: "kitchen-deep-cleaning", icon: CookingPot, desc: "Sanitizing all surfaces, appliances, and grease-prone areas." },
