@@ -20,10 +20,59 @@ type BlogPost = {
   author: string
   publishedAt: string
   featured: boolean
+  promotionalImages?: string[]
+  ctaImage?: string
 }
 
 function toSlug(title: string, id: string) {
   return title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `post-${id}`
+}
+
+function splitContentAtH2(content: string) {
+  const paragraphs = content.split('\n\n').filter(p => p.trim())
+  const h2Index = paragraphs.findIndex(p => /^##\s/.test(p))
+  if (h2Index <= 0) {
+    const splitAt = Math.max(1, Math.floor(paragraphs.length / 3))
+    return { p1: paragraphs.slice(0, splitAt), h2: null, p2: paragraphs.slice(splitAt) }
+  }
+  return {
+    p1: paragraphs.slice(0, h2Index),
+    h2: paragraphs[h2Index].replace(/^#+\s/, ''),
+    p2: paragraphs.slice(h2Index + 1),
+  }
+}
+
+function renderParagraph(paragraph: string, index: number) {
+  if (paragraph.startsWith('- ')) {
+    const items = paragraph.split('\n').filter(item => item.startsWith('- '))
+    return (
+      <ul key={index} className="list-disc list-inside space-y-2 my-6 text-slate-700">
+        {items.map((item, j) => (
+          <li key={j} className="font-medium">{item.replace('- ', '')}</li>
+        ))}
+      </ul>
+    )
+  }
+  if (paragraph.match(/^\d+\./)) {
+    return (
+      <ol key={index} className="list-decimal list-inside space-y-2 my-6 text-slate-700">
+        {paragraph.split('\n').filter(l => l.trim()).map((line, j) => (
+          <li key={j} className="font-medium">{line.replace(/^\d+\.\s/, '')}</li>
+        ))}
+      </ol>
+    )
+  }
+  if (paragraph.match(/^#{1,3}\s/)) {
+    const level = paragraph.match(/^#+/)?.[0].length || 1
+    const text = paragraph.replace(/^#+\s/, '')
+    const cls = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
+    return <h2 key={index} className={`${cls} font-black text-slate-900 mt-8 mb-4`}>{text}</h2>
+  }
+  return (
+    <p key={index} className="text-slate-700 font-medium leading-relaxed text-lg mb-6">
+      {paragraph}
+    </p>
+  )
 }
 
 export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -52,6 +101,8 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
             author: d.name || 'Admin',
             publishedAt: d.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
             featured: d.featured || false,
+            promotionalImages: d.promotionalImages || [],
+            ctaImage: d.ctaImage || '',
           }
         })
 
@@ -100,116 +151,122 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
   if (!post) notFound()
 
+  const { p1, h2, p2 } = splitContentAtH2(post!.content)
+  const promoImages = post!.promotionalImages || []
+  const ctaImage = post!.ctaImage || ''
+
+  const categoryColor =
+    post!.category === 'cleaning-tips' ? 'bg-blue-500 text-white' :
+    post!.category === 'industry-news' ? 'bg-purple-500 text-white' :
+    post!.category === 'customer-stories' ? 'bg-green-500 text-white' :
+    post!.category === 'how-to' ? 'bg-orange-500 text-white' :
+    'bg-pink-500 text-white'
+
   return (
-    <div className="flex flex-col overflow-hidden pt-20">
-      {/* Header with Image */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative h-96 md:h-[500px] bg-slate-900 overflow-hidden group"
-      >
-        {post!.image && (
-          <img
-            src={post!.image}
-            alt={post!.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
-        )}
-        <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/50 to-transparent" />
-
-        <div className="absolute top-8 left-4 md:left-8">
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-2 text-white hover:text-primary font-bold transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" /> Back to Blog
-          </Link>
+    <div className="flex flex-col overflow-hidden">
+      {/* Slim Hero — Title & Meta */}
+      <section className="py-16 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <Link
+                href="/blog"
+                className="inline-flex items-center gap-2 text-slate-400 hover:text-primary font-bold transition-colors mb-8"
+              >
+                <ArrowLeft className="h-5 w-5" /> Back to Blog
+              </Link>
+              <span className={`inline-block px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6 ${categoryColor}`}>
+                {post!.category.replace(/-/g, ' ')}
+              </span>
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-tight mb-8">
+                {post!.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>{post!.author}</span>
+                </div>
+                <span>•</span>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{post!.readTime} min read</span>
+                </div>
+                <span>•</span>
+                <span>
+                  {new Date(post!.publishedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
+            </motion.div>
+          </div>
         </div>
+      </section>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="absolute bottom-0 left-0 right-0 p-8 md:p-12 text-white"
-        >
-          <span className={`inline-block px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6 ${
-            post!.category === 'cleaning-tips' ? 'bg-blue-500' :
-            post!.category === 'industry-news' ? 'bg-purple-500' :
-            post!.category === 'customer-stories' ? 'bg-green-500' :
-            post!.category === 'how-to' ? 'bg-orange-500' :
-            'bg-pink-500'
-          }`}>
-            {post!.category.replace(/-/g, ' ')}
-          </span>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight max-w-4xl">
-            {post!.title}
-          </h1>
-        </motion.div>
-      </motion.div>
-
-      {/* Content Section */}
+      {/* Article + Sidebar */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-3 gap-12">
-            {/* Main Content */}
+            {/* Main Article */}
             <motion.article
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-2"
             >
-              {/* Author Info */}
-              <div className="flex items-center gap-4 pb-8 border-b-2 border-slate-200 mb-8">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <User className="h-8 w-8 text-primary" />
+              {/* Featured Image */}
+              {post!.image && (
+                <div className="w-full rounded-2xl overflow-hidden mb-10 aspect-video">
+                  <img
+                    src={post!.image}
+                    alt={post!.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div>
-                  <h3 className="font-black text-slate-900">{post!.author}</h3>
-                  <p className="text-sm text-slate-500">
-                    {new Date(post!.publishedAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })} • {post!.readTime} min read
-                  </p>
-                </div>
+              )}
+
+              {/* P1 — intro paragraphs before first H2 */}
+              <div className="prose prose-lg max-w-none mb-10">
+                {p1.map((paragraph, i) => renderParagraph(paragraph, i))}
               </div>
 
-              {/* Article Content */}
+              {/* Promotional Images (2 side by side) */}
+              {promoImages.length > 0 && (
+                <div className={`grid gap-4 mb-10 ${promoImages.length >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {promoImages.slice(0, 2).map((src, i) => (
+                    <div key={i} className="rounded-2xl overflow-hidden aspect-video">
+                      <img
+                        src={src}
+                        alt={`Promotional image ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* H2 Section Heading */}
+              {h2 && (
+                <h2 className="text-3xl font-black text-slate-900 mt-4 mb-8 pb-4 border-b-2 border-primary/20">
+                  {h2}
+                </h2>
+              )}
+
+              {/* CTA Image */}
+              {ctaImage && (
+                <div className="w-full rounded-2xl overflow-hidden mb-10 shadow-xl">
+                  <img
+                    src={ctaImage}
+                    alt="Call to action"
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
+
+              {/* P2 — remaining content */}
               <div className="prose prose-lg max-w-none">
-                {post!.content.split('\n\n').map((paragraph, i) => {
-                  if (paragraph.startsWith('- ')) {
-                    const items = paragraph.split('\n').filter(item => item.startsWith('- '))
-                    return (
-                      <ul key={i} className="list-disc list-inside space-y-2 my-6 text-slate-700">
-                        {items.map((item, j) => (
-                          <li key={j} className="font-medium">{item.replace('- ', '')}</li>
-                        ))}
-                      </ul>
-                    )
-                  }
-                  if (paragraph.match(/^\d+\./)) {
-                    return (
-                      <ol key={i} className="list-decimal list-inside space-y-2 my-6 text-slate-700">
-                        {paragraph.split('\n').filter(l => l.trim()).map((line, j) => (
-                          <li key={j} className="font-medium">{line.replace(/^\d+\.\s/, '')}</li>
-                        ))}
-                      </ol>
-                    )
-                  }
-                  if (paragraph.match(/^#{1,3}\s/)) {
-                    const level = paragraph.match(/^#+/)?.[0].length || 1
-                    const text = paragraph.replace(/^#+\s/, '')
-                    const cls = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
-                    return (
-                      <h2 key={i} className={`${cls} font-black text-slate-900 mt-8 mb-4`}>{text}</h2>
-                    )
-                  }
-                  return (
-                    <p key={i} className="text-slate-700 font-medium leading-relaxed text-lg mb-6">
-                      {paragraph}
-                    </p>
-                  )
-                })}
+                {p2.map((paragraph, i) => renderParagraph(paragraph, i + p1.length + 1))}
               </div>
 
               {/* Share */}

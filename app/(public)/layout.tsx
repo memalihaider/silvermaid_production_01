@@ -7,7 +7,8 @@ import {
   Home, Briefcase, Maximize, Sun, Sofa, Layers, Bed, 
   Wind, Grid3X3, Warehouse, CookingPot, HardHat, Building, Truck, Brush,
   Fan, Pipette, Utensils, Waves, Dumbbell, PanelTop, ThermometerSnowflake,
-  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User, Lock
+  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User, Lock,
+  Users, Clock
 } from 'lucide-react'
 import Link from 'next/link'
 import { ContactProvider, useContactInfo } from '@/contexts/ContactContext'
@@ -85,6 +86,8 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                     <div className="grid gap-0.5">
                       {[
                         { name: "Maid Service", href: "/services/maids-service/", icon: User },
+                        { name: "Filipino Cleaner", href: "/services/filipino-cleaner/", icon: Users },
+                        { name: "Part-Time Cleaners", href: "/services/part-time-cleaners/", icon: Clock },
                         { name: "Home Cleaning", href: "/services/home-cleaning/", icon: Home },
                         { name: "Glass & Window", href: "/services/window-cleaning/", icon: Maximize },
                       ].map((item) => (

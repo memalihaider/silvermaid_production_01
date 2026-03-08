@@ -102,7 +102,10 @@ export default function CMS() {
     readTime: 5,
     featured: false,
     tags: '',
-    imageURL: ''
+    imageURL: '',
+    promotionalImage1: '',
+    promotionalImage2: '',
+    ctaImage: ''
   })
   
   // Testimonial Form Data
@@ -304,7 +307,10 @@ You have the right to request access to the personal data we hold about you, to 
         readTime: post.readTime,
         featured: post.featured,
         tags: post.tags.join(', '),
-        imageURL: post.imageURL
+        imageURL: post.imageURL,
+        promotionalImage1: (post as any).promotionalImages?.[0] || '',
+        promotionalImage2: (post as any).promotionalImages?.[1] || '',
+        ctaImage: (post as any).ctaImage || ''
       })
     } else {
       setEditingPost(null)
@@ -316,7 +322,10 @@ You have the right to request access to the personal data we hold about you, to 
         readTime: 5,
         featured: false,
         tags: '',
-        imageURL: ''
+        imageURL: '',
+        promotionalImage1: '',
+        promotionalImage2: '',
+        ctaImage: ''
       })
     }
     setShowModal(true)
@@ -473,6 +482,8 @@ You have the right to request access to the personal data we hold about you, to 
         imageURL: formData.imageURL,
         featured: formData.featured,
         tags: tagsArray,
+        promotionalImages: [formData.promotionalImage1, formData.promotionalImage2].filter(Boolean),
+        ctaImage: formData.ctaImage,
         createdAt: editingPost ? editingPost.createdAt : new Date(),
         updatedAt: new Date()
       }
@@ -1339,6 +1350,65 @@ You have the right to request access to the personal data we hold about you, to 
                         }}
                       />
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Promotional Images */}
+              <div className="border rounded-xl p-4 space-y-4 bg-muted/20">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  Promotional Images (shown between P1 &amp; H2)
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Promo Image 1 URL</label>
+                  <input
+                    type="text"
+                    name="promotionalImage1"
+                    value={formData.promotionalImage1}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="https://example.com/promo1.jpg"
+                  />
+                  {formData.promotionalImage1 && (
+                    <div className="mt-2 h-32 rounded-lg overflow-hidden border">
+                      <img src={formData.promotionalImage1} alt="Promo 1 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Promo Image 2 URL</label>
+                  <input
+                    type="text"
+                    name="promotionalImage2"
+                    value={formData.promotionalImage2}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="https://example.com/promo2.jpg"
+                  />
+                  {formData.promotionalImage2 && (
+                    <div className="mt-2 h-32 rounded-lg overflow-hidden border">
+                      <img src={formData.promotionalImage2} alt="Promo 2 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CTA Image */}
+              <div className="border rounded-xl p-4 space-y-3 bg-muted/20">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  CTA Image (shown after H2, before P2)
+                </h3>
+                <input
+                  type="text"
+                  name="ctaImage"
+                  value={formData.ctaImage}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="https://example.com/cta.jpg"
+                />
+                {formData.ctaImage && (
+                  <div className="h-36 rounded-lg overflow-hidden border">
+                    <img src={formData.ctaImage} alt="CTA preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
                 )}
               </div>
