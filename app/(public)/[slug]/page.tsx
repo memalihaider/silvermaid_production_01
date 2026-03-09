@@ -1,12 +1,12 @@
-'use client'
-
-import { motion } from 'framer-motion'
-import { ArrowLeft, Clock, User, Share2, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Clock, User, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { use, useEffect, useState } from 'react'
+import type { Metadata } from 'next'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { AnimatedDiv, AnimatedArticle, AnimatedAside, ShareButton } from './client-parts'
+
+const SITE_URL = 'https://silvermaid-production-01.vercel.app'
 
 type BlogCategory = {
   id: string
@@ -52,6 +52,82 @@ function splitContentAtH2(content: string) {
   }
 }
 
+async function fetchAllPosts() {
+  const catSnap = await getDocs(collection(db, 'blog-categories'))
+  const cats: BlogCategory[] = catSnap.docs.map(doc => ({
+    id: doc.id,
+    ...(doc.data() as { slug: string; name: string; color: string })
+  }))
+
+  const q = query(collection(db, 'blog-post'), orderBy('createdAt', 'desc'))
+  const snap = await getDocs(q)
+
+  const posts: BlogPost[] = snap.docs.map(doc => {
+    const d = doc.data()
+    return {
+      id: doc.id,
+      title: d.title || '',
+      slug: toSlug(d.title, doc.id),
+      excerpt: d.description ? d.description.substring(0, 150) + '...' : '',
+      content: d.content || '',
+      p1: d.p1 || '',
+      h2: d.h2 || '',
+      p2: d.p2 || '',
+      image: d.imageURL || '',
+      category: d.category || d.tags?.[0]?.toLowerCase()?.replace(/\s+/g, '-') || 'general',
+      readTime: d.readTime || 5,
+      author: d.name || 'Admin',
+      publishedAt: d.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
+      featured: d.featured || false,
+      promotionalImages: d.promotionalImages || [],
+      ctaImage: d.ctaImage || '',
+    }
+  })
+
+  return { posts, cats }
+}
+
+// --- SEO: Dynamic Metadata ---
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+
+  try {
+    const { posts } = await fetchAllPosts()
+    const post = posts.find(p => p.slug === slug)
+
+    if (!post) {
+      return { title: 'Post Not Found | Silver Maid' }
+    }
+
+    return {
+      title: `${post.title} | Silver Maid Blog`,
+      description: post.excerpt || `Read "${post.title}" on the Silver Maid blog.`,
+      openGraph: {
+        title: post.title,
+        description: post.excerpt,
+        url: `${SITE_URL}/${post.slug}`,
+        siteName: 'Silver Maid',
+        type: 'article',
+        publishedTime: post.publishedAt,
+        authors: [post.author],
+        ...(post.image ? { images: [{ url: post.image, width: 1200, height: 630, alt: post.title }] } : {}),
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: post.title,
+        description: post.excerpt,
+        ...(post.image ? { images: [post.image] } : {}),
+      },
+      alternates: {
+        canonical: `${SITE_URL}/${post.slug}`,
+      },
+    }
+  } catch {
+    return { title: 'Blog | Silver Maid' }
+  }
+}
+
+// --- Render helpers ---
 function renderParagraph(paragraph: string, index: number) {
   if (paragraph.startsWith('- ')) {
     const items = paragraph.split('\n').filter(item => item.startsWith('- '))
@@ -85,121 +161,82 @@ function renderParagraph(paragraph: string, index: number) {
   )
 }
 
-export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
-  const [post, setPost] = useState<BlogPost | null>(null)
-  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([])
-  const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([])
-  const [loading, setLoading] = useState(true)
+// --- Page Component (Server Component) ---
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        // Fetch categories
-        const catSnap = await getDocs(collection(db, 'blog-categories'))
-        const cats: BlogCategory[] = catSnap.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as { slug: string; name: string; color: string })
-        }))
-        setBlogCategories(cats)
+  let post: BlogPost | undefined
+  let relatedPosts: BlogPost[] = []
+  let cats: BlogCategory[] = []
 
-        const q = query(collection(db, 'blog-post'), orderBy('createdAt', 'desc'))
-        const snap = await getDocs(q)
-
-        const posts: BlogPost[] = snap.docs.map(doc => {
-          const d = doc.data()
-          return {
-            id: doc.id,
-            title: d.title || '',
-            slug: toSlug(d.title, doc.id),
-            excerpt: d.description ? d.description.substring(0, 150) + '...' : '',
-            content: d.content || '',
-            p1: d.p1 || '',
-            h2: d.h2 || '',
-            p2: d.p2 || '',
-            image: d.imageURL || '',
-            category: d.category || d.tags?.[0]?.toLowerCase()?.replace(/\s+/g, '-') || 'general',
-            readTime: d.readTime || 5,
-            author: d.name || 'Admin',
-            publishedAt: d.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
-            featured: d.featured || false,
-            promotionalImages: d.promotionalImages || [],
-            ctaImage: d.ctaImage || '',
-          }
-        })
-
-        const current = posts.find(p => p.slug === slug)
-        if (!current) {
-          notFound()
-          return
-        }
-
-        setPost(current)
-        setRelatedPosts(
-          posts.filter(p => p.category === current.category && p.id !== current.id).slice(0, 3)
-        )
-      } catch (err) {
-        console.error('Error fetching blog post:', err)
-        notFound()
-      } finally {
-        setLoading(false)
-      }
+  try {
+    const result = await fetchAllPosts()
+    cats = result.cats
+    post = result.posts.find(p => p.slug === slug)
+    if (post) {
+      relatedPosts = result.posts
+        .filter(p => p.category === post!.category && p.id !== post!.id)
+        .slice(0, 3)
     }
-    fetchPost()
-  }, [slug])
-
-  if (loading) {
-    return (
-      <div className="flex flex-col overflow-hidden pt-20">
-        <section className="py-24 bg-linear-to-br from-slate-900 via-slate-800 to-primary/20">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 leading-tight">
-              Loading Post...
-            </h1>
-          </div>
-        </section>
-        <div className="container mx-auto px-4 py-16">
-          <div className="animate-pulse">
-            <div className="h-96 bg-slate-200 rounded-xl mb-8" />
-            <div className="h-8 bg-slate-200 rounded-lg w-3/4 mb-4" />
-            <div className="h-4 bg-slate-200 rounded-lg w-full mb-2" />
-            <div className="h-4 bg-slate-200 rounded-lg w-5/6 mb-2" />
-            <div className="h-4 bg-slate-200 rounded-lg w-4/6" />
-          </div>
-        </div>
-      </div>
-    )
+  } catch (err) {
+    console.error('Error fetching blog post:', err)
   }
 
   if (!post) notFound()
 
-  // Use structured fields if available, otherwise fall back to splitting content
-  const hasStructuredContent = !!(post!.p1 || post!.h2 || post!.p2)
-  const legacy = splitContentAtH2(post!.content)
-  
-  const p1Paragraphs = hasStructuredContent 
-    ? (post!.p1 || '').split('\n\n').filter(p => p.trim()) 
+  // Structured fields or fallback
+  const hasStructuredContent = !!(post.p1 || post.h2 || post.p2)
+  const legacy = splitContentAtH2(post.content)
+
+  const p1Paragraphs = hasStructuredContent
+    ? (post.p1 || '').split('\n\n').filter(p => p.trim())
     : legacy.p1
-  const h2Text = hasStructuredContent ? (post!.h2 || null) : legacy.h2
-  const p2Paragraphs = hasStructuredContent 
-    ? (post!.p2 || '').split('\n\n').filter(p => p.trim()) 
+  const h2Text = hasStructuredContent ? (post.h2 || null) : legacy.h2
+  const p2Paragraphs = hasStructuredContent
+    ? (post.p2 || '').split('\n\n').filter(p => p.trim())
     : legacy.p2
 
-  const promoImages = post!.promotionalImages || []
-  const ctaImage = post!.ctaImage || ''
+  const promoImages = post.promotionalImages || []
+  const ctaImage = post.ctaImage || ''
 
-  const matchedCat = blogCategories.find(c => c.slug === post!.category)
-  const categoryColor = matchedCat 
+  const matchedCat = cats.find(c => c.slug === post.category)
+  const categoryColor = matchedCat
     ? `${matchedCat.color} ${matchedCat.color.replace('100', '700').replace('bg-', 'text-')}`
     : 'bg-slate-500 text-white'
 
+  // JSON-LD structured data for SEO
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt,
+    image: post.image || undefined,
+    datePublished: post.publishedAt,
+    author: { '@type': 'Person', name: post.author },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Silver Maid',
+      url: SITE_URL,
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}/${post.slug}`,
+    },
+  }
+
   return (
     <div className="flex flex-col overflow-hidden">
+      {/* JSON-LD for search engines */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* Slim Hero — Title & Meta */}
       <section className="py-16 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <AnimatedDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Link
                 href="/blog"
                 className="inline-flex items-center gap-2 text-slate-400 hover:text-primary font-bold transition-colors mb-8"
@@ -207,31 +244,31 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                 <ArrowLeft className="h-5 w-5" /> Back to Blog
               </Link>
               <span className={`inline-block px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6 ${categoryColor}`}>
-                {post!.category.replace(/-/g, ' ')}
+                {post.category.replace(/-/g, ' ')}
               </span>
               <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-tight mb-8">
-                {post!.title}
+                {post.title}
               </h1>
               <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  <span>{post!.author}</span>
+                  <span>{post.author}</span>
                 </div>
                 <span>•</span>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  <span>{post!.readTime} min read</span>
+                  <span>{post.readTime} min read</span>
                 </div>
                 <span>•</span>
                 <span>
-                  {new Date(post!.publishedAt).toLocaleDateString('en-US', {
+                  {new Date(post.publishedAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                   })}
                 </span>
               </div>
-            </motion.div>
+            </AnimatedDiv>
           </div>
         </div>
       </section>
@@ -241,37 +278,29 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Main Article */}
-            <motion.article
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-2"
-            >
+            <AnimatedArticle className="lg:col-span-2">
               {/* Featured Image */}
-              {post!.image && (
+              {post.image && (
                 <div className="w-full rounded-2xl overflow-hidden mb-10 aspect-video">
                   <img
-                    src={post!.image}
-                    alt={post!.title}
+                    src={post.image}
+                    alt={post.title}
                     className="w-full h-full object-cover"
                   />
                 </div>
               )}
 
-              {/* P1 — intro paragraphs before first H2 */}
+              {/* P1 */}
               <div className="prose prose-lg max-w-none mb-10">
                 {p1Paragraphs.map((paragraph, i) => renderParagraph(paragraph, i))}
               </div>
 
-              {/* Promotional Images (2 side by side) */}
+              {/* Promotional Images */}
               {promoImages.length > 0 && (
                 <div className={`grid gap-4 mb-10 ${promoImages.length >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {promoImages.slice(0, 2).map((src, i) => (
                     <div key={i} className="rounded-2xl overflow-hidden aspect-video">
-                      <img
-                        src={src}
-                        alt={`Promotional image ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={src} alt={`Promotional image ${i + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -287,15 +316,11 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
               {/* CTA Image */}
               {ctaImage && (
                 <div className="w-full rounded-2xl overflow-hidden mb-10 shadow-xl">
-                  <img
-                    src={ctaImage}
-                    alt="Call to action"
-                    className="w-full h-auto object-cover"
-                  />
+                  <img src={ctaImage} alt="Call to action" className="w-full h-auto object-cover" />
                 </div>
               )}
 
-              {/* P2 — remaining content */}
+              {/* P2 */}
               <div className="prose prose-lg max-w-none">
                 {p2Paragraphs.map((paragraph, i) => renderParagraph(paragraph, i + p1Paragraphs.length + 1))}
               </div>
@@ -303,21 +328,12 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
               {/* Share */}
               <div className="mt-12 pt-8 border-t-2 border-slate-200 flex items-center gap-4">
                 <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Share:</span>
-                <button
-                  onClick={() => navigator.share?.({ title: post!.title, url: window.location.href })}
-                  className="p-3 rounded-lg bg-slate-100 text-slate-600 hover:bg-primary hover:text-white transition-all"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
+                <ShareButton title={post.title} />
               </div>
-            </motion.article>
+            </AnimatedArticle>
 
             {/* Sidebar */}
-            <motion.aside
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-1"
-            >
+            <AnimatedAside className="lg:col-span-1">
               <div className="bg-primary/10 border-2 border-primary rounded-2xl p-8 sticky top-24 mb-8">
                 <h3 className="text-lg font-black text-slate-900 mb-3">Need Professional Cleaning?</h3>
                 <p className="text-sm text-slate-700 mb-6">
@@ -360,7 +376,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                   </div>
                 </div>
               )}
-            </motion.aside>
+            </AnimatedAside>
           </div>
         </div>
       </section>

@@ -1,0 +1,32 @@
+[debug] [2026-03-09T06:53:36.030Z] ----------------------------------------------------------------------
+[debug] [2026-03-09T06:53:36.034Z] Command:       /Users/macbookpro/.nvm/versions/node/v25.0.0/bin/node /Users/macbookpro/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only dataconnect --project silvermaid-94246
+[debug] [2026-03-09T06:53:36.034Z] CLI Version:   15.9.0
+[debug] [2026-03-09T06:53:36.034Z] Platform:      darwin
+[debug] [2026-03-09T06:53:36.034Z] Node Version:  v25.0.0
+[debug] [2026-03-09T06:53:36.035Z] Time:          Mon Mar 09 2026 11:53:36 GMT+0500 (Pakistan Standard Time)
+[debug] [2026-03-09T06:53:36.035Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-09T06:53:38.148Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-09T06:53:38.149Z] > authorizing via signed-in user (largifysolutions@gmail.com)
+[debug] [2026-03-09T06:53:38.149Z] [iam] checking project silvermaid-94246 for permissions ["cloudsql.databases.create","cloudsql.databases.update","cloudsql.instances.connect","cloudsql.instances.create","cloudsql.instances.get","cloudsql.instances.list","cloudsql.instances.update","cloudsql.users.create","firebase.projects.get","firebasedataconnect.connectors.create","firebasedataconnect.connectors.delete","firebasedataconnect.connectors.list","firebasedataconnect.connectors.update","firebasedataconnect.operations.get","firebasedataconnect.schemas.create","firebasedataconnect.schemas.delete","firebasedataconnect.schemas.list","firebasedataconnect.schemas.update","firebasedataconnect.services.create","firebasedataconnect.services.delete","firebasedataconnect.services.list","firebasedataconnect.services.update"]
+[debug] [2026-03-09T06:53:38.150Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:38.151Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:38.152Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/silvermaid-94246:testIamPermissions [none]
+[debug] [2026-03-09T06:53:38.152Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/silvermaid-94246:testIamPermissions  x-goog-user-project=silvermaid-94246
+[debug] [2026-03-09T06:53:38.152Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/silvermaid-94246:testIamPermissions {"permissions":["cloudsql.databases.create","cloudsql.databases.update","cloudsql.instances.connect","cloudsql.instances.create","cloudsql.instances.get","cloudsql.instances.list","cloudsql.instances.update","cloudsql.users.create","firebase.projects.get","firebasedataconnect.connectors.create","firebasedataconnect.connectors.delete","firebasedataconnect.connectors.list","firebasedataconnect.connectors.update","firebasedataconnect.operations.get","firebasedataconnect.schemas.create","firebasedataconnect.schemas.delete","firebasedataconnect.schemas.list","firebasedataconnect.schemas.update","firebasedataconnect.services.create","firebasedataconnect.services.delete","firebasedataconnect.services.list","firebasedataconnect.services.update"]}
+[debug] [2026-03-09T06:53:39.847Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/silvermaid-94246:testIamPermissions 200
+[debug] [2026-03-09T06:53:39.847Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/silvermaid-94246:testIamPermissions {"permissions":["cloudsql.databases.create","cloudsql.databases.update","cloudsql.instances.connect","cloudsql.instances.create","cloudsql.instances.get","cloudsql.instances.list","cloudsql.instances.update","cloudsql.users.create","firebase.projects.get","firebasedataconnect.connectors.create","firebasedataconnect.connectors.delete","firebasedataconnect.connectors.list","firebasedataconnect.connectors.update","firebasedataconnect.operations.get","firebasedataconnect.schemas.create","firebasedataconnect.schemas.delete","firebasedataconnect.schemas.list","firebasedataconnect.schemas.update","firebasedataconnect.services.create","firebasedataconnect.services.delete","firebasedataconnect.services.list","firebasedataconnect.services.update"]}
+[info] 
+[info] === Deploying to 'silvermaid-94246'...
+[info] 
+[info] i  deploying dataconnect 
+[info] i  dataconnect: ensuring required API firebasedataconnect.googleapis.com is enabled... 
+[info] i  dataconnect: ensuring required API sqladmin.googleapis.com is enabled... 
+[debug] [2026-03-09T06:53:39.879Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:39.879Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:39.880Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/silvermaid-94246/billingInfo [none]
+[debug] [2026-03-09T06:53:41.038Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/silvermaid-94246/billingInfo 200
+[debug] [2026-03-09T06:53:41.038Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/silvermaid-94246/billingInfo {"name":"projects/silvermaid-94246/billingInfo","projectId":"silvermaid-94246","billingAccountName":"","billingEnabled":false}
+[debug] [2026-03-09T06:53:41.039Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:41.039Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:41.039Z] >>> [apiv2][query] GET https://mobilesdk-pa.googleapis.com/v1/accessmanagement/tos:getStatus [none]
