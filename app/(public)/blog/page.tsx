@@ -5,7 +5,6 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Search, ChevronRight, Clock, User, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { BLOG_CATEGORIES } from '@/lib/blog-data'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 
@@ -36,6 +35,30 @@ export default function BlogPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [firebasePosts, setFirebasePosts] = useState<FirebaseBlogPost[]>([])
+  const [blogCategories, setBlogCategories] = useState<{ id: string; name: string; slug: string; color: string }[]>([])
+
+  // Fetch categories from Firebase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'blog-categories'))
+        const categories: { id: string; name: string; slug: string; color: string }[] = []
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          categories.push({
+            id: doc.id,
+            name: data.name || '',
+            slug: data.slug || '',
+            color: data.color || 'bg-blue-100'
+          })
+        })
+        setBlogCategories(categories.sort((a, b) => a.name.localeCompare(b.name)))
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   // Fetch posts from Firebase
   useEffect(() => {
@@ -62,7 +85,7 @@ export default function BlogPage() {
             excerpt: data.description?.substring(0, 100) + '...' || '',
             author: data.name || 'Admin',
             // Map first tag to category or use default
-            category: data.tags?.[0]?.toLowerCase()?.replace(/\s+/g, '-') || 'how-to',
+            category: data.category || data.tags?.[0]?.toLowerCase()?.replace(/\\s+/g, '-') || 'general',
             publishedAt: data.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
             image: data.imageURL || '/api/placeholder/600/400'
           }
@@ -88,7 +111,7 @@ export default function BlogPage() {
       excerpt: post.excerpt || post.description?.substring(0, 100) + '...' || 'No description available',
       content: post.content,
       image: post.image || '/api/placeholder/600/400',
-      category: post.category || 'how-to',
+      category: post.category || 'general',
       readTime: post.readTime || 5,
       author: post.author || 'Admin',
       publishedAt: post.publishedAt || new Date().toISOString(),
@@ -125,7 +148,7 @@ export default function BlogPage() {
         excerpt: post.excerpt || post.description?.substring(0, 100) + '...' || 'No description available',
         content: post.content,
         image: post.image || '/api/placeholder/600/400',
-        category: post.category || 'how-to',
+        category: post.category || 'general',
         readTime: post.readTime || 5,
         author: post.author || 'Admin',
         publishedAt: post.publishedAt || new Date().toISOString(),
@@ -194,11 +217,11 @@ export default function BlogPage() {
                       <div>
                         <div className="flex items-center gap-3 mb-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                            post.category === 'cleaning-tips' ? 'bg-blue-100 text-blue-700' :
-                            post.category === 'industry-news' ? 'bg-purple-100 text-purple-700' :
-                            post.category === 'customer-stories' ? 'bg-green-100 text-green-700' :
-                            post.category === 'how-to' ? 'bg-orange-100 text-orange-700' :
-                            'bg-pink-100 text-pink-700'
+                            (() => {
+                              const cat = blogCategories.find(c => c.slug === post.category)
+                              if (cat) return `${cat.color} ${cat.color.replace('100', '700').replace('bg-', 'text-')}`
+                              return 'bg-slate-100 text-slate-700'
+                            })()
                           }`}>
                             {post.category.replace(/-/g, ' ')}
                           </span>
@@ -263,7 +286,7 @@ export default function BlogPage() {
               >
                 All
               </button>
-              {BLOG_CATEGORIES.map(cat => (
+              {blogCategories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => {
@@ -310,11 +333,11 @@ export default function BlogPage() {
                       <div className="p-6 flex-1 flex flex-col justify-between bg-white">
                         <div>
                           <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                            post.category === 'cleaning-tips' ? 'bg-blue-100 text-blue-700' :
-                            post.category === 'industry-news' ? 'bg-purple-100 text-purple-700' :
-                            post.category === 'customer-stories' ? 'bg-green-100 text-green-700' :
-                            post.category === 'how-to' ? 'bg-orange-100 text-orange-700' :
-                            'bg-pink-100 text-pink-700'
+                            (() => {
+                              const cat = blogCategories.find(c => c.slug === post.category)
+                              if (cat) return `${cat.color} ${cat.color.replace('100', '700').replace('bg-', 'text-')}`
+                              return 'bg-slate-100 text-slate-700'
+                            })()
                           }`}>
                             {post.category.replace(/-/g, ' ')}
                           </span>

@@ -19,10 +19,21 @@ import {
   Star,
   MessageSquare,
   HelpCircle,
-  Shield
+  Shield,
+  Tag,
+  Palette
 } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore'
+
+// Blog Category Type
+type BlogCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  createdAt: any;
+}
 
 // Blog Post Type
 type BlogPost = {
@@ -31,15 +42,20 @@ type BlogPost = {
   name: string;
   description: string;
   content: string;
+  p1: string;
+  h2: string;
+  p2: string;
   readTime: number;
   imageURL: string;
   featured: boolean;
   tags: string[];
+  category: string;
   createdAt: any;
   author?: string;
   status?: string;
   date?: string;
-  category?: string;
+  promotionalImages?: string[];
+  ctaImage?: string;
 }
 
 // Testimonial Type
@@ -82,8 +98,10 @@ export default function CMS() {
   const [showTestimonialModal, setShowTestimonialModal] = useState(false)
   const [showFAQModal, setShowFAQModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
   
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
+  const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([])
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [privacyPolicies, setPrivacyPolicies] = useState<PrivacyPolicy[]>([])
@@ -92,20 +110,31 @@ export default function CMS() {
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null)
   const [editingPrivacy, setEditingPrivacy] = useState<PrivacyPolicy | null>(null)
+  const [editingCategory, setEditingCategory] = useState<BlogCategory | null>(null)
   
   // Blog Form Data
   const [formData, setFormData] = useState({
     title: '',
     name: '',
     description: '',
-    content: '',
+    p1: '',
+    h2: '',
+    p2: '',
     readTime: 5,
     featured: false,
+    category: '',
     tags: '',
     imageURL: '',
     promotionalImage1: '',
     promotionalImage2: '',
     ctaImage: ''
+  })
+
+  // Category Form Data
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    slug: '',
+    color: 'bg-blue-100'
   })
   
   // Testimonial Form Data
@@ -148,6 +177,29 @@ Enhance our customer support experience
 Your Rights
 You have the right to request access to the personal data we hold about you, to request corrections, or to ask for your data to be deleted from our active databases when it is no longer required for service delivery.`
 
+  // Fetch blog categories from Firebase
+  const fetchBlogCategories = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'blog-categories'))
+      const categories: BlogCategory[] = []
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        categories.push({
+          id: doc.id,
+          name: data.name || '',
+          slug: data.slug || '',
+          color: data.color || 'bg-blue-100',
+          createdAt: data.createdAt,
+        })
+      })
+      
+      setBlogCategories(categories.sort((a, b) => a.name.localeCompare(b.name)))
+    } catch (error) {
+      console.error('Error fetching blog categories:', error)
+    }
+  }
+
   // Fetch blog posts from Firebase
   const fetchBlogPosts = async () => {
     try {
@@ -162,10 +214,14 @@ You have the right to request access to the personal data we hold about you, to 
           name: data.name || 'Admin',
           description: data.description || '',
           content: data.content || '',
+          p1: data.p1 || '',
+          h2: data.h2 || '',
+          p2: data.p2 || '',
           readTime: data.readTime || 5,
           imageURL: data.imageURL || '',
           featured: data.featured || false,
           tags: data.tags || [],
+          category: data.category || '',
           createdAt: data.createdAt,
           author: data.name || 'Admin',
           status: 'Published',
@@ -174,7 +230,8 @@ You have the right to request access to the personal data we hold about you, to 
             month: 'short', 
             day: 'numeric' 
           }) || 'Dec 20, 2025',
-          category: data.tags?.[0] || 'Tips'
+          promotionalImages: data.promotionalImages || [],
+          ctaImage: data.ctaImage || '',
         })
       })
       
@@ -284,6 +341,7 @@ You have the right to request access to the personal data we hold about you, to 
 
   // Fetch data on component mount
   useEffect(() => {
+    fetchBlogCategories()
     if (activeTab === 'blog') {
       fetchBlogPosts()
     } else if (activeTab === 'testimonials') {
@@ -303,14 +361,17 @@ You have the right to request access to the personal data we hold about you, to 
         title: post.title,
         name: post.name || '',
         description: post.description,
-        content: post.content,
+        p1: post.p1 || '',
+        h2: post.h2 || '',
+        p2: post.p2 || '',
         readTime: post.readTime,
         featured: post.featured,
+        category: post.category || '',
         tags: post.tags.join(', '),
         imageURL: post.imageURL,
-        promotionalImage1: (post as any).promotionalImages?.[0] || '',
-        promotionalImage2: (post as any).promotionalImages?.[1] || '',
-        ctaImage: (post as any).ctaImage || ''
+        promotionalImage1: post.promotionalImages?.[0] || '',
+        promotionalImage2: post.promotionalImages?.[1] || '',
+        ctaImage: post.ctaImage || ''
       })
     } else {
       setEditingPost(null)
@@ -318,9 +379,12 @@ You have the right to request access to the personal data we hold about you, to 
         title: '',
         name: '',
         description: '',
-        content: '',
+        p1: '',
+        h2: '',
+        p2: '',
         readTime: 5,
         featured: false,
+        category: '',
         tags: '',
         imageURL: '',
         promotionalImage1: '',
@@ -416,6 +480,31 @@ You have the right to request access to the personal data we hold about you, to 
     setEditingPrivacy(null)
   }
 
+  const handleCloseCategoryModal = () => {
+    setShowCategoryModal(false)
+    setEditingCategory(null)
+  }
+
+  // Open Category Modal
+  const handleOpenCategoryModal = (category?: BlogCategory) => {
+    if (category) {
+      setEditingCategory(category)
+      setCategoryForm({
+        name: category.name,
+        slug: category.slug,
+        color: category.color
+      })
+    } else {
+      setEditingCategory(null)
+      setCategoryForm({
+        name: '',
+        slug: '',
+        color: 'bg-blue-100'
+      })
+    }
+    setShowCategoryModal(true)
+  }
+
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -462,8 +551,8 @@ You have the right to request access to the personal data we hold about you, to 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.title || !formData.content) {
-      alert('Title and Content are required!')
+    if (!formData.title || !formData.p1) {
+      alert('Title and Paragraph 1 are required!')
       return
     }
 
@@ -473,14 +562,24 @@ You have the right to request access to the personal data we hold about you, to 
         .map(tag => tag.trim())
         .filter(tag => tag !== '')
 
+      // Build combined content for backward compatibility
+      const contentParts = [formData.p1]
+      if (formData.h2) contentParts.push(`## ${formData.h2}`)
+      if (formData.p2) contentParts.push(formData.p2)
+      const combinedContent = contentParts.join('\n\n')
+
       const blogData = {
         title: formData.title,
         name: formData.name,
         description: formData.description,
-        content: formData.content,
+        content: combinedContent,
+        p1: formData.p1,
+        h2: formData.h2,
+        p2: formData.p2,
         readTime: parseInt(formData.readTime.toString()) || 5,
         imageURL: formData.imageURL,
         featured: formData.featured,
+        category: formData.category,
         tags: tagsArray,
         promotionalImages: [formData.promotionalImage1, formData.promotionalImage2].filter(Boolean),
         ctaImage: formData.ctaImage,
@@ -674,6 +773,58 @@ You have the right to request access to the personal data we hold about you, to 
     }
   }
 
+  // Save/Update blog category
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!categoryForm.name) {
+      alert('Category name is required!')
+      return
+    }
+
+    try {
+      const slug = categoryForm.slug || categoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      
+      const categoryData = {
+        name: categoryForm.name,
+        slug: slug,
+        color: categoryForm.color,
+        createdAt: editingCategory ? editingCategory.createdAt : new Date(),
+        updatedAt: new Date()
+      }
+
+      if (editingCategory) {
+        const catRef = doc(db, 'blog-categories', editingCategory.id)
+        await updateDoc(catRef, categoryData)
+        alert('Category updated successfully!')
+      } else {
+        await addDoc(collection(db, 'blog-categories'), categoryData)
+        alert('Category created successfully!')
+      }
+
+      await fetchBlogCategories()
+      handleCloseCategoryModal()
+      
+    } catch (error) {
+      console.error('Error saving category:', error)
+      alert('Error saving category!')
+    }
+  }
+
+  // Delete blog category
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return
+
+    try {
+      await deleteDoc(doc(db, 'blog-categories', categoryId))
+      alert('Category deleted successfully!')
+      await fetchBlogCategories()
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      alert('Error deleting category!')
+    }
+  }
+
   const pages = [
     { id: 1, title: 'Home', slug: '/', status: 'Published', lastModified: 'Dec 20, 2025', views: '12.4k' },
     { id: 2, title: 'About Us', slug: '/about', status: 'Published', lastModified: 'Dec 18, 2025', views: '3.2k' },
@@ -710,13 +861,22 @@ You have the right to request access to the personal data we hold about you, to 
         
         {/* Create Buttons */}
         {activeTab === 'blog' && (
-          <button 
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
-          >
-            <Plus className="h-4 w-4" />
-            Create New Post
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => handleOpenCategoryModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-500/20"
+            >
+              <Tag className="h-4 w-4" />
+              Manage Categories
+            </button>
+            <button 
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+            >
+              <Plus className="h-4 w-4" />
+              Create New Post
+            </button>
+          </div>
         )}
         {activeTab === 'pages' && (
           <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
@@ -885,7 +1045,7 @@ You have the right to request access to the personal data we hold about you, to 
 
                   <div className="flex justify-between items-start mb-4">
                     <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-[10px] font-bold uppercase tracking-wider rounded">
-                      {post.tags[0] || 'General'}
+                      {post.category || post.tags[0] || 'General'}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
                       post.status === 'Published' 
@@ -1218,6 +1378,7 @@ You have the right to request access to the personal data we hold about you, to 
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* 1. Blog Title */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Blog Title <span className="text-red-500">*</span>
@@ -1233,6 +1394,7 @@ You have the right to request access to the personal data we hold about you, to 
                 />
               </div>
 
+              {/* Author Name */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Author Name <span className="text-red-500">*</span>
@@ -1248,6 +1410,7 @@ You have the right to request access to the personal data we hold about you, to 
                 />
               </div>
 
+              {/* Short Description */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Short Description
@@ -1257,145 +1420,108 @@ You have the right to request access to the personal data we hold about you, to 
                   value={formData.description}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
-                  placeholder="Enter short description"
+                  placeholder="Enter short description (shown in previews)"
                   rows={3}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Full Blog Content <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="content"
-                  value={formData.content}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[150px]"
-                  placeholder="Write your full blog content here..."
-                  rows={6}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Read Time (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    name="readTime"
-                    value={formData.readTime}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="5"
-                    min="1"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium mb-2">
-                    <input
-                      type="checkbox"
-                      name="featured"
-                      checked={formData.featured}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        featured: e.target.checked 
-                      }))}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    Featured Post
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Tags
-                </label>
-                <input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Enter tags separated by commas"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Featured Image URL
-                </label>
+              {/* 2. Featured Image */}
+              <div className="border rounded-xl p-4 space-y-3 bg-blue-50/30">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-blue-600">
+                  Featured Image
+                </h3>
                 <input
                   type="text"
                   name="imageURL"
                   value={formData.imageURL}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder="https://example.com/featured-image.jpg"
                 />
-                
                 {formData.imageURL && (
-                  <div className="mt-3">
-                    <p className="text-xs font-medium mb-2">Image Preview:</p>
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border">
-                      <img 
-                        src={formData.imageURL} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none'
-                        }}
-                      />
-                    </div>
+                  <div className="h-48 rounded-lg overflow-hidden border">
+                    <img src={formData.imageURL} alt="Featured preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
                 )}
               </div>
 
-              {/* Promotional Images */}
-              <div className="border rounded-xl p-4 space-y-4 bg-muted/20">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                  Promotional Images (shown between P1 &amp; H2)
+              {/* 3. P1 — Paragraph 1 */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Paragraph 1 (P1) <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-muted-foreground mb-2">Opening content that appears right after the featured image</p>
+                <textarea
+                  name="p1"
+                  value={formData.p1}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[150px]"
+                  placeholder="Write the first section of your blog content here..."
+                  rows={6}
+                  required
+                />
+              </div>
+
+              {/* 4. Promotional Images */}
+              <div className="border rounded-xl p-4 space-y-4 bg-purple-50/30">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-purple-600">
+                  Promotional Images (shown after P1)
                 </h3>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Promo Image 1 URL</label>
-                  <input
-                    type="text"
-                    name="promotionalImage1"
-                    value={formData.promotionalImage1}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="https://example.com/promo1.jpg"
-                  />
-                  {formData.promotionalImage1 && (
-                    <div className="mt-2 h-32 rounded-lg overflow-hidden border">
-                      <img src={formData.promotionalImage1} alt="Promo 1 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Promo Image 2 URL</label>
-                  <input
-                    type="text"
-                    name="promotionalImage2"
-                    value={formData.promotionalImage2}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="https://example.com/promo2.jpg"
-                  />
-                  {formData.promotionalImage2 && (
-                    <div className="mt-2 h-32 rounded-lg overflow-hidden border">
-                      <img src={formData.promotionalImage2} alt="Promo 2 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Promo Image 1 URL</label>
+                    <input
+                      type="text"
+                      name="promotionalImage1"
+                      value={formData.promotionalImage1}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="https://example.com/promo1.jpg"
+                    />
+                    {formData.promotionalImage1 && (
+                      <div className="mt-2 h-32 rounded-lg overflow-hidden border">
+                        <img src={formData.promotionalImage1} alt="Promo 1 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Promo Image 2 URL</label>
+                    <input
+                      type="text"
+                      name="promotionalImage2"
+                      value={formData.promotionalImage2}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="https://example.com/promo2.jpg"
+                    />
+                    {formData.promotionalImage2 && (
+                      <div className="mt-2 h-32 rounded-lg overflow-hidden border">
+                        <img src={formData.promotionalImage2} alt="Promo 2 preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* CTA Image */}
-              <div className="border rounded-xl p-4 space-y-3 bg-muted/20">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              {/* 5. H2 — Section Heading */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Section Heading (H2)
+                </label>
+                <p className="text-xs text-muted-foreground mb-2">Heading that appears between the promotional images and CTA image</p>
+                <input
+                  type="text"
+                  name="h2"
+                  value={formData.h2}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Enter section heading"
+                />
+              </div>
+
+              {/* 6. CTA Image */}
+              <div className="border rounded-xl p-4 space-y-3 bg-green-50/30">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-green-600">
                   CTA Image (shown after H2, before P2)
                 </h3>
                 <input
@@ -1411,6 +1537,118 @@ You have the right to request access to the personal data we hold about you, to 
                     <img src={formData.ctaImage} alt="CTA preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
                 )}
+              </div>
+
+              {/* 7. P2 — Paragraph 2 */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Paragraph 2 (P2)
+                </label>
+                <p className="text-xs text-muted-foreground mb-2">Remaining content that appears after the CTA image</p>
+                <textarea
+                  name="p2"
+                  value={formData.p2}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[150px]"
+                  placeholder="Write the second section of your blog content here..."
+                  rows={6}
+                />
+              </div>
+
+              {/* Category & Meta */}
+              <div className="border rounded-xl p-4 space-y-4 bg-muted/20">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  Post Settings
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Category
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">Select a category</option>
+                    {blogCategories.map(cat => (
+                      <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                    ))}
+                  </select>
+                  {blogCategories.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">No categories yet. Use &quot;Manage Categories&quot; to create some.</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Read Time (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      name="readTime"
+                      value={formData.readTime}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="5"
+                      min="1"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                      <input
+                        type="checkbox"
+                        name="featured"
+                        checked={formData.featured}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          featured: e.target.checked 
+                        }))}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      Featured Post
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    name="tags"
+                    value={formData.tags}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Enter tags separated by commas"
+                  />
+                </div>
+              </div>
+
+              {/* Blog Flow Preview */}
+              <div className="border rounded-xl p-4 bg-slate-50">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-3">
+                  Blog Flow Preview
+                </h3>
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className={`px-2 py-1 rounded ${formData.title ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>Title</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.imageURL ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>Featured Image</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.p1 ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>P1</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.promotionalImage1 || formData.promotionalImage2 ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>Promo Images</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.h2 ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>H2</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.ctaImage ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>CTA Image</span>
+                  <span className="text-slate-400">&rarr;</span>
+                  <span className={`px-2 py-1 rounded ${formData.p2 ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>P2</span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-6 border-t">
@@ -1905,6 +2143,170 @@ You have the right to request access...`}
     </div>
   </div>
 )}
+
+      {/* MODAL - Manage Blog Categories */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-2xl border shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-xl font-bold">
+                  {editingCategory ? 'Edit Category' : 'Blog Categories'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {editingCategory ? 'Update category details' : 'Manage your blog categories'}
+                </p>
+              </div>
+              <button 
+                onClick={handleCloseCategoryModal}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Existing Categories List */}
+            {!editingCategory && (
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    Existing Categories ({blogCategories.length})
+                  </h3>
+                </div>
+                {blogCategories.length > 0 ? (
+                  <div className="space-y-2">
+                    {blogCategories.map(cat => (
+                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${cat.color.replace('100', '400')}`} />
+                          <span className="font-medium">{cat.name}</span>
+                          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">{cat.slug}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => handleOpenCategoryModal(cat)}
+                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCategory(cat.id)}
+                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No categories created yet</p>
+                )}
+              </div>
+            )}
+
+            {/* Add/Edit Category Form */}
+            <form onSubmit={handleCategorySubmit} className="p-6 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                {editingCategory ? 'Edit Category' : 'Add New Category'}
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Category Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => {
+                    const name = e.target.value
+                    setCategoryForm(prev => ({
+                      ...prev,
+                      name: name,
+                      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                    }))
+                  }}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g., Cleaning Tips"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Slug
+                </label>
+                <input
+                  type="text"
+                  value={categoryForm.slug}
+                  onChange={(e) => setCategoryForm(prev => ({ ...prev, slug: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-muted-foreground"
+                  placeholder="auto-generated-from-name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Color
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'bg-blue-100', label: 'Blue' },
+                    { value: 'bg-purple-100', label: 'Purple' },
+                    { value: 'bg-green-100', label: 'Green' },
+                    { value: 'bg-orange-100', label: 'Orange' },
+                    { value: 'bg-pink-100', label: 'Pink' },
+                    { value: 'bg-red-100', label: 'Red' },
+                    { value: 'bg-yellow-100', label: 'Yellow' },
+                    { value: 'bg-teal-100', label: 'Teal' },
+                  ].map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setCategoryForm(prev => ({ ...prev, color: color.value }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${color.value} ${
+                        categoryForm.color === color.value 
+                          ? 'border-slate-900 ring-2 ring-slate-300' 
+                          : 'border-transparent hover:border-slate-300'
+                      }`}
+                    >
+                      {color.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                {editingCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCategory(null)
+                      setCategoryForm({ name: '', slug: '', color: 'bg-blue-100' })
+                    }}
+                    className="px-4 py-2.5 border rounded-xl font-medium hover:bg-muted transition-colors"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCloseCategoryModal}
+                  className="px-4 py-2.5 border rounded-xl font-medium hover:bg-muted transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                >
+                  {editingCategory ? 'Update Category' : 'Add Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

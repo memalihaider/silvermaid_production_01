@@ -8,12 +8,22 @@ import { use, useEffect, useState } from 'react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 
+type BlogCategory = {
+  id: string
+  slug: string
+  name: string
+  color: string
+}
+
 type BlogPost = {
   id: string
   title: string
   slug: string
   excerpt: string
   content: string
+  p1: string
+  h2: string
+  p2: string
   image: string
   category: string
   readTime: number
@@ -79,11 +89,20 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
   const { slug } = use(params)
   const [post, setPost] = useState<BlogPost | null>(null)
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([])
+  const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
+        // Fetch categories
+        const catSnap = await getDocs(collection(db, 'blog-categories'))
+        const cats: BlogCategory[] = catSnap.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as { slug: string; name: string; color: string })
+        }))
+        setBlogCategories(cats)
+
         const q = query(collection(db, 'blog-post'), orderBy('createdAt', 'desc'))
         const snap = await getDocs(q)
 
@@ -95,8 +114,11 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
             slug: toSlug(d.title, doc.id),
             excerpt: d.description ? d.description.substring(0, 150) + '...' : '',
             content: d.content || '',
+            p1: d.p1 || '',
+            h2: d.h2 || '',
+            p2: d.p2 || '',
             image: d.imageURL || '',
-            category: d.tags?.[0]?.toLowerCase()?.replace(/\s+/g, '-') || 'general',
+            category: d.category || d.tags?.[0]?.toLowerCase()?.replace(/\s+/g, '-') || 'general',
             readTime: d.readTime || 5,
             author: d.name || 'Admin',
             publishedAt: d.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
@@ -151,16 +173,25 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
   if (!post) notFound()
 
-  const { p1, h2, p2 } = splitContentAtH2(post!.content)
+  // Use structured fields if available, otherwise fall back to splitting content
+  const hasStructuredContent = !!(post!.p1 || post!.h2 || post!.p2)
+  const legacy = splitContentAtH2(post!.content)
+  
+  const p1Paragraphs = hasStructuredContent 
+    ? (post!.p1 || '').split('\n\n').filter(p => p.trim()) 
+    : legacy.p1
+  const h2Text = hasStructuredContent ? (post!.h2 || null) : legacy.h2
+  const p2Paragraphs = hasStructuredContent 
+    ? (post!.p2 || '').split('\n\n').filter(p => p.trim()) 
+    : legacy.p2
+
   const promoImages = post!.promotionalImages || []
   const ctaImage = post!.ctaImage || ''
 
-  const categoryColor =
-    post!.category === 'cleaning-tips' ? 'bg-blue-500 text-white' :
-    post!.category === 'industry-news' ? 'bg-purple-500 text-white' :
-    post!.category === 'customer-stories' ? 'bg-green-500 text-white' :
-    post!.category === 'how-to' ? 'bg-orange-500 text-white' :
-    'bg-pink-500 text-white'
+  const matchedCat = blogCategories.find(c => c.slug === post!.category)
+  const categoryColor = matchedCat 
+    ? `${matchedCat.color} ${matchedCat.color.replace('100', '700').replace('bg-', 'text-')}`
+    : 'bg-slate-500 text-white'
 
   return (
     <div className="flex flex-col overflow-hidden">
@@ -228,7 +259,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
               {/* P1 — intro paragraphs before first H2 */}
               <div className="prose prose-lg max-w-none mb-10">
-                {p1.map((paragraph, i) => renderParagraph(paragraph, i))}
+                {p1Paragraphs.map((paragraph, i) => renderParagraph(paragraph, i))}
               </div>
 
               {/* Promotional Images (2 side by side) */}
@@ -247,9 +278,9 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
               )}
 
               {/* H2 Section Heading */}
-              {h2 && (
+              {h2Text && (
                 <h2 className="text-3xl font-black text-slate-900 mt-4 mb-8 pb-4 border-b-2 border-primary/20">
-                  {h2}
+                  {h2Text}
                 </h2>
               )}
 
@@ -266,7 +297,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
               {/* P2 — remaining content */}
               <div className="prose prose-lg max-w-none">
-                {p2.map((paragraph, i) => renderParagraph(paragraph, i + p1.length + 1))}
+                {p2Paragraphs.map((paragraph, i) => renderParagraph(paragraph, i + p1Paragraphs.length + 1))}
               </div>
 
               {/* Share */}
