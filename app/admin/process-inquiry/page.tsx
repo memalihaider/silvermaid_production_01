@@ -469,7 +469,7 @@ export default function ProcessInquiry() {
                             </div>
                             <div className="mt-4 flex gap-3 flex-wrap">
                               <a
-                                href={`mailto:${inquiry.email}?subject=Regarding your inquiry about ${getServiceName(inquiry.service)}&body=Dear ${inquiry.name},%0D%0A%0D%0AThank you for your inquiry about "${getServiceName(inquiry.service)}". We have received your message: "%0D%0A%0D%0A${encodeURIComponent(inquiry.message)}"%0D%0A%0D%0AOur team will review your requirements and get back to you shortly.%0D%0A%0D%0ABest regards,%0D%0AHome Work UAE Team`}
+                                href={`mailto:${inquiry.email}?subject=Regarding your inquiry about ${getServiceName(inquiry.service)}&body=Dear ${inquiry.name},%0D%0A%0D%0AThank you for your inquiry about "${getServiceName(inquiry.service)}". We have received your message: "%0D%0A%0D%0A${encodeURIComponent(inquiry.message)}"%0D%0A%0D%0AOur team will review your requirements and get back to you shortly.%0D%0A%0D%0ABest regards,%0D%0ASilver Maid Team`}
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors"
                               >
                                 <Mail className="h-4 w-4" />

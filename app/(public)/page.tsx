@@ -133,24 +133,26 @@ useEffect(() => {
       // API call with timeout
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
+      let response: Response
 
-      const response = await fetch(
-        'https://air-quality-api.open-meteo.com/v1/air_quality?latitude=25.2048&longitude=55.2708&current=us_aqi',
-        {
-          signal: controller.signal,
-          cache: 'no-store',
-          next: { revalidate: 0 }
-        }
-      ).catch(err => {
-        if (err.name === 'AbortError') {
-          throw new Error('Request timeout')
-        }
-        throw err
-      })
-
-      clearTimeout(timeoutId)
+      try {
+        response = await fetch(
+          'https://air-quality-api.open-meteo.com/v1/air_quality?latitude=25.2048&longitude=55.2708&current=us_aqi',
+          {
+            signal: controller.signal,
+            cache: 'no-store',
+            next: { revalidate: 0 }
+          }
+        )
+      } finally {
+        clearTimeout(timeoutId)
+      }
       
       if (!isMounted) return
+
+      if (!response.ok) {
+        throw new Error(`Air quality API failed with status ${response.status}`)
+      }
       
      
       
@@ -172,9 +174,19 @@ useEffect(() => {
       }
       
     } catch (error) {
-      console.error('Air quality fetch error:', error)
+      const isAbortOrTimeout =
+        error instanceof DOMException && error.name === 'AbortError'
+
+      if (!isAbortOrTimeout) {
+        console.error('Air quality fetch error:', error)
+      }
       
       if (!isMounted) return
+
+      if (isAbortOrTimeout) {
+        useFallbackData()
+        return
+      }
       
       // Retry logic
       if (retryCount < maxRetries) {

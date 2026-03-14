@@ -30,3 +30,170 @@
 [debug] [2026-03-09T06:53:41.039Z] Checked if tokens are valid: true, expires at: 1773041956595
 [debug] [2026-03-09T06:53:41.039Z] Checked if tokens are valid: true, expires at: 1773041956595
 [debug] [2026-03-09T06:53:41.039Z] >>> [apiv2][query] GET https://mobilesdk-pa.googleapis.com/v1/accessmanagement/tos:getStatus [none]
+[debug] [2026-03-09T06:53:42.150Z] <<< [apiv2][status] GET https://mobilesdk-pa.googleapis.com/v1/accessmanagement/tos:getStatus 200
+[debug] [2026-03-09T06:53:42.150Z] <<< [apiv2][body] GET https://mobilesdk-pa.googleapis.com/v1/accessmanagement/tos:getStatus {"overallStatus":"ACCEPTED","uTosStatus":{"tos":{"id":"firebase","tosId":"FIREBASE_UNIVERSAL"},"status":"ACCEPTED","acceptedVersion":7},"childTosStatus":[{"tos":{"id":"cloud","tosId":"CLOUD_PLATFORM"},"status":"ACCEPTED","acceptedVersion":39},{"tos":{"id":"firebase_b2b","tosId":"FIREBASE_B2B"},"status":"ACCEPTED","acceptedVersion":1},{"tos":{"id":"universal","tosId":"GOOGLE_APIS"},"status":"ACCEPTED","acceptedVersion":6}],"termsUrl":"https://firebase.google.com/terms","perServiceStatus":[{"tosId":"APP_CHECK","serviceStatus":{"tos":{"id":"app_check","tosId":"APP_CHECK"},"status":"ACCEPTED","acceptedVersion":3}},{"tosId":"APP_HOSTING_TOS","serviceStatus":{"tos":{"id":"app_hosting","tosId":"APP_HOSTING_TOS"},"status":"ACCEPTED","acceptedVersion":3}},{"tosId":"FIREBASE_DATA_CONNECT","serviceStatus":{"tos":{"id":"data_connect","tosId":"FIREBASE_DATA_CONNECT"},"status":"ACCEPTED","acceptedVersion":3}},{"tosId":"CORE_APPS","serviceStatus":{"tos":{"id":"core_apps","tosId":"CORE_APPS"},"status":"ACCEPTED","acceptedVersion":1}},{"tosId":"VERTEX_AI_IN_FIREBASE","serviceStatus":{"tos":{"id":"vertex_ai_in_firebase","tosId":"VERTEX_AI_IN_FIREBASE"},"status":"ACCEPTED","acceptedVersion":2}},{"tosId":"FIREBASE_CRASHLYTICS_APP_DISTRIBUTION","serviceStatus":{"tos":{"id":"firebase_crashlytics_app_distribution","tosId":"FIREBASE_CRASHLYTICS_APP_DISTRIBUTION"},"status":"ACCEPTED","acceptedVersion":4}},{"tosId":"GENERATIVE_LANGUAGE","serviceStatus":{"tos":{"id":"generative-language-api","tosId":"GENERATIVE_LANGUAGE"},"status":"NEVER_ACCEPTED","acceptedVersion":3}}]}
+[debug] [2026-03-09T06:53:42.151Z] defaultcredentials: writing to file /Users/macbookpro/.config/firebase/largifysolutions_gmail_com_application_default_credentials.json
+[debug] [2026-03-09T06:53:49.331Z] W0309 11:53:48.858272    6941 deployed.go:102] resource is not found: https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services/silver01/schemas?fields=schemas.name,schemas.source
+W0309 11:53:49.297111    6941 deployed.go:102] resource is not found: https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services/silver01/connectors/example
+I0309 11:53:49.318955    6941 control.go:100] [projects/emulator/locations/emulator/services/silver01 784a] UpdateResources(): done
+Main schema: sources: schema/schema.gql [1992B] 
+Connector "example": sources: example/mutations.gql [1243B] example/queries.gql [1801B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"W0309 11:53:48.858272    6941 deployed.go:102] resource is not found: https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services/silver01/schemas?fields=schemas.name,schemas.source\nW0309 11:53:49.297111    6941 deployed.go:102] resource is not found: https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services/silver01/connectors/example\nI0309 11:53:49.318955    6941 control.go:100] [projects/emulator/locations/emulator/services/silver01 784a] UpdateResources(): done\nMain schema: sources: schema/schema.gql [1992B] \nConnector \"example\": sources: example/mutations.gql [1243B] example/queries.gql [1801B] \n"}}
+[info] i  dataconnect: Successfully compiled schema and connectors 
+[debug] [2026-03-09T06:53:49.332Z] {
+  "serviceInfos": [
+    {
+      "serviceName": "projects/silvermaid-94246/locations/us-east4/services/silver01",
+      "sourceDirectory": "/Users/macbookpro/Desktop/silver01/dataconnect",
+      "schemas": [
+        {
+          "name": "projects/silvermaid-94246/locations/us-east4/services/silver01/schemas/main",
+          "datasources": [
+            {
+              "postgresql": {
+                "database": "fdcdb",
+                "cloudSql": {
+                  "instance": "projects/silvermaid-94246/locations/us-east4/instances/silver01-fdc"
+                }
+              }
+            }
+          ],
+          "source": {
+            "files": [
+              {
+                "path": "schema.gql",
+                "content": "# Example schema for simple movie review app\n\n# User table is keyed by Firebase Auth UID.\ntype User @table {\n  # `@default(expr: \"auth.uid\")` sets it to Firebase Auth UID during insert and upsert.\n  id: String! @default(expr: \"auth.uid\")\n  username: String! @col(dataType: \"varchar(50)\")\n  # The `user: User!` field in the Review table generates the following one-to-many query field.\n  #  reviews_on_user: [Review!]!\n  # The `Review` join table the following many-to-many query field.\n  #  movies_via_Review: [Movie!]!\n}\n\n# Movie is keyed by a randomly generated UUID.\ntype Movie @table {\n  # If you do not pass a 'key' to `@table`, Data Connect automatically adds the following 'id' column.\n  # Feel free to uncomment and customize it.\n  #  id: UUID! @default(expr: \"uuidV4()\")\n  title: String!\n  imageUrl: String!\n  genre: String\n}\n\n# MovieMetadata is a metadata attached to a Movie.\n# Movie <-> MovieMetadata is a one-to-one relationship\ntype MovieMetadata @table {\n  # @unique ensures each Movie can only one MovieMetadata.\n  movie: Movie! @unique\n  # The movie field adds the following foreign key field. Feel free to uncomment and customize it.\n  #  movieId: UUID!\n  rating: Float\n  releaseYear: Int\n  description: String\n}\n\n# Reviews is a join table between User and Movie.\n# It has a composite primary keys `userUid` and `movieId`.\n# A user can leave reviews for many movies. A movie can have reviews from many users.\n# User  <-> Review is a one-to-many relationship\n# Movie <-> Review is a one-to-many relationship\n# Movie <-> User is a many-to-many relationship\ntype Review @table(name: \"Reviews\", key: [\"movie\", \"user\"]) {\n  user: User!\n  # The user field adds the following foreign key field. Feel free to uncomment and customize it.\n  #  userUid: String!\n  movie: Movie!\n  # The movie field adds the following foreign key field. Feel free to uncomment and customize it.\n  #  movieId: UUID!\n  rating: Int\n  reviewText: String\n  reviewDate: Date! @default(expr: \"request.time\")\n}\n"
+              }
+            ]
+          }
+        }
+      ],
+      "dataConnectYaml": {
+        "specVersion": "v1",
+        "serviceId": "silver01",
+        "location": "us-east4",
+        "schemas": [
+          {
+            "source": "./schema",
+            "datasource": {
+              "postgresql": {
+                "database": "fdcdb",
+                "cloudSql": {
+                  "instanceId": "silver01-fdc"
+                }
+              }
+            }
+          }
+        ],
+        "connectorDirs": [
+          "./example"
+        ]
+      },
+      "connectorInfo": [
+        {
+          "directory": "/Users/macbookpro/Desktop/silver01/dataconnect/example",
+          "connectorYaml": {
+            "connectorId": "example",
+            "generate": {
+              "javascriptSdk": [
+                {
+                  "outputDir": "../../src/dataconnect-generated",
+                  "package": "@dataconnect/generated",
+                  "packageJsonDir": "../..",
+                  "react": true,
+                  "angular": false
+                }
+              ]
+            }
+          },
+          "connector": {
+            "name": "projects/silvermaid-94246/locations/us-east4/services/silver01/connectors/example",
+            "source": {
+              "files": [
+                {
+                  "path": "queries.gql",
+                  "content": "# Example queries for a simple movie app.\n\n# @auth() directives control who can call each operation.\n# Anyone should be able to list all movies, so the auth level is set to PUBLIC\nquery ListMovies @auth(level: PUBLIC, insecureReason: \"Anyone can list all movies.\") {\n  movies {\n    id\n    title\n    imageUrl\n    genre\n  }\n}\n\n# List all users, only admins should be able to list all users, so we use NO_ACCESS\nquery ListUsers @auth(level: NO_ACCESS) {\n  users {\n    id\n    username\n  }\n}\n\n# Logged in users can list all their reviews and movie titles associated with the review\n# Since the query uses the uid of the current authenticated user, we set auth level to USER\nquery ListUserReviews @auth(level: USER) {\n  user(key: { id_expr: \"auth.uid\" }) {\n    id\n    username\n    # <field>_on_<foreign_key_field> makes it easy to grab info from another table\n    # Here, we use it to grab all the reviews written by the user.\n    reviews: reviews_on_user {\n      rating\n      reviewDate\n      reviewText\n      movie {\n        id\n        title\n      }\n    }\n  }\n}\n\n# Get movie by id\nquery GetMovieById($id: UUID!) @auth(level: PUBLIC, insecureReason: \"Anyone can get a movie by id.\") {\n  movie(id: $id) {\n    id\n    title\n    imageUrl\n    genre\n    metadata: movieMetadata_on_movie {\n      rating\n      releaseYear\n      description\n    }\n    reviews: reviews_on_movie {\n      reviewText\n      reviewDate\n      rating\n      user {\n        id\n        username\n      }\n    }\n  }\n}\n\n# Search for movies, actors, and reviews\nquery SearchMovie($titleInput: String, $genre: String) @auth(level: PUBLIC, insecureReason: \"Anyone can search for movies.\") {\n  movies(\n    where: {\n      _and: [{ genre: { eq: $genre } }, { title: { contains: $titleInput } }]\n    }\n  ) {\n    id\n    title\n    genre\n    imageUrl\n  }\n}\n"
+                },
+                {
+                  "path": "mutations.gql",
+                  "content": "# Example mutations for a simple movie app\n\n# Create a movie based on user input\nmutation CreateMovie($title: String!, $genre: String!, $imageUrl: String!)\n@auth(level: USER_EMAIL_VERIFIED, insecureReason: \"Any email verified users can create a new movie.\") {\n  movie_insert(data: { title: $title, genre: $genre, imageUrl: $imageUrl })\n}\n\n# Upsert (update or insert) a user's username based on their auth.uid\nmutation UpsertUser($username: String!) @auth(level: USER) {\n  # The \"auth.uid\" server value ensures that users can only register their own user.\n  user_upsert(data: { id_expr: \"auth.uid\", username: $username })\n}\n\n# Add a review for a movie\nmutation AddReview($movieId: UUID!, $rating: Int!, $reviewText: String!)\n@auth(level: USER) {\n  review_upsert(\n    data: {\n      userId_expr: \"auth.uid\"\n      movieId: $movieId\n      rating: $rating\n      reviewText: $reviewText\n      # reviewDate defaults to today in the schema. No need to set it manually.\n    }\n  )\n}\n\n# Logged in user can delete their review for a movie\nmutation DeleteReview($movieId: UUID!) @auth(level: USER) {\n  # The \"auth.uid\" server value ensures that users can only delete their own reviews.\n  review_delete(key: { userId_expr: \"auth.uid\", movieId: $movieId })\n}\n"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "deploymentMetadata": {
+        "primaryDataSource": {
+          "postgres": {
+            "requiredExtensions": [
+              "uuid-ossp"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "deployStats": {
+    "numBuildErrors": 0,
+    "numBuildWarnings": {},
+    "numServiceCreated": 0,
+    "numServiceDeleted": 0,
+    "numSchemaMigrated": 0,
+    "numConnectorUpdatedBeforeSchema": 0,
+    "numConnectorUpdatedAfterSchema": 0,
+    "numSchemaSkippedDueToPendingCreate": 0,
+    "numSchemaSqlDiffs": 0,
+    "numSchemaInvalidConnectors": 0,
+    "missingBilling": true
+  }
+}
+[debug] [2026-03-09T06:53:49.332Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:49.332Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:49.333Z] >>> [apiv2][query] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/-/services [none]
+[debug] [2026-03-09T06:53:51.379Z] <<< [apiv2][status] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/-/services 200
+[debug] [2026-03-09T06:53:51.379Z] <<< [apiv2][body] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/-/services {}
+[debug] [2026-03-09T06:53:51.379Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:51.380Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:51.380Z] >>> [apiv2][query] POST https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services service_id=silver01
+[debug] [2026-03-09T06:53:51.380Z] >>> [apiv2][body] POST https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services {"name":"projects/silvermaid-94246/locations/us-east4/services/silver01"}
+[debug] [2026-03-09T06:53:54.612Z] <<< [apiv2][status] POST https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services 200
+[debug] [2026-03-09T06:53:54.613Z] <<< [apiv2][body] POST https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/services {"name":"projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf","metadata":{"@type":"type.googleapis.com/google.firebase.dataconnect.v1.OperationMetadata","createTime":"2026-03-09T06:53:54.521997582Z","target":"projects/silvermaid-94246/locations/us-east4/services/silver01","verb":"create","requestedCancellation":false,"apiVersion":"v1"},"done":false}
+[debug] [2026-03-09T06:53:54.614Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:54.614Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:54.614Z] >>> [apiv2][query] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf [none]
+[debug] [2026-03-09T06:53:54.956Z] <<< [apiv2][status] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf 200
+[debug] [2026-03-09T06:53:54.956Z] <<< [apiv2][body] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf {"name":"projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf","metadata":{"@type":"type.googleapis.com/google.firebase.dataconnect.v1.OperationMetadata","createTime":"2026-03-09T06:53:54.521997582Z","target":"projects/silvermaid-94246/locations/us-east4/services/silver01","verb":"create","requestedCancellation":false,"apiVersion":"v1"},"done":false}
+[debug] [2026-03-09T06:53:55.458Z] [LRO Poller] Retrying task index 0
+[debug] [2026-03-09T06:53:55.458Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:55.458Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:55.459Z] >>> [apiv2][query] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf [none]
+[debug] [2026-03-09T06:53:56.160Z] <<< [apiv2][status] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf 200
+[debug] [2026-03-09T06:53:56.160Z] <<< [apiv2][body] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf {"name":"projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf","metadata":{"@type":"type.googleapis.com/google.firebase.dataconnect.v1.OperationMetadata","createTime":"2026-03-09T06:53:54.521997582Z","target":"projects/silvermaid-94246/locations/us-east4/services/silver01","verb":"create","requestedCancellation":false,"apiVersion":"v1"},"done":false}
+[debug] [2026-03-09T06:53:57.161Z] [LRO Poller] Retrying task index 0
+[debug] [2026-03-09T06:53:57.161Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:57.161Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:57.162Z] >>> [apiv2][query] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf [none]
+[debug] [2026-03-09T06:53:57.477Z] <<< [apiv2][status] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf 200
+[debug] [2026-03-09T06:53:57.477Z] <<< [apiv2][body] GET https://firebasedataconnect.googleapis.com/v1/projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf {"name":"projects/silvermaid-94246/locations/us-east4/operations/operation-1773039232581-64c91dda17fb1-351421aa-b1ad61bf","metadata":{"@type":"type.googleapis.com/google.firebase.dataconnect.v1.OperationMetadata","createTime":"2026-03-09T06:53:54.521997582Z","endTime":"2026-03-09T06:53:55.768315831Z","target":"projects/silvermaid-94246/locations/us-east4/services/silver01","verb":"create","requestedCancellation":false,"apiVersion":"v1"},"done":true,"response":{"@type":"type.googleapis.com/google.firebase.dataconnect.v1.Service","name":"projects/silvermaid-94246/locations/us-east4/services/silver01","createTime":"2026-03-09T06:53:54.518358322Z","updateTime":"2026-03-09T06:53:54.518358322Z","uid":"d699a2b7-036a-4fdd-8466-f2f0f28a2da2","reconciling":false,"etag":"4o1KZuI0OVqqj4g5eG7q65XEgJvVrO1lulSAjRt1454"}}
+[info] ✔  dataconnect: Created service projects/silvermaid-94246/locations/us-east4/services/silver01 
+[info] i  dataconnect: Checking for CloudSQL resources... 
+[debug] [2026-03-09T06:53:57.479Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:57.479Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:57.479Z] >>> [apiv2][query] GET https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances/silver01-fdc [none]
+[debug] [2026-03-09T06:53:58.747Z] <<< [apiv2][status] GET https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances/silver01-fdc 404
+[debug] [2026-03-09T06:53:58.748Z] <<< [apiv2][body] GET https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances/silver01-fdc {"error":{"code":404,"message":"The Cloud SQL instance does not exist.","errors":[{"message":"The Cloud SQL instance does not exist.","domain":"global","reason":"instanceDoesNotExist"}]}}
+[debug] [2026-03-09T06:53:58.749Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:58.749Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:53:58.749Z] >>> [apiv2][query] GET https://monitoring.googleapis.com/v3/projects/silvermaid-94246/timeSeries/ filter=metric.type%3D%22serviceruntime.googleapis.com%2Fquota%2Fallocation%2Fusage%22+AND+metric.label.quota_metric+%3D+%22sqladmin.googleapis.com%2Ffdc_lifetime_free_trial_per_project%22&interval.endTime=2026-03-09T06%3A53%3A58.749Z&interval.startTime=2026-03-02T06%3A53%3A58.749Z
+[debug] [2026-03-09T06:54:00.498Z] <<< [apiv2][status] GET https://monitoring.googleapis.com/v3/projects/silvermaid-94246/timeSeries/ 200
+[debug] [2026-03-09T06:54:00.498Z] <<< [apiv2][body] GET https://monitoring.googleapis.com/v3/projects/silvermaid-94246/timeSeries/ {"unit":"1"}
+[debug] [2026-03-09T06:54:00.499Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:54:00.499Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:54:00.499Z] >>> [apiv2][query] POST https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances [none]
+[debug] [2026-03-09T06:54:00.499Z] >>> [apiv2][body] POST https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances {"name":"silver01-fdc","region":"us-east4","databaseVersion":"POSTGRES_17","settings":{"tier":"db-f1-micro","edition":"ENTERPRISE","ipConfiguration":{"authorizedNetworks":[]},"enableGoogleMlIntegration":false,"databaseFlags":[{"name":"cloudsql.iam_authentication","value":"on"}],"storageAutoResize":false,"userLabels":{"firebase-data-connect":"ft"},"insightsConfig":{"queryInsightsEnabled":true,"queryPlansPerMinute":5,"queryStringLength":1024}}}
+[debug] [2026-03-09T06:54:04.247Z] <<< [apiv2][status] POST https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances 200
+[debug] [2026-03-09T06:54:04.248Z] <<< [apiv2][body] POST https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances {"kind":"sql#operation","targetLink":"https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/instances/silver01-fdc","status":"PENDING","user":"largifysolutions@gmail.com","insertTime":"2026-03-09T06:54:04.015Z","operationType":"CREATE","name":"a9d7d463-92ab-4733-8326-ebcc0000002c","targetId":"silver01-fdc","selfLink":"https://sqladmin.googleapis.com/v1/projects/silvermaid-94246/operations/a9d7d463-92ab-4733-8326-ebcc0000002c","targetProject":"silvermaid-94246"}
+[debug] [2026-03-09T06:54:04.248Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:54:04.248Z] Checked if tokens are valid: true, expires at: 1773041956595
+[debug] [2026-03-09T06:54:04.248Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/silvermaid-94246/billingInfo [none]

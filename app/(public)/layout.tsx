@@ -316,7 +316,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
           </div>
           
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[11px] text-slate-500 tracking-wide">© 2024 Home Work UAE. All rights reserved.</p>
+            <p className="text-[11px] text-slate-500 tracking-wide">© 2024 Silver Maid. All rights reserved.</p>
             <div className="flex items-center gap-3">
               {[Facebook, Instagram, Music2].map((Icon, i) => (
                 <a key={i} href="#" className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-[#ea4c8c] transition-colors group">
