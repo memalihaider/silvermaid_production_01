@@ -332,7 +332,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
         {/* WhatsApp */}
         <a 
-          href="https://wa.me/971507177059" 
+          href="https://wa.me/971588844151" 
           target="_blank" 
           rel="noopener noreferrer"
           className="group relative h-12 w-12 bg-[#25D366] text-white rounded-full shadow-lg shadow-[#25D366]/25 flex items-center justify-center hover:scale-105 transition-transform"
