@@ -230,8 +230,8 @@ export default function AdminLogin() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('admin@silvermaid.ae');
-    setPassword('Demo@123');
+    setEmail('admin@silvermaidcleaning.com');
+    setPassword('Admin@1234');
   };
 
   return (
@@ -295,7 +295,7 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all pl-11"
-                  placeholder="admin@silvermaid.ae"
+                  placeholder="admin@silvermaidcleaning.com"
                   required
                   disabled={isLoading}
                 />

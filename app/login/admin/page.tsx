@@ -42,8 +42,8 @@ export default function AdminLogin() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('admin@silvermaid.ae');
-    setPassword('Demo@123');
+    setEmail('admin@silvermaidcleaning.com');
+    setPassword('Admin@1234');
   };
 
   return (
@@ -100,7 +100,7 @@ export default function AdminLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                placeholder="admin@silvermaid.ae"
+                  placeholder="admin@silvermaidcleaning.com"
                 required
               />
             </div>
@@ -181,11 +181,11 @@ export default function AdminLogin() {
             <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Email:</span>
-                <code className="text-slate-300 font-mono">admin@silvermaid.ae</code>
+                <code className="text-slate-300 font-mono">admin@silvermaidcleaning.com</code>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Password:</span>
-                <code className="text-slate-300 font-mono">Demo@123</code>
+                <code className="text-slate-300 font-mono">Admin@1234</code>
               </div>
               <button
                 type="button"

@@ -254,7 +254,7 @@ export async function logout() {
 }
 
 export const DEMO_CREDENTIALS: Record<string, { email: string; password: string }> = {
-  admin: { email: 'admin@silvermaid.com', password: 'admin123' },
+  admin: { email: 'admin@silvermaidcleaning.com', password: 'Admin@1234' },
   manager: { email: 'manager@silvermaid.com', password: 'manager123' },
   supervisor: { email: 'supervisor@silvermaid.com', password: 'supervisor123' },
   employee: { email: 'employee@silvermaid.com', password: 'employee123' },
