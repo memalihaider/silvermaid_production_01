@@ -1,0 +1,41 @@
+export const ADMIN_ALLOWED_PAGES = [
+  "Dashboard",
+  "Lead Dashboard",
+  "Communications",
+  "Clients",
+  "Surveys",
+  "Report",
+  "Process Inquiry",
+  "Quotations",
+  "Inventory & Services",
+  "Jobs",
+  "Equipment & Permits",
+  "Job Profitability",
+  "Bookings",
+  "Employee Directory",
+  "Attendance",
+  "Leave Management",
+  "Payroll",
+  "Performance Dashboard",
+  "Feedback & Complaints",
+  "Meeting Calendar",
+  "Meeting Detail",
+  "Notes & Decisions",
+  "Follow-Up Tracker",
+  "Finance",
+  "Marketing",
+  "Role Manager",
+  "Permission Matrix",
+  "User Accounts",
+  "Audit Logs",
+  "AI Command Center",
+  "AI Recommendations",
+  "CMS",
+  "Settings",
+  "Employee Chat",
+] as const;
+
+export const ADMIN_CRUD_PERMISSIONS = ["view", "add", "edit", "remove"] as const;
+
+export const EMPLOYEE_DEFAULT_PAGES = ["Employee Chat"] as const;
+export const EMPLOYEE_DEFAULT_PERMISSIONS = ["view"] as const;

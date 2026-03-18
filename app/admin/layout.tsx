@@ -52,6 +52,11 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { getSession, logout } from "@/lib/auth";
+import {
+  ADMIN_ALLOWED_PAGES,
+  ADMIN_CRUD_PERMISSIONS,
+  EMPLOYEE_DEFAULT_PERMISSIONS,
+} from "@/lib/admin-permissions";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -361,6 +366,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     name: string;
     email: string;
     allowedPages: string[];
+    permissions: string[];
     roleName: string;
   } | null>(null);
 
@@ -522,11 +528,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     const session = getSession();
     if (session) {
       const allowedPages = session.allowedPages || [];
-      const allAllowedPages = [...allowedPages];
+      const allAllowedPages =
+        session.portal === "admin" ? [...ADMIN_ALLOWED_PAGES] : [...allowedPages];
 
-      if (!allAllowedPages.includes("Process Inquiry")) {
+      // Keep Process Inquiry as a baseline page for non-admin sessions.
+      if (
+        session.portal !== "admin" &&
+        !allAllowedPages.includes("Process Inquiry")
+      ) {
         allAllowedPages.push("Process Inquiry");
       }
+
+      const permissions =
+        session.portal === "admin"
+          ? [...ADMIN_CRUD_PERMISSIONS]
+          : session.permissions || [...EMPLOYEE_DEFAULT_PERMISSIONS];
 
       // ✅ FIXED: Make sure Employee Chat is included in allowed pages
       if (
@@ -540,6 +556,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         name: session.user.name || "User",
         email: session.user.email || "",
         allowedPages: allAllowedPages,
+        permissions,
         roleName: session.portal || "User", // ✅ Changed from roleName to portal
       });
 

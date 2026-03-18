@@ -7,12 +7,19 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
+import {
+  ADMIN_ALLOWED_PAGES,
+  ADMIN_CRUD_PERMISSIONS,
+  EMPLOYEE_DEFAULT_PAGES,
+  EMPLOYEE_DEFAULT_PERMISSIONS,
+} from '@/lib/admin-permissions'
 
 export interface UserRole {
   id: string
   email: string
   name: string
   allowedPages: string[]
+  permissions?: string[]
   createdAt: string
   updatedAt: string
   portal: 'admin' | 'employee'  // ✅ Added portal field
@@ -30,6 +37,7 @@ export interface SessionData {
     name: string | null
   }
   allowedPages: string[]
+  permissions?: string[]
   portal: 'admin' | 'employee'   // ✅ Changed from roleName to portal
   employeeId?: string             // ✅ This is a property, not a method
   employeeName?: string           // ✅ Added employeeName
@@ -47,6 +55,13 @@ export async function createUserWithRole(
 ) {
   try {
     console.log('📝 Creating user:', { email, name, portal, employeeId });
+
+    const normalizedAllowedPages = portal === 'admin'
+      ? [...ADMIN_ALLOWED_PAGES]
+      : [...EMPLOYEE_DEFAULT_PAGES]
+    const normalizedPermissions = portal === 'admin'
+      ? [...ADMIN_CRUD_PERMISSIONS]
+      : [...EMPLOYEE_DEFAULT_PERMISSIONS]
     
     // Firebase authentication mein user create karna
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
@@ -62,7 +77,8 @@ export async function createUserWithRole(
     const userData: any = {
       email,
       name,
-      allowedPages,
+      allowedPages: normalizedAllowedPages,
+      permissions: normalizedPermissions,
       portal,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -91,14 +107,19 @@ export async function getUserRole(uid: string): Promise<UserRole | null> {
     
     if (docSnap.exists()) {
       const data = docSnap.data()
+      const portal = data.portal || 'admin'
+      const allowedPages = data.allowedPages || (portal === 'admin' ? [...ADMIN_ALLOWED_PAGES] : [...EMPLOYEE_DEFAULT_PAGES])
+      const permissions = data.permissions || (portal === 'admin' ? [...ADMIN_CRUD_PERMISSIONS] : [...EMPLOYEE_DEFAULT_PERMISSIONS])
+
       return {
         id: docSnap.id,
         email: data.email || '',
         name: data.name || '',
-        allowedPages: data.allowedPages || [],
+        allowedPages,
+        permissions,
         createdAt: data.createdAt || '',
         updatedAt: data.updatedAt || '',
-        portal: data.portal || 'admin',
+        portal,
         employeeId: data.employeeId || '',
         employeeName: data.employeeName || ''
       } as UserRole
@@ -158,6 +179,13 @@ export async function validateCredentials(portal: 'admin' | 'employee', email: s
       name: userRole.name,
       allowedPages: userRole.allowedPages 
     });
+
+    const resolvedAllowedPages = userRole.portal === 'admin'
+      ? [...ADMIN_ALLOWED_PAGES]
+      : [...EMPLOYEE_DEFAULT_PAGES]
+    const resolvedPermissions = userRole.portal === 'admin'
+      ? [...ADMIN_CRUD_PERMISSIONS]
+      : [...EMPLOYEE_DEFAULT_PERMISSIONS]
     
     // ✅ Check if portal matches
     if (userRole.portal !== portal) {
@@ -177,7 +205,8 @@ export async function validateCredentials(portal: 'admin' | 'employee', email: s
         email: userCredential.user.email,
         name: userRole.name
       },
-      allowedPages: userRole.allowedPages,
+      allowedPages: resolvedAllowedPages,
+      permissions: resolvedPermissions,
       portal: userRole.portal,
       employeeId: userRole.employeeId,
       employeeName: userRole.employeeName,

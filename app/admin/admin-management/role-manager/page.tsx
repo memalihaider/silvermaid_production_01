@@ -23,46 +23,12 @@ import {
   BarChart3 // ✅ Import Report icon
 } from 'lucide-react'
 import { createUserWithRole, updateUserRole, deleteUserRole, UserRole } from '@/lib/auth'
+import { ADMIN_ALLOWED_PAGES } from '@/lib/admin-permissions'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore'
 
 // Available pages for selection - ONLY FOR ADMIN
-const ALL_PAGES = [
-  'Dashboard',
-  'Lead Dashboard', 
-  'Communications',
-  'Clients',
-  'Surveys',
-  'Report',           // ✅ Changed from 'report' to 'Report' with proper capitalization
-  'Process Inquiry',   // ✅ Fixed capitalization
-  'Quotations',
-  'Inventory & Services',
-  'Jobs',
-  'Equipment & Permits',
-  'Job Profitability',
-  'Bookings',
-  'Employee Directory',
-  'Attendance',
-  'Leave Management',
-  'Payroll',
-  'Performance Dashboard',
-  'Feedback & Complaints',
-  'Meeting Calendar',
-  'Meeting Detail',
-  'Notes & Decisions',
-  'Follow-Up Tracker',
-  'Finance',
-  'Marketing',
-  'Role Manager',
-  'Permission Matrix',
-  'User Accounts',
-  'Audit Logs',
-  'AI Command Center',
-  'AI Recommendations',
-  'CMS',
-  'Settings',
-  'Employee Chat'
-]
+const ALL_PAGES = [...ADMIN_ALLOWED_PAGES]
 
 // Portal Types
 const PORTALS = [
@@ -101,7 +67,7 @@ export default function RoleManager() {
     password: '',
     portal: 'admin' as 'admin' | 'employee',
     employeeId: '',
-    allowedPages: [] as string[]
+    allowedPages: [...ALL_PAGES] as string[]
   })
 
   const [showPassword, setShowPassword] = useState(false)
@@ -116,6 +82,15 @@ export default function RoleManager() {
   useEffect(() => {
     if (newUser.portal === 'employee') {
       fetchEmployees()
+      setNewUser(prev => ({
+        ...prev,
+        allowedPages: ['Employee Chat']
+      }))
+    } else {
+      setNewUser(prev => ({
+        ...prev,
+        allowedPages: [...ALL_PAGES]
+      }))
     }
   }, [newUser.portal])
 
@@ -195,12 +170,6 @@ export default function RoleManager() {
       return
     }
 
-    // For admin portal, require page selection
-    if (newUser.portal === 'admin' && newUser.allowedPages.length === 0) {
-      alert('Please select at least one page access for admin')
-      return
-    }
-
     setLoading(true)
     
     try {
@@ -209,7 +178,7 @@ export default function RoleManager() {
       // For employee portal, always give them ONLY chat access
       const allowedPages = newUser.portal === 'employee' 
         ? ['Employee Chat']
-        : newUser.allowedPages
+        : [...ALL_PAGES]
       
       console.log('📝 Creating user with data:', {
         email: newUser.email,
@@ -237,7 +206,7 @@ export default function RoleManager() {
           password: '',
           portal: 'admin',
           employeeId: '',
-          allowedPages: []
+          allowedPages: [...ALL_PAGES]
         })
         setShowForm(false)
         fetchUserRoles()
@@ -284,12 +253,6 @@ export default function RoleManager() {
       return
     }
 
-    // For admin portal, require page selection
-    if (newUser.portal === 'admin' && newUser.allowedPages.length === 0) {
-      alert('Please select at least one page access for admin')
-      return
-    }
-
     setLoading(true)
     
     try {
@@ -298,7 +261,7 @@ export default function RoleManager() {
       // For employee portal, always give them ONLY chat access
       const allowedPages = newUser.portal === 'employee' 
         ? ['Employee Chat']
-        : newUser.allowedPages
+        : [...ALL_PAGES]
       
       console.log('📝 Updating user:', { 
         id: editingUserId, 
@@ -332,7 +295,7 @@ export default function RoleManager() {
           password: '',
           portal: 'admin',
           employeeId: '',
-          allowedPages: []
+          allowedPages: [...ALL_PAGES]
         })
         setEditingUserId(null)
         setShowForm(false)
@@ -417,7 +380,7 @@ export default function RoleManager() {
                 password: '', 
                 portal: 'admin',
                 employeeId: '',
-                allowedPages: [] 
+                allowedPages: [...ALL_PAGES] 
               }) 
             }}
             className="group relative flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]">
@@ -616,7 +579,7 @@ export default function RoleManager() {
               <button onClick={() => {
                 setShowForm(false)
                 setEditingUserId(null)
-                setNewUser({ name: '', email: '', password: '', portal: 'admin', employeeId: '', allowedPages: [] })
+                setNewUser({ name: '', email: '', password: '', portal: 'admin', employeeId: '', allowedPages: [...ALL_PAGES] })
               }} className="p-2 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors text-gray-500">
                 <X className="h-6 w-6" />
               </button>
