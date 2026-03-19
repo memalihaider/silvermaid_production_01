@@ -55,13 +55,26 @@ function normalizeReadTime(value: unknown): number {
   return Math.round(parsed)
 }
 
-function getBlogCreateErrorMessage(error: unknown): string {
+function getBlogApiErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : String(error ?? '')
+
   if (/Could not load the default credentials/i.test(message)) {
     return 'Firebase Admin credentials are not configured on the server. Set FIREBASE_SERVICE_ACCOUNT_JSON (or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).'
   }
 
-  return 'Failed to create blog post.'
+  if (/PERMISSION_DENIED|insufficient permissions|Missing or insufficient permissions/i.test(message)) {
+    return 'Firestore permission denied for server credentials. Grant Firestore access to the service account used in Vercel environment variables.'
+  }
+
+  if (/The caller does not have permission|iam\.serviceAccounts\.signBlob|not authorized/i.test(message)) {
+    return 'Service account IAM permissions are not sufficient. Ensure the credential belongs to the same Firebase project and has Firestore access.'
+  }
+
+  if (/deadline exceeded|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|network/i.test(message)) {
+    return 'Unable to reach Firestore from the server due to network or timeout issues. Retry and check Vercel function logs.'
+  }
+
+  return fallback
 }
 
 function normalizeFeatured(featured: NewBlogPayload['featured']): boolean {
@@ -144,7 +157,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data: posts })
   } catch (error) {
     console.error('GET /api/blog failed:', error)
-    return NextResponse.json({ success: false, error: 'Failed to fetch blog posts.' }, { status: 500 })
+    return NextResponse.json({ success: false, error: getBlogApiErrorMessage(error, 'Failed to fetch blog posts.') }, { status: 500 })
   }
 }
 
@@ -164,9 +177,9 @@ export async function POST(request: Request) {
   const normalizedTitle = normalizeString(body.title)
   const normalizedContent = normalizeString(body.content) || fallbackContent
 
-  if (!normalizedTitle || !normalizedContent) {
+  if (!normalizedTitle) {
     return NextResponse.json(
-      { success: false, error: 'title and content are required. Provide content or at least one paragraph field (p1/p2).' },
+      { success: false, error: 'title is required.' },
       { status: 400 }
     )
   }
@@ -212,6 +225,6 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error('POST /api/blog failed:', error)
-    return NextResponse.json({ success: false, error: getBlogCreateErrorMessage(error) }, { status: 500 })
+    return NextResponse.json({ success: false, error: getBlogApiErrorMessage(error, 'Failed to create blog post.') }, { status: 500 })
   }
 }
