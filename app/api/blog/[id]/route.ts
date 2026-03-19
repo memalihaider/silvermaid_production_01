@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { adminDb, adminServerTimestamp } from '@/lib/firebase-admin'
 import { verifyBasicAuth } from '@/lib/api-basic-auth'
 
 type UpdateBlogPayload = {
@@ -24,6 +23,28 @@ function toSlug(title: string, id: string) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `post-${id}`
 }
 
+function timestampToISO(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || !('toDate' in value)) {
+    return null
+  }
+
+  const toDate = (value as { toDate?: () => Date }).toDate
+  if (typeof toDate !== 'function') return null
+  return toDate().toISOString()
+}
+
+function getString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+function getNumber(value: unknown, fallback = 5): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function getStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
@@ -31,35 +52,36 @@ export async function GET(
   const { id } = await context.params
 
   try {
-    const blogRef = doc(db, 'blog-post', id)
-    const snapshot = await getDoc(blogRef)
+    const blogRef = adminDb.collection('blog-post').doc(id)
+    const snapshot = await blogRef.get()
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ success: false, error: 'Blog post not found.' }, { status: 404 })
     }
 
-    const data = snapshot.data()
+    const data = snapshot.data() ?? {}
+    const title = getString(data.title)
     return NextResponse.json({
       success: true,
       data: {
         id: snapshot.id,
-        title: data.title || '',
-        slug: toSlug(data.title || '', snapshot.id),
-        description: data.description || '',
-        content: data.content || '',
-        p1: data.p1 || '',
-        h2: data.h2 || '',
-        p2: data.p2 || '',
-        imageURL: data.imageURL || '',
-        category: data.category || 'general',
-        tags: Array.isArray(data.tags) ? data.tags : [],
-        readTime: data.readTime || 5,
-        name: data.name || 'Admin',
+        title,
+        slug: toSlug(title, snapshot.id),
+        description: getString(data.description),
+        content: getString(data.content),
+        p1: getString(data.p1),
+        h2: getString(data.h2),
+        p2: getString(data.p2),
+        imageURL: getString(data.imageURL),
+        category: getString(data.category, 'general'),
+        tags: getStringArray(data.tags),
+        readTime: getNumber(data.readTime, 5),
+        name: getString(data.name, 'Admin'),
         featured: !!data.featured,
-        promotionalImages: Array.isArray(data.promotionalImages) ? data.promotionalImages : [],
-        ctaImage: data.ctaImage || '',
-        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || null,
+        promotionalImages: getStringArray(data.promotionalImages),
+        ctaImage: getString(data.ctaImage),
+        createdAt: timestampToISO(data?.createdAt),
+        updatedAt: timestampToISO(data?.updatedAt),
       },
     })
   } catch (error) {
@@ -111,23 +133,28 @@ export async function PUT(
     return NextResponse.json({ success: false, error: 'No valid fields to update.' }, { status: 400 })
   }
 
-  updates.updatedAt = serverTimestamp()
+  updates.updatedAt = adminServerTimestamp()
 
   try {
-    const blogRef = doc(db, 'blog-post', id)
-    const existing = await getDoc(blogRef)
+    const blogRef = adminDb.collection('blog-post').doc(id)
+    const existing = await blogRef.get()
 
-    if (!existing.exists()) {
+    if (!existing.exists) {
       return NextResponse.json({ success: false, error: 'Blog post not found.' }, { status: 404 })
     }
 
-    await updateDoc(blogRef, updates)
+    await blogRef.update(updates)
+
+    const responseUpdates = {
+      ...updates,
+      updatedAt: null,
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         id,
-        ...updates,
+        ...responseUpdates,
       },
     })
   } catch (error) {

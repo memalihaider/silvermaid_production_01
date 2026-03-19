@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { 
   Search, Eye, Edit, Trash2, Mail,
-  CheckCircle, Clock, XCircle, AlertCircle, RefreshCw, FileDown, Phone, CalendarDays, Building2
+  CheckCircle, Clock, XCircle, AlertCircle, RefreshCw, FileDown, FileText, Phone, CalendarDays, Building2
 } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
