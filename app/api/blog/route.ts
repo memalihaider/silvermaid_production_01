@@ -19,9 +19,16 @@ type NewBlogPayload = {
   ctaImage?: string
 }
 
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 function normalizeTags(tags: NewBlogPayload['tags']): string[] {
   if (Array.isArray(tags)) {
-    return tags.map((tag) => tag.trim()).filter(Boolean)
+    return tags
+      .filter((tag): tag is string => typeof tag === 'string')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
   }
 
   if (typeof tags === 'string') {
@@ -32,6 +39,29 @@ function normalizeTags(tags: NewBlogPayload['tags']): string[] {
   }
 
   return []
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function normalizeReadTime(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed) || parsed < 1) return 5
+  return Math.round(parsed)
+}
+
+function getBlogCreateErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  if (/Could not load the default credentials/i.test(message)) {
+    return 'Firebase Admin credentials are not configured on the server. Set FIREBASE_SERVICE_ACCOUNT_JSON (or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).'
+  }
+
+  return 'Failed to create blog post.'
 }
 
 function normalizeFeatured(featured: NewBlogPayload['featured']): boolean {
@@ -131,9 +161,10 @@ export async function POST(request: Request) {
     .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
     .join('\n\n')
 
-  const normalizedContent = body.content?.trim() || fallbackContent
+  const normalizedTitle = normalizeString(body.title)
+  const normalizedContent = normalizeString(body.content) || fallbackContent
 
-  if (!body.title?.trim() || !normalizedContent) {
+  if (!normalizedTitle || !normalizedContent) {
     return NextResponse.json(
       { success: false, error: 'title and content are required. Provide content or at least one paragraph field (p1/p2).' },
       { status: 400 }
@@ -142,22 +173,20 @@ export async function POST(request: Request) {
 
   try {
     const payload = {
-      title: body.title.trim(),
-      description: body.description?.trim() || '',
+      title: normalizedTitle,
+      description: normalizeString(body.description),
       content: normalizedContent,
-      p1: body.p1?.trim() || '',
-      h2: body.h2?.trim() || '',
-      p2: body.p2?.trim() || '',
-      imageURL: body.imageURL?.trim() || '',
-      category: body.category?.trim() || 'general',
+      p1: normalizeString(body.p1),
+      h2: normalizeString(body.h2),
+      p2: normalizeString(body.p2),
+      imageURL: normalizeString(body.imageURL),
+      category: normalizeString(body.category) || 'general',
       tags: normalizeTags(body.tags),
-      readTime: Number.isFinite(body.readTime) ? Number(body.readTime) : 5,
-      name: body.name?.trim() || authResult.username,
+      readTime: normalizeReadTime(body.readTime),
+      name: normalizeString(body.name) || authResult.username,
       featured: normalizeFeatured(body.featured),
-      promotionalImages: Array.isArray(body.promotionalImages)
-        ? body.promotionalImages.map((image) => image.trim()).filter(Boolean)
-        : [],
-      ctaImage: body.ctaImage?.trim() || '',
+      promotionalImages: normalizeStringList(body.promotionalImages),
+      ctaImage: normalizeString(body.ctaImage),
       createdAt: adminServerTimestamp(),
       updatedAt: adminServerTimestamp(),
     }
@@ -183,6 +212,6 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error('POST /api/blog failed:', error)
-    return NextResponse.json({ success: false, error: 'Failed to create blog post.' }, { status: 500 })
+    return NextResponse.json({ success: false, error: getBlogCreateErrorMessage(error) }, { status: 500 })
   }
 }
