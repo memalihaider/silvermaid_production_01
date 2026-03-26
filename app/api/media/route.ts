@@ -19,25 +19,49 @@ export async function POST(request: Request) {
   const authResult = verifyBasicAuth(request)
   if ('errorResponse' in authResult) return authResult.errorResponse
 
-  const contentType = request.headers.get('content-type') || 'application/octet-stream'
+  const requestContentType = request.headers.get('content-type') || 'application/octet-stream'
 
   try {
     let bytes: Uint8Array
     let fileName = ''
 
-    if (contentType.includes('multipart/form-data')) {
-      const form = await request.formData()
-      const file = form.get('file')
+    let uploadContentType = requestContentType
 
-      if (!(file instanceof File)) {
+    if (requestContentType.includes('multipart/form-data')) {
+      const form = await request.formData()
+      const candidateFields = ['file', 'data', 'image', 'media', 'upload']
+      let file: File | null = null
+
+      for (const field of candidateFields) {
+        const value = form.get(field)
+        if (value instanceof File) {
+          file = value
+          break
+        }
+      }
+
+      if (!file) {
+        for (const value of form.values()) {
+          if (value instanceof File) {
+            file = value
+            break
+          }
+        }
+      }
+
+      if (!file) {
         return NextResponse.json(
-          { success: false, error: 'Expected form-data field named file.' },
+          {
+            success: false,
+            error: 'Expected a multipart file field (file, data, image, media, upload).',
+          },
           { status: 400 }
         )
       }
 
       fileName = file.name || ''
       bytes = new Uint8Array(await file.arrayBuffer())
+      uploadContentType = file.type || uploadContentType
     } else {
       const headerFileName = request.headers.get('x-file-name')
       const cdFileName = getFilenameFromContentDisposition(request.headers.get('content-disposition'))
@@ -58,7 +82,7 @@ export async function POST(request: Request) {
     const storageRef = ref(storage, storagePath)
 
     const snapshot = await uploadBytes(storageRef, bytes, {
-      contentType,
+      contentType: uploadContentType,
       customMetadata: {
         uploadedBy: authResult.username,
       },
@@ -72,7 +96,7 @@ export async function POST(request: Request) {
         data: {
           url: imageUrl,
           path: storagePath,
-          contentType,
+          contentType: uploadContentType,
         },
       },
       { status: 201 }
