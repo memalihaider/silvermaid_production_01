@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { storage } from '@/lib/firebase'
 import { verifyBasicAuth } from '@/lib/api-basic-auth'
+import { getAdminStorageBucket } from '@/lib/firebase-admin'
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -79,16 +78,22 @@ export async function POST(request: Request) {
 
     const finalName = sanitizeFilename(fileName || `upload-${Date.now()}.bin`)
     const storagePath = `blog-media/${Date.now()}-${finalName}`
-    const storageRef = ref(storage, storagePath)
+    const bucket = getAdminStorageBucket()
+    const object = bucket.file(storagePath)
+    const downloadToken = crypto.randomUUID()
 
-    const snapshot = await uploadBytes(storageRef, bytes, {
+    await object.save(Buffer.from(bytes), {
       contentType: uploadContentType,
-      customMetadata: {
-        uploadedBy: authResult.username,
+      resumable: false,
+      metadata: {
+        metadata: {
+          uploadedBy: authResult.username,
+          firebaseStorageDownloadTokens: downloadToken,
+        },
       },
     })
 
-    const imageUrl = await getDownloadURL(snapshot.ref)
+    const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`
 
     return NextResponse.json(
       {
@@ -102,7 +107,10 @@ export async function POST(request: Request) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('POST /api/media failed:', error)
+    console.error('POST /api/media failed:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return NextResponse.json({ success: false, error: 'Failed to upload media.' }, { status: 500 })
   }
 }

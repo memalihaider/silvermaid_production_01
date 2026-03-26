@@ -464,3 +464,25 @@ I0326 21:36:27.023850   18050 dev.go:104] Listening on address (HTTP + gRPC): 12
 [debug] [2026-03-26T16:36:27.535Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
 [debug] [2026-03-26T16:36:28.387Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
 [debug] [2026-03-26T16:36:28.388Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2026-03-26T16:56:52.556Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2026-03-26T16:56:52.556Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-03-26T16:56:52.558Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-26T16:56:52.558Z] > authorizing via signed-in user (largifysolutions@gmail.com)
+[debug] [2026-03-26T16:56:52.558Z] Checked if tokens are valid: true, expires at: 1774546586480
+[debug] [2026-03-26T16:56:52.559Z] [Firebase Plugin] User found:  largifysolutions@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-03-26T16:56:52.559Z] Checked if tokens are valid: true, expires at: 1774546586480
+[debug] [2026-03-26T16:56:52.560Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-03-26T16:56:52.567Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2026-03-26T16:56:52.567Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2026-03-26T16:56:52.568Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-26T16:56:52.568Z] > authorizing via signed-in user (largifysolutions@gmail.com)
+[debug] [2026-03-26T16:56:52.569Z] Checked if tokens are valid: true, expires at: 1774546586480
+[debug] [2026-03-26T16:56:52.569Z] [Firebase Plugin] User found:  largifysolutions@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2026-03-26T16:56:52.570Z] Checked if tokens are valid: true, expires at: 1774546586480
+[debug] [2026-03-26T16:56:52.570Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-03-26T16:56:53.285Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-03-26T16:56:53.285Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2026-03-26T16:56:53.369Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-03-26T16:56:53.369Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]

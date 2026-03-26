@@ -1,5 +1,6 @@
 import { App, cert, getApp, getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { getStorage as getAdminStorage } from 'firebase-admin/storage'
 
 function getPrivateKey(): string | undefined {
   const value = process.env.FIREBASE_PRIVATE_KEY
@@ -47,6 +48,18 @@ function readServiceAccountFromEnv(): ServiceAccountLike | null {
   return parseServiceAccountJson(decoded)
 }
 
+function resolveStorageBucket(projectId?: string): string | undefined {
+  const envBucket =
+    process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+  if (envBucket?.trim()) {
+    return normalizeBucketName(envBucket.trim())
+  }
+
+  if (!projectId?.trim()) return undefined
+  return `${projectId.trim()}.firebasestorage.app`
+}
+
 function initFirebaseAdminApp(): App {
   if (getApps().length > 0) {
     return getApp()
@@ -59,6 +72,7 @@ function initFirebaseAdminApp(): App {
     const privateKey = (serviceAccount.privateKey || serviceAccount.private_key || '').replace(/\\n/g, '\n').trim()
 
     if (projectId && clientEmail && privateKey) {
+      const storageBucket = resolveStorageBucket(projectId)
       return initializeApp({
         credential: cert({
           projectId,
@@ -66,6 +80,7 @@ function initFirebaseAdminApp(): App {
           privateKey,
         }),
         projectId,
+        storageBucket,
       })
     }
   }
@@ -75,6 +90,7 @@ function initFirebaseAdminApp(): App {
   const privateKey = getPrivateKey()
 
   if (projectId && clientEmail && privateKey) {
+    const storageBucket = resolveStorageBucket(projectId)
     return initializeApp({
       credential: cert({
         projectId,
@@ -82,15 +98,35 @@ function initFirebaseAdminApp(): App {
         privateKey,
       }),
       projectId,
+      storageBucket,
     })
   }
 
   // Fallback to ADC when running on GCP environments that provide workload identity.
-  return initializeApp({ projectId })
+  return initializeApp({
+    projectId,
+    storageBucket: resolveStorageBucket(projectId),
+  })
 }
 
 const adminApp = initFirebaseAdminApp()
 export const adminDb = getFirestore(adminApp)
+export { adminApp }
+
+function normalizeBucketName(bucketName: string): string {
+  return bucketName.replace(/^gs:\/\//, '').replace(/\/$/, '')
+}
+
+export function getAdminStorageBucket() {
+  const configuredBucket =
+    process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+  if (configuredBucket?.trim()) {
+    return getAdminStorage(adminApp).bucket(normalizeBucketName(configuredBucket.trim()))
+  }
+
+  return getAdminStorage(adminApp).bucket()
+}
 
 export function adminServerTimestamp() {
   return FieldValue.serverTimestamp()
