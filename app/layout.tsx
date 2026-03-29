@@ -21,20 +21,20 @@ export const metadata: Metadata = {
   title: "Silver Maid - Professional Cleaning & Hygiene Services",
   description: "UAE's trusted hygiene solution provider, dedicated to creating fresh, clean, and productive environments for homes and offices.",
   icons: {
-    icon: "/logo.png",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon.svg",
+    apple: "/logo.png",
     other: [
       {
         rel: "icon",
-        url: "/logo.png",
+        url: "/favicon.svg",
         sizes: "32x32",
-        type: "image/png",
+        type: "image/svg+xml",
       },
       {
         rel: "icon",
-        url: "/logo.png",
+        url: "/favicon.svg",
         sizes: "16x16",
-        type: "image/png",
+        type: "image/svg+xml",
       },
     ],
   },

@@ -10,25 +10,25 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/favicon-16x16.png",
+      "src": "/logo.png",
       "sizes": "16x16",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon-32x32.png",
+      "src": "/logo.png",
       "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/logo.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon.ico",
+      "src": "/logo.png",
       "sizes": "any",
       "type": "image/x-icon"
     }
