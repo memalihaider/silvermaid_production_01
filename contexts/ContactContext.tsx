@@ -9,13 +9,15 @@ export interface ContactInfo {
   email: string;
   company: string;
   address: string;
+  whatsapp: string;
 }
 
 const defaultContact: ContactInfo = {
   phone: '80046639675',
   email: 'info@silvermaid.ae',
   company: 'silvermaid',
-  address: 'Office: 201, 2nd Floor, Al Saaha Offices - B, Downtown Dubai - UAE'
+  address: 'Office: 201, 2nd Floor, Al Saaha Offices - B, Downtown Dubai - UAE',
+  whatsapp: '971588844151'
 };
 
 interface ContactContextType {
@@ -42,7 +44,8 @@ export function ContactProvider({ children }: { children: ReactNode }) {
                 phone: data.profile.phone || defaultContact.phone,
                 email: data.profile.email || defaultContact.email,
                 company: data.profile.company || defaultContact.company,
-                address: data.profile.address || defaultContact.address
+                address: data.profile.address || defaultContact.address,
+                whatsapp: data.profile.whatsapp || defaultContact.whatsapp
               });
             }
           }

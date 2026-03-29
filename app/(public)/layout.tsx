@@ -15,11 +15,13 @@ import { ContactProvider, useContactInfo } from '@/contexts/ContactContext'
 
 function PublicLayoutContent({ children }: { children: ReactNode }) {
   const { contact } = useContactInfo()
+  const whatsappNumber = (contact.whatsapp || contact.phone).replace(/[^\d]/g, '')
+  const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#'
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* Top Bar - Premium */}
-      <div className="bg-gradient-to-r from-[#ea4c8c] via-[#d43a7a] to-[#ea4c8c] text-white py-2.5 hidden md:block">
+      <div className="bg-linear-to-r from-[#ea4c8c] via-[#d43a7a] to-[#ea4c8c] text-white py-2.5 hidden md:block">
         <div className="container mx-auto px-6 flex justify-between items-center text-xs font-semibold">
           <div className="flex items-center gap-8">
             <a 
@@ -76,7 +78,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               </a>
               
               {/* Mega Menu */}
-              <div className="absolute top-full -left-80 w-[720px] bg-white border border-slate-200/80 shadow-xl rounded-2xl p-8 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
+              <div className="absolute top-full -left-80 w-180 bg-white border border-slate-200/80 shadow-xl rounded-2xl p-8 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
                 <div className="grid grid-cols-3 gap-8">
                   {/* Cleaning Services Section */}
                   <div>
@@ -253,6 +255,14 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               <ul className="space-y-4 text-sm text-slate-400">
                 <li className="flex items-start gap-3 group cursor-pointer">
                   <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
+                    <Building className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="group-hover:text-white transition-colors text-[12px] leading-relaxed">
+                    {contact.company}
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 group cursor-pointer">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <MapPin className="h-3.5 w-3.5" />
                   </div>
                   <span className="group-hover:text-white transition-colors text-[12px] leading-relaxed">
@@ -273,6 +283,14 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                   </div>
                   <a href={`mailto:${contact.email}`} className="group-hover:text-white transition-colors">
                     {contact.email}
+                  </a>
+                </li>
+                <li className="flex items-start gap-3 group cursor-pointer">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </div>
+                  <a href={whatsappHref} className="group-hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                    {contact.whatsapp || contact.phone}
                   </a>
                 </li>
               </ul>
@@ -329,10 +347,10 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
       </footer>
 
       {/* Floating Action Buttons - Clean & Minimal */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
+      <div className="fixed bottom-6 right-6 z-9999 flex flex-col gap-3">
         {/* WhatsApp */}
         <a 
-          href="https://wa.me/971588844151" 
+          href={whatsappHref} 
           target="_blank" 
           rel="noopener noreferrer"
           className="group relative h-12 w-12 bg-[#25D366] text-white rounded-full shadow-lg shadow-[#25D366]/25 flex items-center justify-center hover:scale-105 transition-transform"

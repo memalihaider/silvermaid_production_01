@@ -34,6 +34,10 @@ interface Booking {
   duration: number
   estimatedPrice: number
   status: 'pending' | 'accepted' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'rejected'
+  paymentMethod?: string
+  paymentStatus?: string
+  materialsOption?: string
+  schedule?: { date: string; time: string }[]
   notes?: string
   createdAt: string
   updatedAt: string
@@ -85,12 +89,42 @@ const calendarDotColors: Record<string, string> = {
   'in-progress': 'bg-violet-500', completed: 'bg-emerald-500', cancelled: 'bg-red-500', rejected: 'bg-rose-500',
 }
 
+const PAYMENT_STATUS_CONFIG = {
+  paid: { label: 'Paid (Stripe)', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  'after-work': { label: 'After Work', color: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  pending: { label: 'Pending', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-500' },
+}
+
+const getPaymentStatus = (status?: string, method?: string) => {
+  if (status) return status
+  if (method === 'card') return 'paid'
+  if (method === 'after-work') return 'after-work'
+  return 'pending'
+}
+
+const getPaymentMethodLabel = (method?: string) => {
+  if (method === 'card') return 'Card (Stripe)'
+  if (method === 'after-work') return 'After Work (Onsite)'
+  return 'Not set'
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending
   const Icon = cfg.icon
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${cfg.color}`}>
       <Icon className="h-3 w-3" />
+      {cfg.label}
+    </span>
+  )
+}
+
+function PaymentBadge({ status, method }: { status?: string; method?: string }) {
+  const resolved = getPaymentStatus(status, method) as keyof typeof PAYMENT_STATUS_CONFIG
+  const cfg = PAYMENT_STATUS_CONFIG[resolved] ?? PAYMENT_STATUS_CONFIG.pending
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${cfg.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
   )
@@ -188,6 +222,15 @@ export default function AdminBookings() {
       const data: Booking[] = snap.docs.map(d => {
         const r = d.data()
         const svc = getServiceInfo(r.service || r.serviceName || '', services)
+        const paymentMethod = r.paymentMethod || r.payment_method || ''
+        const paymentStatus = r.paymentStatus || r.payment_status || ''
+        const schedule = Array.isArray(r.schedule)
+          ? r.schedule
+          : Array.isArray(r.selectedSchedule)
+            ? r.selectedSchedule
+            : []
+        const duration = Number(r.serviceDuration || r.duration || svc.duration || 2)
+        const estimatedPrice = Number(r.totalAmount ?? r.estimatedPrice ?? svc.price ?? 0)
         return {
           id: d.id,
           bookingId: r.bookingId || `BK${d.id.slice(-6).toUpperCase()}`,
@@ -197,12 +240,16 @@ export default function AdminBookings() {
           clientAddress: r.area || r.clientAddress || 'N/A',
           serviceName: svc.name,
           serviceId: r.serviceId || svc.id,
-          bookingDate: r.date || r.bookingDate || new Date().toISOString().split('T')[0],
-          bookingTime: r.time || r.bookingTime || '09:00',
+          bookingDate: r.date || r.bookingDate || schedule[0]?.date || new Date().toISOString().split('T')[0],
+          bookingTime: r.time || r.bookingTime || schedule[0]?.time || '09:00',
           bookingNumber: r.bookingId || `BK${d.id.slice(-6).toUpperCase()}`,
-          duration: svc.duration,
-          estimatedPrice: svc.price,
+          duration,
+          estimatedPrice,
           status: (r.status || 'pending') as Booking['status'],
+          paymentMethod,
+          paymentStatus,
+          materialsOption: r.materialsOption || r.materialOption || '',
+          schedule,
           notes: r.message || r.notes || '',
           propertyType: r.propertyType || '',
           frequency: r.frequency || 'once',
@@ -676,6 +723,9 @@ export default function AdminBookings() {
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Price</p>
                           <p className="text-sm font-black text-emerald-600">AED {b.estimatedPrice.toLocaleString()}</p>
+                          <div className="mt-1">
+                            <PaymentBadge status={b.paymentStatus} method={b.paymentMethod} />
+                          </div>
                           {b.clientAddress && (
                             <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-30">{b.clientAddress}</p>
                           )}
@@ -777,6 +827,15 @@ export default function AdminBookings() {
                     <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> AED {editFormData.estimatedPrice.toLocaleString()}</span>
                     {editFormData.frequency && <span className="capitalize">{editFormData.frequency}</span>}
                   </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-3 text-xs font-semibold text-muted-foreground">
+                    <PaymentBadge status={editFormData.paymentStatus} method={editFormData.paymentMethod} />
+                    <span>{getPaymentMethodLabel(editFormData.paymentMethod)}</span>
+                    {editFormData.materialsOption && (
+                      <span className="capitalize">
+                        {editFormData.materialsOption === 'with-materials' ? 'With materials' : 'Without materials'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Assigned staff */}
@@ -859,6 +918,18 @@ export default function AdminBookings() {
                         <p className="text-[11px] font-semibold text-muted-foreground mb-1">Duration</p>
                         <p className="text-sm font-bold">{editFormData.duration}h</p>
                       </div>
+                      {!isEditingDetails && editFormData.schedule && editFormData.schedule.length > 1 && (
+                        <div className="bg-muted/40 rounded-lg p-3 col-span-3">
+                          <p className="text-[11px] font-semibold text-muted-foreground mb-2">Additional Days</p>
+                          <div className="flex flex-wrap gap-2">
+                            {editFormData.schedule.map((slot) => (
+                              <span key={`${slot.date}-${slot.time}`} className="px-2 py-1 bg-background border border-border rounded-full text-xs font-semibold">
+                                {slot.date} {slot.time}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

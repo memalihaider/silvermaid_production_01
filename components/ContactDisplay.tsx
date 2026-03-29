@@ -9,6 +9,8 @@ interface ContactDisplayProps {
   className?: string;
 }
 
+const normalizeWhatsAppNumber = (value: string) => value.replace(/[^\d]/g, '');
+
 export function ContactPhone({ className = '' }: { className?: string }) {
   const { contact } = useContactInfo();
   return (
@@ -57,6 +59,18 @@ export function ContactEmailLink(props: ContactDisplayProps) {
       className={className}
     >
       {contact.email}
+    </a>
+  );
+}
+
+export function ContactWhatsAppLink({ className = '' }: { className?: string }) {
+  const { contact } = useContactInfo();
+  const number = normalizeWhatsAppNumber(contact.whatsapp || contact.phone);
+  const href = number ? `https://wa.me/${number}` : '#';
+
+  return (
+    <a href={href} className={className} target="_blank" rel="noopener noreferrer">
+      {contact.whatsapp || contact.phone}
     </a>
   );
 }

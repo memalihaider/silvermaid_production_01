@@ -23,6 +23,7 @@ import {
   UserCheck,
   Ruler,
   Map,
+  MapPin,
   DollarSign,
   Eye,
   CheckCircle,
@@ -32,6 +33,7 @@ import {
   Zap,
   Wrench,
   Navigation,
+  Phone,
   AlertTriangle,
   Zap as Zap2,
   Star,
@@ -50,8 +52,10 @@ import {
   Inbox,
   Bot,
   MessageCircle,
+  Mail,
 } from "lucide-react";
 import { getSession, logout } from "@/lib/auth";
+import { ContactProvider, useContactInfo } from "@/contexts/ContactContext";
 import {
   ADMIN_ALLOWED_PAGES,
   ADMIN_CRUD_PERMISSIONS,
@@ -145,6 +149,40 @@ const formatTime = (timestamp: any): string => {
   } catch (error) {
     return "Recently";
   }
+};
+
+const AdminContactFooter = () => {
+  const { contact } = useContactInfo();
+  const whatsappNumber = (contact.whatsapp || contact.phone).replace(/[^\d]/g, "");
+  const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "#";
+
+  return (
+    <footer className="border-t bg-card px-6 py-4 text-xs text-muted-foreground">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="font-semibold text-foreground">{contact.company}</span>
+          <span className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            {contact.address}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 hover:text-foreground">
+            <Phone className="h-3.5 w-3.5" />
+            {contact.phone}
+          </a>
+          <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 hover:text-foreground">
+            <Mail className="h-3.5 w-3.5" />
+            {contact.email}
+          </a>
+          <a href={whatsappHref} className="flex items-center gap-1.5 hover:text-foreground" target="_blank" rel="noopener noreferrer">
+            <MessageCircle className="h-3.5 w-3.5" />
+            {contact.whatsapp || contact.phone}
+          </a>
+        </div>
+      </div>
+    </footer>
+  );
 };
 
 // ✅ FIXED: Added 'Employee Chat' key with correct icon and href
@@ -722,7 +760,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <ContactProvider>
+      <div className="min-h-screen bg-background text-foreground flex">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 lg:hidden z-30"
@@ -902,7 +941,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {sidebarOpen && (
             <div className="bg-muted/50 rounded-xl p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#0b7a8e] to-[#086878] flex items-center justify-center text-white font-semibold shrink-0">
+                <div className="h-10 w-10 rounded-full bg-linear-to-br from-[#0b7a8e] to-[#086878] flex items-center justify-center text-white font-semibold shrink-0">
                   {userSession.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1222,7 +1261,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <main className="flex-1 p-6 overflow-y-auto bg-muted/20">
           <div className="w-full">{children}</div>
         </main>
+        <AdminContactFooter />
       </div>
     </div>
+    </ContactProvider>
   );
 }

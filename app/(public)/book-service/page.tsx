@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -22,6 +22,8 @@ import {
   PhoneCall,
   Users,
   Award,
+  CreditCard,
+  Wallet,
 } from "lucide-react";
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from '@/lib/firebase';
@@ -46,6 +48,36 @@ interface Employee {
   email?: string;
   phone?: string;
 }
+
+interface ScheduleEntry {
+  date: string;
+  time: string;
+}
+
+interface BookingFormData {
+  name: string;
+  email: string;
+  phone: string;
+  serviceId: string;
+  serviceName: string;
+  propertyType: string;
+  area: string;
+  frequency: string;
+  serviceDuration: string;
+  numberOfMaids: string;
+  date: string;
+  time: string;
+  message: string;
+  staffId: string;
+  staffName: string;
+  materialsOption: "with-materials" | "without-materials";
+  paymentMethod: "after-work" | "card" | "";
+  schedule: ScheduleEntry[];
+}
+
+const HOURLY_RATE_AED = 35;
+const MAX_SCHEDULE_DAYS = 3;
+const AVAILABLE_DAYS_COUNT = 7;
 
 // Save booking to Firebase function
 const saveBookingToFirebase = async (bookingData: any) => {
@@ -73,6 +105,13 @@ const saveBookingToFirebase = async (bookingData: any) => {
       serviceDuration: bookingData.serviceDuration || "2",
       numberOfMaids: Number(bookingData.numberOfMaids) || 1,
       frequency: bookingData.frequency || "once",
+      materialsOption: bookingData.materialsOption || "without-materials",
+      paymentMethod: bookingData.paymentMethod || "after-work",
+      paymentStatus: bookingData.paymentStatus || "after-work",
+      hourlyRate: bookingData.hourlyRate || HOURLY_RATE_AED,
+      totalAmount: bookingData.totalAmount || bookingData.estimatedPrice || 0,
+      estimatedPrice: bookingData.estimatedPrice || bookingData.totalAmount || 0,
+      schedule: bookingData.schedule || [],
       
       // Keep original fields for backward compatibility
       service: bookingData.serviceName || bookingData.service || "",
@@ -321,7 +360,8 @@ export default function BookService() {
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
-  const [formData, setFormData] = useState({
+  const [scheduleError, setScheduleError] = useState("");
+  const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
     phone: "",
@@ -337,6 +377,9 @@ export default function BookService() {
     message: "",
     staffId: "", // Store staff ID
     staffName: "", // Store staff name
+    materialsOption: "without-materials",
+    paymentMethod: "",
+    schedule: [],
   });
 
   // Fetch services and employees from Firebase on component mount
@@ -364,107 +407,208 @@ export default function BookService() {
     loadData();
   }, []);
 
-  const totalSteps = 3;
+  const totalSteps = 4;
+
+  const availableDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: AVAILABLE_DAYS_COUNT }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + index);
+      const iso = date.toISOString().split("T")[0];
+      const label = date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      return { date: iso, label };
+    });
+  }, []);
+
+  const serviceHours = Number(formData.serviceDuration || 0);
+  const totalAmount = useMemo(
+    () => Math.max(0, serviceHours * HOURLY_RATE_AED),
+    [serviceHours],
+  );
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
 
-  if (step < totalSteps) {
-    nextStep();
-  } else {
-    try {
-      // Validate required fields
-      if (
-        !formData.name ||
-        !formData.email ||
-        !formData.phone ||
-        !formData.serviceId ||
-        !formData.date
-      ) {
-        alert("Please fill all required fields");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const validateStep = () => {
+      if (step === 2 && !formData.serviceId) {
+        alert("Please select a service");
+        return false;
+      }
+
+      if (step === 3) {
+        if (formData.schedule.length === 0) {
+          setScheduleError("Select up to 3 days for the service.");
+          return false;
+        }
+
+        const missingTime = formData.schedule.find((slot) => !slot.time);
+        if (missingTime) {
+          setScheduleError("Please select a time for each chosen day.");
+          return false;
+        }
+
+        setScheduleError("");
+      }
+
+      if (step === 4 && !formData.paymentMethod) {
+        alert("Please choose a payment method");
+        return false;
+      }
+
+      return true;
+    };
+
+    if (step < totalSteps) {
+      if (!validateStep()) {
         return;
       }
+      nextStep();
+    } else {
+      try {
+        const primarySchedule = formData.schedule[0];
+        const bookingDate = primarySchedule?.date || formData.date;
+        const bookingTime = primarySchedule?.time || formData.time;
+        const paymentStatus = formData.paymentMethod === "card" ? "pending" : "after-work";
+        const bookingPayload = {
+          ...formData,
+          date: bookingDate,
+          time: bookingTime,
+          paymentStatus,
+          totalAmount,
+          estimatedPrice: totalAmount,
+          hourlyRate: HOURLY_RATE_AED,
+        };
 
-      // Save to Firebase
-      const result = await saveBookingToFirebase(formData);
-
-      if (result.success) {
-        // ============= 📧 EMAIL SEND KARO - FIXED VERSION =============
-        try {
-          console.log("📧 Sending email notification...");
-          
-          // DEBUG: Check values before sending
-          console.log("📧 formData.staffName:", formData.staffName);
-          console.log("📧 formData.staffId:", formData.staffId);
-          console.log("📧 formData.serviceName:", formData.serviceName);
-          
-          const emailResponse = await fetch('/api/send-booking-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clientName: formData.name,
-              clientEmail: formData.email,
-              clientPhone: formData.phone,
-              serviceName: formData.serviceName,
-              bookingDate: formData.date,
-              bookingTime: formData.time,
-              message: formData.message,
-              bookingId: result.bookingRef,
-              propertyType: formData.propertyType,
-              area: formData.area,
-              frequency: formData.frequency,
-              // 👇 IMPORTANT - STAFF FIELDS
-              staffName: formData.staffName,  // YEH NULL NAHI HONA CHAHIYE
-              staffId: formData.staffId,      // YEH BHI BHEJO
-              source: 'book-service-page',
-            }),
-          });
-          
-          const emailResult = await emailResponse.json();
-          
-          if (emailResult.success) {
-            console.log("✅ Email sent successfully!");
-            console.log("📧 Email response staffName:", emailResult.staffName);
-          } else {
-            console.error("❌ Email failed:", emailResult.error);
-          }
-        } catch (emailError) {
-          console.error("❌ Email error:", emailError);
+        // Validate required fields
+        if (
+          !formData.name ||
+          !formData.email ||
+          !formData.phone ||
+          !formData.serviceId ||
+          !bookingDate ||
+          !formData.paymentMethod
+        ) {
+          alert("Please fill all required fields");
+          return;
         }
-        // =============================================================
 
-        // Store latest booking details for popup
-        setLatestBooking(formData);
-        setShowSuccessPopup(true);
+        // Save to Firebase
+        const result = await saveBookingToFirebase(bookingPayload);
 
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          serviceId: "",
-          serviceName: "",
-          propertyType: "apartment",
-          area: "",
-          frequency: "once",
-          serviceDuration: "2",
-          numberOfMaids: "1",
-          date: "",
-          time: "",
-          message: "",
-          staffId: "",
-          staffName: "",
-        });
-        setStep(1);
+        if (result.success) {
+          if (formData.paymentMethod === "card") {
+            try {
+              const sessionResponse = await fetch(
+                "/api/stripe/create-checkout-session",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ bookingDocId: result.bookingId }),
+                },
+              );
+
+              const sessionData = await sessionResponse.json().catch(() => ({}));
+              if (!sessionResponse.ok) {
+                throw new Error(sessionData.error || "Failed to start payment.");
+              }
+
+              if (sessionData?.url) {
+                window.location.assign(sessionData.url);
+                return;
+              }
+
+              throw new Error("Stripe session URL missing.");
+            } catch (sessionError: any) {
+              console.error("Stripe checkout error:", sessionError);
+              alert("Unable to start Stripe checkout. Please try again.");
+              return;
+            }
+          }
+
+          // ============= 📧 EMAIL SEND KARO - FIXED VERSION =============
+          try {
+            console.log("📧 Sending email notification...");
+            
+            // DEBUG: Check values before sending
+            console.log("📧 formData.staffName:", formData.staffName);
+            console.log("📧 formData.staffId:", formData.staffId);
+            console.log("📧 formData.serviceName:", formData.serviceName);
+            
+            const emailResponse = await fetch('/api/send-booking-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientName: formData.name,
+                clientEmail: formData.email,
+                clientPhone: formData.phone,
+                serviceName: formData.serviceName,
+                bookingDate,
+                bookingTime,
+                message: formData.message,
+                bookingId: result.bookingRef,
+                propertyType: formData.propertyType,
+                area: formData.area,
+                frequency: formData.frequency,
+                // 👇 IMPORTANT - STAFF FIELDS
+                staffName: formData.staffName,  // YEH NULL NAHI HONA CHAHIYE
+                staffId: formData.staffId,      // YEH BHI BHEJO
+                source: 'book-service-page',
+              }),
+            });
+            
+            const emailResult = await emailResponse.json();
+            
+            if (emailResult.success) {
+              console.log("✅ Email sent successfully!");
+              console.log("📧 Email response staffName:", emailResult.staffName);
+            } else {
+              console.error("❌ Email failed:", emailResult.error);
+            }
+          } catch (emailError) {
+            console.error("❌ Email error:", emailError);
+          }
+          // =============================================================
+
+          // Store latest booking details for popup
+          setLatestBooking(bookingPayload);
+          setShowSuccessPopup(true);
+
+          // Reset form
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            serviceId: "",
+            serviceName: "",
+            propertyType: "apartment",
+            area: "",
+            frequency: "once",
+            serviceDuration: "2",
+            numberOfMaids: "1",
+            date: "",
+            time: "",
+            message: "",
+            staffId: "",
+            staffName: "",
+            materialsOption: "without-materials",
+            paymentMethod: "",
+            schedule: [],
+          });
+          setStep(1);
+        }
+      } catch (error: any) {
+        console.error("Booking error:", error);
+        alert("Booking failed. Please try again.");
       }
-    } catch (error: any) {
-      console.error("Booking error:", error);
-      alert("Booking failed. Please try again.");
     }
-  }
-};
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -498,6 +642,51 @@ const handleSubmit = async (e: React.FormEvent) => {
         [name]: value,
       }));
     }
+  };
+
+  const normalizeSchedule = (schedule: ScheduleEntry[]) =>
+    [...schedule].sort((a, b) => a.date.localeCompare(b.date));
+
+  const handleToggleScheduleDate = (date: string) => {
+    setFormData((prev) => {
+      const exists = prev.schedule.find((slot) => slot.date === date);
+      if (!exists && prev.schedule.length >= MAX_SCHEDULE_DAYS) {
+        setScheduleError(`You can select up to ${MAX_SCHEDULE_DAYS} days.`);
+        return prev;
+      }
+
+      setScheduleError("");
+      const nextSchedule = normalizeSchedule(
+        exists
+          ? prev.schedule.filter((slot) => slot.date !== date)
+          : [...prev.schedule, { date, time: "" }],
+      );
+      const primary = nextSchedule[0];
+      return {
+        ...prev,
+        schedule: nextSchedule,
+        date: primary?.date || "",
+        time: primary?.time || "",
+      };
+    });
+  };
+
+  const handleScheduleTimeChange = (date: string, time: string) => {
+    setScheduleError("");
+    setFormData((prev) => {
+      const nextSchedule = normalizeSchedule(
+        prev.schedule.map((slot) =>
+          slot.date === date ? { ...slot, time } : slot,
+        ),
+      );
+      const primary = nextSchedule[0];
+      return {
+        ...prev,
+        schedule: nextSchedule,
+        date: primary?.date || "",
+        time: primary?.time || "",
+      };
+    });
   };
 
   // Group Firebase services by category
@@ -582,10 +771,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                       Booking Steps
                     </h3>
                     <div className="space-y-8">
-                      {[
+                        {[
                         { s: 1, label: "CONTACT INFO", icon: User },
                         { s: 2, label: "SERVICE & STAFF", icon: ClipboardList },
-                        { s: 3, label: "DATETIME", icon: Calendar },
+                        { s: 3, label: "AVAILABILITY", icon: Calendar },
+                        { s: 4, label: "PAYMENT", icon: CreditCard },
                       ].map((item, idx) => (
                         <div
                           key={idx}
@@ -766,7 +956,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                   <optgroup key={`firebase-${category}`} label={category}>
                                     {services.map((service) => (
                                       <option key={`firebase-${service.id}`} value={service.id}>
-                                        {service.name} - AED {service.price}
+                                        {service.name}
                                       </option>
                                     ))}
                                   </optgroup>
@@ -952,6 +1142,21 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
+                              Materials Option
+                            </label>
+                            <select
+                              name="materialsOption"
+                              value={formData.materialsOption}
+                              onChange={handleChange}
+                              className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
+                            >
+                              <option value="without-materials">Without Materials</option>
+                              <option value="with-materials">With Materials</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
                               General Area / Location
                             </label>
                             <div className="relative group">
@@ -964,6 +1169,21 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 placeholder="Dubai Marina, Downtown, etc."
                                 className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
                               />
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                            <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                              <span>Hourly Rate</span>
+                              <span>AED {HOURLY_RATE_AED}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm font-bold text-slate-600 mt-2">
+                              <span>Selected Hours</span>
+                              <span>{serviceHours || 0} hrs</span>
+                            </div>
+                            <div className="flex items-center justify-between text-base font-black text-slate-900 mt-3 pt-3 border-t border-slate-200">
+                              <span>Total</span>
+                              <span>AED {totalAmount.toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -988,38 +1208,87 @@ const handleSubmit = async (e: React.FormEvent) => {
                         </div>
 
                         <div className="grid gap-6">
-                          <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
                               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Target Date *
+                                Select Up To {MAX_SCHEDULE_DAYS} Days (Next {AVAILABLE_DAYS_COUNT})
                               </label>
-                              <div className="relative group">
-                                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none" />
-                                <input
-                                  type="date"
-                                  name="date"
-                                  value={formData.date}
-                                  onChange={handleChange}
-                                  required
-                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                                />
-                              </div>
+                              <span className="text-[11px] font-bold text-slate-500">
+                                {formData.schedule.length}/{MAX_SCHEDULE_DAYS} selected
+                              </span>
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Preferred Time
-                              </label>
-                              <div className="relative group">
-                                <Clock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none" />
-                                <input
-                                  type="time"
-                                  name="time"
-                                  value={formData.time}
-                                  onChange={handleChange}
-                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                                />
-                              </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {availableDays.map((day) => {
+                                const selected = formData.schedule.find(
+                                  (slot) => slot.date === day.date,
+                                );
+                                return (
+                                  <div
+                                    key={day.date}
+                                    className={`rounded-2xl border p-4 transition-all ${
+                                      selected
+                                        ? "border-primary/40 bg-primary/5"
+                                        : "border-slate-100 bg-slate-50"
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleScheduleDate(day.date)}
+                                      className="w-full flex items-center justify-between gap-3"
+                                    >
+                                      <div className="text-left">
+                                        <p className="text-sm font-black text-slate-900">
+                                          {day.label}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500 font-semibold">
+                                          {selected ? "Selected" : "Tap to select"}
+                                        </p>
+                                      </div>
+                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${
+                                        selected
+                                          ? "bg-primary text-white"
+                                          : "bg-white text-slate-300"
+                                      }`}>
+                                        {selected ? (
+                                          <CheckCircle2 className="h-4 w-4" />
+                                        ) : (
+                                          <Calendar className="h-4 w-4" />
+                                        )}
+                                      </div>
+                                    </button>
+
+                                    {selected && (
+                                      <div className="mt-3">
+                                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
+                                          Time
+                                        </label>
+                                        <div className="relative group mt-2">
+                                          <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none" />
+                                          <input
+                                            type="time"
+                                            value={selected.time}
+                                            onChange={(e) =>
+                                              handleScheduleTimeChange(
+                                                day.date,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-bold text-sm shadow-inner"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
+
+                            {scheduleError && (
+                              <p className="text-xs text-rose-500 font-semibold">
+                                {scheduleError}
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-2">
@@ -1033,6 +1302,106 @@ const handleSubmit = async (e: React.FormEvent) => {
                               placeholder="Any specific instructions or priorities for our team?"
                               className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner resize-none min-h-[120px]"
                             />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {step === 4 && (
+                      <motion.div
+                        key="step4"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="space-y-8 flex-1"
+                      >
+                        <div className="space-y-2">
+                          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
+                            Payment
+                          </h2>
+                          <p className="text-slate-400 font-bold italic">
+                            Choose how you want to pay and review the total.
+                          </p>
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                            <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                              <span>Hourly Rate</span>
+                              <span>AED {HOURLY_RATE_AED}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm font-bold text-slate-600 mt-2">
+                              <span>Selected Hours</span>
+                              <span>{serviceHours || 0} hrs</span>
+                            </div>
+                            <div className="flex items-center justify-between text-base font-black text-slate-900 mt-4 pt-4 border-t border-slate-200">
+                              <span>Total Due</span>
+                              <span>AED {totalAmount.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  paymentMethod: "after-work",
+                                }))
+                              }
+                              className={`w-full text-left rounded-3xl border p-5 transition-all ${
+                                formData.paymentMethod === "after-work"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-slate-100 bg-white"
+                              }`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+                                  formData.paymentMethod === "after-work"
+                                    ? "bg-primary text-white"
+                                    : "bg-slate-100 text-slate-400"
+                                }`}>
+                                  <Wallet className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-slate-900">After Work (Onsite)</p>
+                                  <p className="text-xs text-slate-500 font-semibold">
+                                    Pay after the service is completed.
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  paymentMethod: "card",
+                                }))
+                              }
+                              className={`w-full text-left rounded-3xl border p-5 transition-all ${
+                                formData.paymentMethod === "card"
+                                  ? "border-primary bg-primary/5"
+                                  : "border-slate-100 bg-white"
+                              }`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+                                  formData.paymentMethod === "card"
+                                    ? "bg-primary text-white"
+                                    : "bg-slate-100 text-slate-400"
+                                }`}>
+                                  <CreditCard className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-slate-900">Card Payment (Stripe)</p>
+                                  <p className="text-xs text-slate-500 font-semibold">
+                                    Secure card payment and instant confirmation.
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
                           </div>
                         </div>
                       </motion.div>

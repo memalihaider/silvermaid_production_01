@@ -24,7 +24,8 @@ import {
   AlertCircle,
   ArrowUp,
   ArrowDown,
-  Layers
+  Layers,
+  FileText
 } from 'lucide-react';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from 'date-fns';
 import {
@@ -113,12 +114,20 @@ interface Booking {
   email: string;
   phone: string;
   service: string;
+  serviceName?: string;
   date: string;
   time: string;
   status: string;
   area: string;
   propertyType: string;
   frequency: string;
+  staffName?: string;
+  totalAmount?: number;
+  estimatedPrice?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  materialsOption?: string;
+  schedule?: { date: string; time: string }[];
   message: string;
   createdAt: string;
   updatedAt: string;
@@ -246,10 +255,42 @@ export default function FinanceAnalyticsPage() {
     try {
       const bookingsRef = collection(db, 'bookings');
       const snapshot = await getDocs(bookingsRef);
-      const bookingsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Booking[];
+      const bookingsData = snapshot.docs.map(doc => {
+        const data = doc.data() as any;
+        const schedule = Array.isArray(data.schedule) ? data.schedule : [];
+        const date = data.date || data.bookingDate || schedule[0]?.date || '';
+        const time = data.time || data.bookingTime || schedule[0]?.time || '';
+        const serviceName = data.serviceName || data.service || '';
+        const totalAmount = Number(data.totalAmount ?? data.estimatedPrice ?? 0);
+        const paymentMethod = data.paymentMethod || data.payment_method || '';
+        const paymentStatus = data.paymentStatus || data.payment_status || '';
+
+        return {
+          id: doc.id,
+          bookingId: data.bookingId || `BK${doc.id.slice(-6).toUpperCase()}`,
+          name: data.name || data.clientName || '',
+          email: data.email || data.clientEmail || '',
+          phone: data.phone || data.clientPhone || '',
+          service: serviceName,
+          serviceName,
+          date,
+          time,
+          status: data.status || 'pending',
+          area: data.area || data.clientAddress || '',
+          propertyType: data.propertyType || '',
+          frequency: data.frequency || 'once',
+          staffName: data.staffName || data.assignedStaffName || data.assignedStaff || '',
+          totalAmount,
+          estimatedPrice: Number(data.estimatedPrice ?? totalAmount),
+          paymentMethod,
+          paymentStatus,
+          materialsOption: data.materialsOption || data.materialOption || '',
+          schedule,
+          message: data.message || data.notes || '',
+          createdAt: data.createdAt || '',
+          updatedAt: data.updatedAt || '',
+        } as Booking;
+      });
       setBookings(bookingsData);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -274,6 +315,88 @@ export default function FinanceAnalyticsPage() {
   const filteredServices = useMemo(() => filterByDateRange(services), [services, dateRange]);
   const filteredProducts = useMemo(() => filterByDateRange(products), [products, dateRange]);
   const filteredBookings = useMemo(() => filterByDateRange(bookings), [bookings, dateRange]);
+
+  const getBookingAmount = (booking: Booking) =>
+    booking.totalAmount ?? booking.estimatedPrice ?? 0;
+
+  const resolvePaymentStatus = (booking: Booking) => {
+    if (booking.paymentStatus) return booking.paymentStatus;
+    if (booking.paymentMethod === 'card') return 'paid';
+    if (booking.paymentMethod === 'after-work') return 'after-work';
+    return 'pending';
+  };
+
+  const bookingPaymentBreakdown = useMemo(() => {
+    return filteredBookings.reduce(
+      (acc, booking) => {
+        const status = resolvePaymentStatus(booking);
+        const amount = getBookingAmount(booking);
+
+        if (status === 'paid') {
+          acc.paid += 1;
+          acc.paidAmount += amount;
+        } else if (status === 'after-work') {
+          acc.afterWork += 1;
+          acc.afterWorkAmount += amount;
+        } else {
+          acc.pending += 1;
+          acc.pendingAmount += amount;
+        }
+
+        return acc;
+      },
+      {
+        paid: 0,
+        afterWork: 0,
+        pending: 0,
+        paidAmount: 0,
+        afterWorkAmount: 0,
+        pendingAmount: 0,
+      },
+    );
+  }, [filteredBookings]);
+
+  const materialsUsage = useMemo(() => {
+    return filteredBookings.reduce(
+      (acc, booking) => {
+        if (booking.materialsOption === 'with-materials') {
+          acc.withMaterials += 1;
+        } else if (booking.materialsOption === 'without-materials') {
+          acc.withoutMaterials += 1;
+        } else {
+          acc.unknown += 1;
+        }
+        return acc;
+      },
+      {
+        withMaterials: 0,
+        withoutMaterials: 0,
+        unknown: 0,
+      },
+    );
+  }, [filteredBookings]);
+
+  const inventoryMetrics = useMemo(() => {
+    const totalStock = filteredProducts.reduce((sum, product) => sum + (product.stock || 0), 0);
+    const totalCostValue = filteredProducts.reduce(
+      (sum, product) => sum + (product.cost || 0) * (product.stock || 0),
+      0,
+    );
+    const totalRetailValue = filteredProducts.reduce(
+      (sum, product) => sum + (product.price || 0) * (product.stock || 0),
+      0,
+    );
+    const lowStock = filteredProducts.filter(
+      (product) => (product.stock || 0) <= (product.minStock || 0),
+    ).length;
+
+    return {
+      totalStock,
+      totalCostValue,
+      totalRetailValue,
+      lowStock,
+    };
+  }, [filteredProducts]);
 
   // ============================================
   // THIS WEEK DATA
@@ -332,7 +455,11 @@ export default function FinanceAnalyticsPage() {
     bookings: {
       count: thisWeekBookings.length,
       pending: thisWeekBookings.filter(b => b.status === 'pending').length,
-      completed: thisWeekBookings.filter(b => b.status === 'completed').length
+      completed: thisWeekBookings.filter(b => b.status === 'completed').length,
+      revenue: thisWeekBookings.reduce((sum, booking) => sum + getBookingAmount(booking), 0),
+      paid: thisWeekBookings.filter(b => resolvePaymentStatus(b) === 'paid').length,
+      afterWork: thisWeekBookings.filter(b => resolvePaymentStatus(b) === 'after-work').length,
+      pendingPayment: thisWeekBookings.filter(b => resolvePaymentStatus(b) === 'pending').length
     }
   }), [thisWeekJobs, thisWeekServices, thisWeekProducts, thisWeekBookings]);
 
@@ -363,6 +490,9 @@ export default function FinanceAnalyticsPage() {
     const totalBookings = filteredBookings.length;
     const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
     const completedBookings = filteredBookings.filter(b => b.status === 'completed').length;
+    const totalBookingRevenue = filteredBookings.reduce((sum, booking) => sum + getBookingAmount(booking), 0);
+    const paidBookingRevenue = bookingPaymentBreakdown.paidAmount;
+    const outstandingBookingRevenue = bookingPaymentBreakdown.afterWorkAmount + bookingPaymentBreakdown.pendingAmount;
 
     // Overall
     const totalRevenue = totalJobBudget + totalServiceRevenue + totalProductRevenue;
@@ -403,6 +533,9 @@ export default function FinanceAnalyticsPage() {
         pending: pendingBookings,
         completed: completedBookings,
         conversionRate: totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0,
+        revenue: totalBookingRevenue,
+        paidRevenue: paidBookingRevenue,
+        outstandingRevenue: outstandingBookingRevenue,
       },
       overall: {
         revenue: totalRevenue,
@@ -412,6 +545,42 @@ export default function FinanceAnalyticsPage() {
       },
     };
   }, [filteredJobs, filteredServices, filteredProducts, filteredBookings]);
+
+  const statementMetrics = useMemo(() => {
+    const revenue = {
+      jobs: financialMetrics.jobs.budget,
+      services: financialMetrics.services.revenue,
+      products: financialMetrics.products.revenue,
+      bookings: financialMetrics.bookings.revenue,
+    };
+    const totalRevenue = revenue.jobs + revenue.services + revenue.products + revenue.bookings;
+
+    const cost = {
+      jobs: financialMetrics.jobs.actualCost,
+      services: financialMetrics.services.cost,
+      products: financialMetrics.products.cost,
+    };
+    const totalCost = cost.jobs + cost.services + cost.products;
+    const profit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+    const cashflow = {
+      collected: bookingPaymentBreakdown.paidAmount,
+      afterWork: bookingPaymentBreakdown.afterWorkAmount,
+      pending: bookingPaymentBreakdown.pendingAmount,
+      outstanding: bookingPaymentBreakdown.afterWorkAmount + bookingPaymentBreakdown.pendingAmount,
+    };
+
+    return {
+      revenue,
+      totalRevenue,
+      cost,
+      totalCost,
+      profit,
+      profitMargin,
+      cashflow,
+    };
+  }, [financialMetrics, bookingPaymentBreakdown]);
 
   // ============================================
   // CHART DATA
@@ -506,6 +675,22 @@ export default function FinanceAnalyticsPage() {
     }));
   }, [filteredJobs]);
 
+  const bookingPaymentChart = useMemo(() => {
+    return [
+      { name: 'Paid', value: bookingPaymentBreakdown.paid, color: '#10b981' },
+      { name: 'After Work', value: bookingPaymentBreakdown.afterWork, color: '#f59e0b' },
+      { name: 'Pending', value: bookingPaymentBreakdown.pending, color: '#94a3b8' },
+    ].filter(item => item.value > 0);
+  }, [bookingPaymentBreakdown]);
+
+  const materialsUsageChart = useMemo(() => {
+    return [
+      { name: 'With Materials', value: materialsUsage.withMaterials, color: '#3b82f6' },
+      { name: 'Without Materials', value: materialsUsage.withoutMaterials, color: '#22c55e' },
+      { name: 'Unknown', value: materialsUsage.unknown, color: '#94a3b8' },
+    ].filter(item => item.value > 0);
+  }, [materialsUsage]);
+
   // Top performing services
   const topServices = useMemo(() => {
     return [...filteredServices]
@@ -537,6 +722,9 @@ export default function FinanceAnalyticsPage() {
       ['Total Cost', `AED ${financialMetrics.overall.cost.toLocaleString()}`],
       ['Total Profit', `AED ${financialMetrics.overall.profit.toLocaleString()}`],
       ['Profit Margin', `${financialMetrics.overall.profitMargin.toFixed(2)}%`],
+      ['Bookings Revenue (Gross)', `AED ${financialMetrics.bookings.revenue.toLocaleString()}`],
+      ['Bookings Paid (Stripe)', `AED ${financialMetrics.bookings.paidRevenue.toLocaleString()}`],
+      ['Bookings Outstanding', `AED ${financialMetrics.bookings.outstandingRevenue.toLocaleString()}`],
       [],
       ['JOBS METRICS'],
       ['Metric', 'Value'],
@@ -574,9 +762,42 @@ export default function FinanceAnalyticsPage() {
       ['Pending Bookings', financialMetrics.bookings.pending],
       ['Completed Bookings', financialMetrics.bookings.completed],
       ['Conversion Rate', `${financialMetrics.bookings.conversionRate.toFixed(2)}%`],
+      ['Paid Bookings Amount', `AED ${financialMetrics.bookings.paidRevenue.toLocaleString()}`],
+      ['After Work + Pending Amount', `AED ${financialMetrics.bookings.outstandingRevenue.toLocaleString()}`],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    const statementSheetData = [
+      ['COMPLETE STATEMENT'],
+      [`Generated on: ${format(new Date(), 'dd MMM yyyy HH:mm')}`],
+      [`Date Range: ${format(dateRange.start, 'dd MMM yyyy')} - ${format(dateRange.end, 'dd MMM yyyy')}`],
+      [],
+      ['REVENUE'],
+      ['Jobs', `AED ${statementMetrics.revenue.jobs.toLocaleString()}`],
+      ['Services', `AED ${statementMetrics.revenue.services.toLocaleString()}`],
+      ['Products', `AED ${statementMetrics.revenue.products.toLocaleString()}`],
+      ['Bookings (Gross)', `AED ${statementMetrics.revenue.bookings.toLocaleString()}`],
+      ['Total Revenue', `AED ${statementMetrics.totalRevenue.toLocaleString()}`],
+      [],
+      ['COSTS'],
+      ['Jobs Cost', `AED ${statementMetrics.cost.jobs.toLocaleString()}`],
+      ['Services Cost', `AED ${statementMetrics.cost.services.toLocaleString()}`],
+      ['Products Cost', `AED ${statementMetrics.cost.products.toLocaleString()}`],
+      ['Total Cost', `AED ${statementMetrics.totalCost.toLocaleString()}`],
+      [],
+      ['PROFIT'],
+      ['Net Profit', `AED ${statementMetrics.profit.toLocaleString()}`],
+      ['Profit Margin', `${statementMetrics.profitMargin.toFixed(2)}%`],
+      [],
+      ['CASHFLOW (BOOKINGS)'],
+      ['Collected (Stripe)', `AED ${statementMetrics.cashflow.collected.toLocaleString()}`],
+      ['After Work', `AED ${statementMetrics.cashflow.afterWork.toLocaleString()}`],
+      ['Pending', `AED ${statementMetrics.cashflow.pending.toLocaleString()}`],
+      ['Outstanding', `AED ${statementMetrics.cashflow.outstanding.toLocaleString()}`],
+    ];
+    const statementSheet = XLSX.utils.aoa_to_sheet(statementSheetData);
+    XLSX.utils.book_append_sheet(wb, statementSheet, 'Statement');
 
     // Jobs Sheet
     if (filteredJobs.length > 0) {
@@ -651,21 +872,47 @@ export default function FinanceAnalyticsPage() {
       XLSX.utils.book_append_sheet(wb, productsSheet, 'Products');
     }
 
+    // Materials Summary Sheet
+    const materialsSheetData = [
+      ['MATERIALS SUMMARY'],
+      [`Generated on: ${format(new Date(), 'dd MMM yyyy HH:mm')}`],
+      [`Date Range: ${format(dateRange.start, 'dd MMM yyyy')} - ${format(dateRange.end, 'dd MMM yyyy')}`],
+      [],
+      ['INVENTORY'],
+      ['Total Stock', inventoryMetrics.totalStock],
+      ['Low Stock Items', inventoryMetrics.lowStock],
+      ['Cost Value (AED)', inventoryMetrics.totalCostValue.toLocaleString()],
+      ['Retail Value (AED)', inventoryMetrics.totalRetailValue.toLocaleString()],
+      [],
+      ['BOOKING MATERIALS USAGE'],
+      ['With Materials', materialsUsage.withMaterials],
+      ['Without Materials', materialsUsage.withoutMaterials],
+      ['Unknown', materialsUsage.unknown],
+    ];
+    const materialsSheet = XLSX.utils.aoa_to_sheet(materialsSheetData);
+    XLSX.utils.book_append_sheet(wb, materialsSheet, 'Materials');
+
     // Bookings Sheet
     if (filteredBookings.length > 0) {
       const bookingsSheetData = [
-        ['Booking ID', 'Customer', 'Email', 'Phone', 'Service', 'Date', 'Time', 'Status', 'Area', 'Property Type', 'Created At'],
+        ['Booking ID', 'Customer', 'Email', 'Phone', 'Service', 'Date', 'Time', 'Amount (AED)', 'Payment Status', 'Payment Method', 'Materials', 'Status', 'Area', 'Property Type', 'Staff', 'Schedule Days', 'Created At'],
         ...filteredBookings.map(booking => [
           booking.bookingId || booking.id,
           booking.name || '',
           booking.email || '',
           booking.phone || '',
-          booking.service || '',
+          booking.serviceName || booking.service || '',
           booking.date || '',
           booking.time || '',
+          getBookingAmount(booking),
+          resolvePaymentStatus(booking),
+          booking.paymentMethod || '',
+          booking.materialsOption || 'unknown',
           booking.status || '',
           booking.area || '',
           booking.propertyType || '',
+          booking.staffName || '',
+          booking.schedule?.length || 0,
           booking.createdAt ? format(new Date(booking.createdAt), 'dd/MM/yyyy') : '',
         ])
       ];
@@ -842,7 +1089,7 @@ export default function FinanceAnalyticsPage() {
         <div className="p-6 max-w-7xl mx-auto space-y-6">
           {/* THIS WEEK SECTION */}
           <Card className="border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-600" />
                 <h2 className="text-lg font-semibold text-gray-900">This Week's Activity</h2>
@@ -947,12 +1194,20 @@ export default function FinanceAnalyticsPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Revenue</span>
+                      <span className="font-medium text-gray-900">AED {thisWeekMetrics.bookings.revenue.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Completed</span>
                       <span className="font-medium text-green-600">{thisWeekMetrics.bookings.completed}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Pending</span>
                       <span className="font-medium text-amber-600">{thisWeekMetrics.bookings.pending}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Paid / After Work</span>
+                      <span>{thisWeekMetrics.bookings.paid} / {thisWeekMetrics.bookings.afterWork}</span>
                     </div>
                   </div>
                 </div>
@@ -962,7 +1217,7 @@ export default function FinanceAnalyticsPage() {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-0 shadow-lg">
+            <Card className="bg-linear-to-br from-blue-600 to-blue-800 border-0 shadow-lg">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <DollarSign className="w-8 h-8 text-blue-200" />
@@ -972,16 +1227,16 @@ export default function FinanceAnalyticsPage() {
                 </div>
                 <p className="text-blue-200 text-sm font-medium">Total Revenue</p>
                 <p className="text-3xl font-bold text-white mt-2">
-                  AED {financialMetrics.overall.revenue.toLocaleString()}
+                  AED {statementMetrics.totalRevenue.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-2 mt-4 text-blue-200">
                   <TrendingUp className="w-4 h-4" />
-                  <span className="text-sm">Profit: AED {financialMetrics.overall.profit.toLocaleString()}</span>
+                  <span className="text-sm">Profit: AED {statementMetrics.profit.toLocaleString()}</span>
                 </div>
               </div>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-600 to-emerald-800 border-0 shadow-lg">
+            <Card className="bg-linear-to-br from-emerald-600 to-emerald-800 border-0 shadow-lg">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Briefcase className="w-8 h-8 text-emerald-200" />
@@ -1002,7 +1257,7 @@ export default function FinanceAnalyticsPage() {
               </div>
             </Card>
 
-            <Card className="bg-gradient-to-br from-amber-600 to-amber-800 border-0 shadow-lg">
+            <Card className="bg-linear-to-br from-amber-600 to-amber-800 border-0 shadow-lg">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Package className="w-8 h-8 text-amber-200" />
@@ -1025,7 +1280,7 @@ export default function FinanceAnalyticsPage() {
               </div>
             </Card>
 
-            <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-0 shadow-lg">
+            <Card className="bg-linear-to-br from-purple-600 to-purple-800 border-0 shadow-lg">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Users className="w-8 h-8 text-purple-200" />
@@ -1042,6 +1297,118 @@ export default function FinanceAnalyticsPage() {
                   <span className="text-xs px-2 py-1 bg-purple-700 rounded-full">
                     {financialMetrics.bookings.pending} pending
                   </span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Statement + Materials Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-white border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Complete Statement
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Revenue</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Jobs</span>
+                      <span className="font-medium">AED {statementMetrics.revenue.jobs.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Services</span>
+                      <span className="font-medium">AED {statementMetrics.revenue.services.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Products</span>
+                      <span className="font-medium">AED {statementMetrics.revenue.products.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Bookings</span>
+                      <span className="font-medium">AED {statementMetrics.revenue.bookings.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-gray-200 flex justify-between text-sm font-semibold">
+                    <span>Total Revenue</span>
+                    <span>AED {statementMetrics.totalRevenue.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cashflow</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Collected (Stripe)</span>
+                      <span className="font-medium text-green-600">AED {statementMetrics.cashflow.collected.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">After Work</span>
+                      <span className="font-medium text-amber-600">AED {statementMetrics.cashflow.afterWork.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Pending</span>
+                      <span className="font-medium text-gray-600">AED {statementMetrics.cashflow.pending.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-gray-200 flex justify-between text-sm font-semibold">
+                    <span>Outstanding</span>
+                    <span>AED {statementMetrics.cashflow.outstanding.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 pt-4 border-t border-gray-200 flex flex-wrap gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Total Cost</span>
+                  <span className="font-semibold">AED {statementMetrics.totalCost.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Net Profit</span>
+                  <span className={`font-semibold ${statementMetrics.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    AED {statementMetrics.profit.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Margin</span>
+                  <span className="font-semibold">{statementMetrics.profitMargin.toFixed(1)}%</span>
+                </div>
+                <span className="text-xs text-gray-400 ml-auto">Bookings are reported as gross revenue.</span>
+              </div>
+            </Card>
+
+            <Card className="bg-white border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-600" />
+                Materials Summary
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 font-semibold">Inventory Stock</p>
+                  <p className="text-xl font-bold text-gray-900 mt-2">{inventoryMetrics.totalStock}</p>
+                  <p className="text-xs text-gray-500">Low stock: {inventoryMetrics.lowStock}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 font-semibold">Inventory Value</p>
+                  <p className="text-xl font-bold text-gray-900 mt-2">AED {inventoryMetrics.totalCostValue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Retail: AED {inventoryMetrics.totalRetailValue.toLocaleString()}</p>
+                </div>
+                <div className="col-span-2 bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 font-semibold">Booking Materials Usage</p>
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">With Materials</p>
+                      <p className="text-lg font-bold text-blue-600">{materialsUsage.withMaterials}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Without</p>
+                      <p className="text-lg font-bold text-green-600">{materialsUsage.withoutMaterials}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Unknown</p>
+                      <p className="text-lg font-bold text-gray-500">{materialsUsage.unknown}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -1175,21 +1542,20 @@ export default function FinanceAnalyticsPage() {
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <RePieChart>
-                     <Pie
-            data={revenueByCategory}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={100}
-            paddingAngle={5}
-            dataKey="value"
-            // ✅ FIXED: Default value for percent
-            label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
-          >
-            {revenueByCategory.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
+                      <Pie
+                        data={jobStatusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {jobStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
                       <Tooltip
                         contentStyle={{ backgroundColor: 'white', borderColor: '#e5e7eb', color: '#111827' }}
                       />
@@ -1201,6 +1567,95 @@ export default function FinanceAnalyticsPage() {
                   <p className="text-gray-500">No job data for selected period</p>
                 </div>
               )}
+            </Card>
+          </div>
+
+          {/* Charts Row 3 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Booking Payment Status */}
+            <Card className="bg-white border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-600" />
+                Booking Payment Status
+              </h3>
+              {bookingPaymentChart.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                      <Pie
+                        data={bookingPaymentChart}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={95}
+                        paddingAngle={4}
+                        dataKey="value"
+                        label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {bookingPaymentChart.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'white', borderColor: '#e5e7eb', color: '#111827' }}
+                      />
+                      <Legend />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-72 flex items-center justify-center">
+                  <p className="text-gray-500">No booking payments for selected period</p>
+                </div>
+              )}
+              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Paid</p>
+                  <p className="font-semibold text-green-600">AED {bookingPaymentBreakdown.paidAmount.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">After Work</p>
+                  <p className="font-semibold text-amber-600">AED {bookingPaymentBreakdown.afterWorkAmount.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Pending</p>
+                  <p className="font-semibold text-gray-600">AED {bookingPaymentBreakdown.pendingAmount.toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Materials Usage */}
+            <Card className="bg-white border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-600" />
+                Materials Usage (Bookings)
+              </h3>
+              {materialsUsageChart.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={materialsUsageChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'white', borderColor: '#e5e7eb', color: '#111827' }}
+                      />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                        {materialsUsageChart.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-72 flex items-center justify-center">
+                  <p className="text-gray-500">No materials data for selected period</p>
+                </div>
+              )}
+              <div className="mt-4 text-sm text-gray-500">
+                Total bookings tracked: {filteredBookings.length}
+              </div>
             </Card>
           </div>
 
@@ -1392,6 +1847,31 @@ export default function FinanceAnalyticsPage() {
             {/* Services & Products Tab */}
             {activeTab === 'services' && (
               <div className="space-y-6">
+                <Card className="bg-white border-gray-200 p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-amber-600" />
+                    Materials Insights
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-xs uppercase text-gray-500 font-semibold">Inventory Value</p>
+                      <p className="text-xl font-bold text-gray-900 mt-2">AED {inventoryMetrics.totalCostValue.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Retail: AED {inventoryMetrics.totalRetailValue.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-xs uppercase text-gray-500 font-semibold">Stock Health</p>
+                      <p className="text-xl font-bold text-gray-900 mt-2">{inventoryMetrics.totalStock} units</p>
+                      <p className="text-xs text-gray-500">Low stock: {inventoryMetrics.lowStock}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-xs uppercase text-gray-500 font-semibold">Bookings Materials</p>
+                      <p className="text-sm text-gray-600 mt-2">With: {materialsUsage.withMaterials}</p>
+                      <p className="text-sm text-gray-600">Without: {materialsUsage.withoutMaterials}</p>
+                      <p className="text-sm text-gray-600">Unknown: {materialsUsage.unknown}</p>
+                    </div>
+                  </div>
+                </Card>
+
                 {/* Services */}
                 <Card className="bg-white border-gray-200 overflow-hidden shadow-sm">
                   <div className="px-6 py-4 border-b border-gray-200">
@@ -1520,11 +2000,13 @@ export default function FinanceAnalyticsPage() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Materials</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
                       </tr>
                     </thead>
@@ -1537,11 +2019,35 @@ export default function FinanceAnalyticsPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <p className="text-gray-900">{booking.name}</p>
                             <p className="text-xs text-gray-500">{booking.email}</p>
+                            <p className="text-xs text-gray-500">{booking.phone}</p>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">{booking.phone}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">{booking.service}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">{booking.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">{booking.time}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <p className="text-gray-900 font-medium">{booking.serviceName || booking.service}</p>
+                            <p className="text-xs text-gray-500 capitalize">{booking.frequency || 'once'}</p>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <p className="text-gray-900">{booking.date || '-'}</p>
+                            <p className="text-xs text-gray-500">{booking.time || '-'}</p>
+                            {booking.schedule && booking.schedule.length > 1 && (
+                              <p className="text-xs text-gray-500">+{booking.schedule.length - 1} more</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900">
+                            AED {getBookingAmount(booking).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-xs px-2 py-1 rounded-full mr-2 ${
+                              resolvePaymentStatus(booking) === 'paid' ? 'bg-green-100 text-green-700' :
+                              resolvePaymentStatus(booking) === 'after-work' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {resolvePaymentStatus(booking)}
+                            </span>
+                            <p className="text-xs text-gray-500 mt-1">{booking.paymentMethod || 'n/a'}</p>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700 capitalize">
+                            {booking.materialsOption || 'unknown'}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`text-xs px-2 py-1 rounded-full ${
                               booking.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -1551,6 +2057,9 @@ export default function FinanceAnalyticsPage() {
                             }`}>
                               {booking.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            {booking.staffName || '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-700">{booking.area}</td>
                         </tr>
