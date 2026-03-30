@@ -432,9 +432,9 @@ export default function QuotationPreview() {
                     <div className={`text-xs space-y-1 ${
                       selectedTemplate === 'modern' ? 'text-slate-400' : 'text-slate-500'
                     }`}>
-                      <p>📧 info@silvermaid.ae</p>
-                      <p>📱 +971-50-123-4567</p>
-                      <p>🏢 Dubai, UAE</p>
+                      <p>📧 Info@silvermaidsdubai.com</p>
+                      <p>📱 +96105 888 44 151</p>
+                      <p>🏢 Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai</p>
                       <p>🌐 www.silvermaid.ae</p>
                     </div>
                   </div>

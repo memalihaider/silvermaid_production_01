@@ -32,6 +32,9 @@ type BlogPost = {
   featured: boolean
   promotionalImages?: string[]
   ctaImage?: string
+  seoTitle?: string
+  seoDescription?: string
+  canonicalUrl?: string
 }
 
 function toSlug(title: string, id: string) {
@@ -81,6 +84,9 @@ async function fetchAllPosts() {
       featured: d.featured || false,
       promotionalImages: d.promotionalImages || [],
       ctaImage: d.ctaImage || '',
+      seoTitle: d.seoTitle || '',
+      seoDescription: d.seoDescription || '',
+      canonicalUrl: d.canonicalUrl || '',
     }
   })
 
@@ -99,13 +105,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       return { title: 'Post Not Found | Silver Maid' }
     }
 
+    const metaTitle = post.seoTitle?.trim() || `${post.title} | Silver Maid Blog`
+    const metaDescription = post.seoDescription?.trim() || post.excerpt || `Read "${post.title}" on the Silver Maid blog.`
+    const canonicalUrl = post.canonicalUrl?.trim() || `${SITE_URL}/${post.slug}`
+
     return {
-      title: `${post.title} | Silver Maid Blog`,
-      description: post.excerpt || `Read "${post.title}" on the Silver Maid blog.`,
+      title: metaTitle,
+      description: metaDescription,
       openGraph: {
-        title: post.title,
-        description: post.excerpt,
-        url: `${SITE_URL}/${post.slug}`,
+        title: metaTitle,
+        description: metaDescription,
+        url: canonicalUrl,
         siteName: 'Silver Maid',
         type: 'article',
         publishedTime: post.publishedAt,
@@ -114,12 +124,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       },
       twitter: {
         card: 'summary_large_image',
-        title: post.title,
-        description: post.excerpt,
+        title: metaTitle,
+        description: metaDescription,
         ...(post.image ? { images: [post.image] } : {}),
       },
       alternates: {
-        canonical: `${SITE_URL}/${post.slug}`,
+        canonical: canonicalUrl,
       },
     }
   } catch {
@@ -209,7 +219,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: post.excerpt,
+    description: post.seoDescription?.trim() || post.excerpt,
     image: post.image || undefined,
     datePublished: post.publishedAt,
     author: { '@type': 'Person', name: post.author },
@@ -220,7 +230,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}/${post.slug}`,
+      '@id': post.canonicalUrl?.trim() || `${SITE_URL}/${post.slug}`,
     },
   }
 

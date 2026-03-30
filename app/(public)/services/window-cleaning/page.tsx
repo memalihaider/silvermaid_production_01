@@ -24,6 +24,8 @@ import {
 
 export default function WindowCleaning() {
   const { contact } = useContactInfo()
+  const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
+  const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#'
   const servicesList = [
     { name: "Maid Service", slug: "maids-service" },
     { name: "Deep Cleaning", slug: "deep-cleaning" },
@@ -293,10 +295,10 @@ export default function WindowCleaning() {
               <h4 className="text-4xl md:text-5xl font-black text-white mb-8 tracking-tighter">See The World <span className="text-primary italic">Clearly Again</span></h4>
               <p className="text-slate-400 text-lg mb-10 font-bold">Contact us today for a crystal clear window cleaning experience.</p>
               <div className="flex flex-wrap justify-center gap-6">
-                <a href={`tel:${contact.phone}`} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
-                   800 4663 9675
+                 <a href={phoneHref} className="bg-primary text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-pink-600 transition-all flex items-center gap-3">
+                   {contact.phone}
                 </a>
-                <a href={`mailto:${contact.email}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
+                 <a href={`mailto:${contact.email.toLowerCase()}`} className="bg-white/10 text-white border border-white/20 px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-slate-900 transition-all flex items-center gap-3">
                    Email Us
                 </a>
               </div>

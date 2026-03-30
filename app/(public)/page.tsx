@@ -758,10 +758,10 @@ useEffect(() => {
                 <h4 className="text-2xl font-black mb-8 tracking-tight">Direct Support</h4>
                 <div className="space-y-8">
                   <div className="flex items-center gap-5">
-                    <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center font-bold text-lg">800</div>
+                    <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center font-bold text-lg">+961</div>
                     <div>
                       <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-0.5">Toll Free Support</div>
-                      <div className="text-2xl font-black tracking-tight">800 4663 9675</div>
+                      <div className="text-2xl font-black tracking-tight">+96105 888 44 151</div>
                     </div>
                   </div>
                   <div className="h-px bg-white/10" />
@@ -779,7 +779,7 @@ useEffect(() => {
                     ))}
                   </div>
                   <a 
-                    href="https://wa.me/80046639675"
+                    href="https://wa.me/9610588844151"
                     className="block w-full h-12 bg-white text-slate-900 rounded-xl text-center leading-[3rem] font-bold text-sm hover:bg-slate-100 transition-colors"
                   >
                     Chat via WhatsApp

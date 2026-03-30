@@ -16,6 +16,9 @@ type FirebaseBlogPost = {
   title: string;
   name: string;
   description: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  canonicalUrl?: string;
   content: string;
   readTime: number;
   imageURL: string;

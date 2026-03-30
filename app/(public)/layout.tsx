@@ -15,7 +15,11 @@ import { ContactProvider, useContactInfo } from '@/contexts/ContactContext'
 
 function PublicLayoutContent({ children }: { children: ReactNode }) {
   const { contact } = useContactInfo()
-  const whatsappNumber = (contact.whatsapp || contact.phone).replace(/[^\d]/g, '')
+  const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
+  const normalizeWhatsAppNumber = (value: string) => value.replace(/[^\d]/g, '')
+  const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#'
+  const emailHref = contact.email ? `mailto:${contact.email.toLowerCase()}` : '#'
+  const whatsappNumber = normalizeWhatsAppNumber(contact.whatsapp || contact.phone)
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#'
 
   return (
@@ -25,7 +29,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
         <div className="container mx-auto px-6 flex justify-between items-center text-xs font-semibold">
           <div className="flex items-center gap-8">
             <a 
-              href={`tel:${contact.phone}`} 
+              href={phoneHref}
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
               <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
@@ -34,7 +38,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               <span className="tracking-wide">{contact.phone}</span>
             </a>
             <a 
-              href={`mailto:${contact.email}`} 
+              href={emailHref}
               className="flex items-center gap-2 hover:text-white/90 transition-all group"
             >
               <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
@@ -273,7 +277,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                   <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <Phone className="h-3.5 w-3.5" />
                   </div>
-                  <a href={`tel:${contact.phone}`} className="group-hover:text-white transition-colors">
+                  <a href={phoneHref} className="group-hover:text-white transition-colors">
                     {contact.phone}
                   </a>
                 </li>
@@ -281,7 +285,7 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                   <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-[#ea4c8c] shrink-0">
                     <Mail className="h-3.5 w-3.5" />
                   </div>
-                  <a href={`mailto:${contact.email}`} className="group-hover:text-white transition-colors">
+                  <a href={emailHref} className="group-hover:text-white transition-colors">
                     {contact.email}
                   </a>
                 </li>
@@ -362,14 +366,14 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
         </a>
         {/* Phone */}
         <a 
-          href={`tel:${contact.phone}`} 
+          href={phoneHref}
           className="h-12 w-12 bg-[#0b7a8e] text-white rounded-full shadow-lg shadow-[#0b7a8e]/25 flex items-center justify-center hover:scale-105 transition-transform"
         >
           <Phone className="h-5 w-5" />
         </a>
         {/* Email */}
         <a 
-          href={`mailto:${contact.email}`} 
+          href={emailHref}
           className="h-12 w-12 bg-slate-800 text-white rounded-full shadow-lg shadow-slate-800/25 flex items-center justify-center hover:scale-105 transition-transform"
         >
           <Mail className="h-5 w-5" />

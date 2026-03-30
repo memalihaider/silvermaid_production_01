@@ -183,7 +183,7 @@ export async function POST(request: Request) {
             </div>
           </div>
           <div class="footer">
-            <p>SilverMaid Booking System • notification@silvermaid.com</p>
+            <p>SilverMaid Booking System • Info@silvermaidsdubai.com</p>
           </div>
         </div>
       </body>

@@ -865,7 +865,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   checkPageBreak(32);
 
   const fromToBaseY = yPos - 1;
-  let fromToContentHeight = 24;
+  let fromToContentHeight = 30;
   
   if (quotation.company) {
     fromToContentHeight += 3;
@@ -899,14 +899,16 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   let fromY = fromToBaseY + 8;
   doc.text('SILVER MAID CLEANING', margin + 4, fromY);
   fromY += 3;
-  doc.text('Al Quoz Ind Area 1', margin + 4, fromY);
+  doc.text('Same Oman Trading building', margin + 4, fromY);
   fromY += 3;
-  doc.text('Dubai, UAE', margin + 4, fromY);
+  doc.text("Apt G - 01 Al Badaa' St", margin + 4, fromY);
+  fromY += 3;
+  doc.text('near Bus station - Al Satwa - Dubai', margin + 4, fromY);
   fromY += 4;
   doc.setTextColor(0, 0, 0);
-  doc.text('+971 800 4663', margin + 4, fromY);
+  doc.text('+96105 888 44 151', margin + 4, fromY);
   fromY += 3;
-  doc.text('info@silvermaid.ae', margin + 4, fromY);
+  doc.text('Info@silvermaidsdubai.com', margin + 4, fromY);
 
   doc.setDrawColor(220, 220, 220);
   doc.line(pageWidth / 2, fromToBaseY, pageWidth / 2, fromToBaseY + fromToBoxHeight);

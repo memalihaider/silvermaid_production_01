@@ -13,11 +13,11 @@ export interface ContactInfo {
 }
 
 const defaultContact: ContactInfo = {
-  phone: '80046639675',
-  email: 'info@silvermaid.ae',
+  phone: '+96105 888 44 151',
+  email: 'Info@silvermaidsdubai.com',
   company: 'silvermaid',
-  address: 'Office: 201, 2nd Floor, Al Saaha Offices - B, Downtown Dubai - UAE',
-  whatsapp: '971588844151'
+  address: "Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai",
+  whatsapp: '+96105 888 44 151'
 };
 
 interface ContactContextType {

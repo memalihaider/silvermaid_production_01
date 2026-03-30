@@ -38,10 +38,11 @@ interface FormData {
 export default function Contact() {
   const [activeTab, setActiveTab] = useState('form')
   const [profileData, setProfileData] = useState({
-    email: 'info@silvermaid.ae',
-    phone: '80046639675',
-    whatsapp: '+971 50 717 7059'
+    email: 'Info@silvermaidsdubai.com',
+    phone: '+96105 888 44 151',
+    whatsapp: '+96105 888 44 151'
   })
+  const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
   const [services, setServices] = useState<FirebaseService[]>([])
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -63,9 +64,9 @@ export default function Contact() {
           const data = docSnap.data()
           if (data.profile) {
             setProfileData({
-              email: data.profile.email || 'info@silvermaid.ae',
-              phone: data.profile.phone || '80046639675',
-              whatsapp: data.profile.whatsapp || '+971 50 717 7059'
+              email: data.profile.email || 'Info@silvermaidsdubai.com',
+              phone: data.profile.phone || '+96105 888 44 151',
+              whatsapp: data.profile.whatsapp || '+96105 888 44 151'
             })
           }
         }
@@ -253,7 +254,7 @@ export default function Contact() {
                 <p className="text-slate-400 font-bold mb-10 italic">Talk or Write to us to Discuss your Cleaning Needs</p>
                 
                 <div className="space-y-10">
-                  <a href={`tel:${profileData.phone}`} className="flex gap-6 group cursor-pointer border-b border-white/5 pb-8">
+                  <a href={`tel:${normalizeTelNumber(profileData.phone)}`} className="flex gap-6 group cursor-pointer border-b border-white/5 pb-8">
                     <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
                       <Phone className="h-7 w-7" />
                     </div>
@@ -264,7 +265,7 @@ export default function Contact() {
                     </div>
                   </a>
 
-                  <a href={`mailto:${profileData.email}`} className="flex gap-6 group cursor-pointer border-b border-white/5 pb-8">
+                  <a href={`mailto:${profileData.email.toLowerCase()}`} className="flex gap-6 group cursor-pointer border-b border-white/5 pb-8">
                     <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
                       <Mail className="h-7 w-7" />
                     </div>
@@ -281,7 +282,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Our Location</div>
-                      <div className="text-xl font-black tracking-tight leading-snug">Al Quoz – Dubai</div>
+                      <div className="text-xl font-black tracking-tight leading-snug">Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai</div>
                       <div className="text-slate-400 font-medium text-sm italic underline decoration-primary/30">United Arab Emirates</div>
                     </div>
                   </div>
@@ -475,7 +476,7 @@ export default function Contact() {
                 </div>
               </div>
               <p className="text-sm font-bold text-slate-600 mb-6 leading-relaxed italic border-l-2 border-primary pl-4">
-                Al Quoz – Dubai – United Arab Emirates
+                Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai
               </p>
               <a 
                 href="https://maps.google.com/?q=Al+Quoz+Dubai" 

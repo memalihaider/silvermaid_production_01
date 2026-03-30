@@ -10,12 +10,15 @@ interface ContactDisplayProps {
 }
 
 const normalizeWhatsAppNumber = (value: string) => value.replace(/[^\d]/g, '');
+const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
 export function ContactPhone({ className = '' }: { className?: string }) {
   const { contact } = useContactInfo();
+  const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#';
   return (
     <a 
-      href={`tel:${contact.phone}`}
+      href={phoneHref}
       className={className}
     >
       {contact.phone}
@@ -25,9 +28,10 @@ export function ContactPhone({ className = '' }: { className?: string }) {
 
 export function ContactEmail({ className = '' }: { className?: string }) {
   const { contact } = useContactInfo();
+  const emailHref = contact.email ? `mailto:${normalizeEmail(contact.email)}` : '#';
   return (
     <a 
-      href={`mailto:${contact.email}`}
+      href={emailHref}
       className={className}
     >
       {contact.email}
@@ -38,10 +42,11 @@ export function ContactEmail({ className = '' }: { className?: string }) {
 export function ContactPhoneLink(props: ContactDisplayProps) {
   const { contact } = useContactInfo();
   const { className = '' } = props;
+  const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#';
   
   return (
     <a 
-      href={`tel:${contact.phone}`}
+      href={phoneHref}
       className={className}
     >
       {contact.phone}
@@ -52,10 +57,11 @@ export function ContactPhoneLink(props: ContactDisplayProps) {
 export function ContactEmailLink(props: ContactDisplayProps) {
   const { contact } = useContactInfo();
   const { className = '' } = props;
+  const emailHref = contact.email ? `mailto:${normalizeEmail(contact.email)}` : '#';
   
   return (
     <a 
-      href={`mailto:${contact.email}`}
+      href={emailHref}
       className={className}
     >
       {contact.email}
@@ -77,10 +83,10 @@ export function ContactWhatsAppLink({ className = '' }: { className?: string }) 
 
 export function getContactPhone() {
   // This is for use in non-client components or static generation
-  return '80046639675';
+  return '+96105 888 44 151';
 }
 
 export function getContactEmail() {
   // This is for use in non-client components or static generation
-  return 'info@silvermaid.ae';
+  return 'Info@silvermaidsdubai.com';
 }

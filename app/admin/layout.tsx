@@ -153,8 +153,11 @@ const formatTime = (timestamp: any): string => {
 
 const AdminContactFooter = () => {
   const { contact } = useContactInfo();
+  const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
   const whatsappNumber = (contact.whatsapp || contact.phone).replace(/[^\d]/g, "");
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "#";
+  const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#';
+  const emailHref = contact.email ? `mailto:${contact.email.toLowerCase()}` : '#';
 
   return (
     <footer className="border-t bg-card px-6 py-4 text-xs text-muted-foreground">
@@ -167,11 +170,11 @@ const AdminContactFooter = () => {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 hover:text-foreground">
+          <a href={phoneHref} className="flex items-center gap-1.5 hover:text-foreground">
             <Phone className="h-3.5 w-3.5" />
             {contact.phone}
           </a>
-          <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 hover:text-foreground">
+          <a href={emailHref} className="flex items-center gap-1.5 hover:text-foreground">
             <Mail className="h-3.5 w-3.5" />
             {contact.email}
           </a>

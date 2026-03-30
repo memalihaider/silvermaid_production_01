@@ -829,10 +829,10 @@ export default function BookService() {
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
                     Need instant help? <br />
                     <a
-                      href="tel:80046639675"
+                      href="tel:+9610588844151"
                       className="text-white hover:text-primary transition-colors"
                     >
-                      800-SILVERMAID
+                      +96105 888 44 151
                     </a>
                   </p>
                 </div>

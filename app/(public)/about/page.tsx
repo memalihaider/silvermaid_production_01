@@ -209,7 +209,7 @@ export default function About() {
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Main Office</div>
-                    <div className="text-lg font-bold">Al Quoz - Dubai - United Arab Emirates</div>
+                    <div className="text-lg font-bold">Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 group">
@@ -218,7 +218,7 @@ export default function About() {
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Toll Free</div>
-                    <div className="text-lg font-bold">800 4663 9675</div>
+                    <div className="text-lg font-bold">+96105 888 44 151</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 group">
@@ -227,7 +227,7 @@ export default function About() {
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email Support</div>
-                    <div className="text-lg font-bold">info@silvermaid.ae</div>
+                    <div className="text-lg font-bold">Info@silvermaidsdubai.com</div>
                   </div>
                 </div>
               </div>

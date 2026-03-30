@@ -376,7 +376,7 @@ export default function AdminLogin() {
         {/* Support link */}
         <p className="text-center text-slate-500 text-sm mt-8">
           Need help?{' '}
-          <a href="mailto:support@silvermaid.ae" className="text-purple-400 hover:text-purple-300 transition-colors">
+          <a href="mailto:info@silvermaidsdubai.com" className="text-purple-400 hover:text-purple-300 transition-colors">
             Contact support
           </a>
         </p>

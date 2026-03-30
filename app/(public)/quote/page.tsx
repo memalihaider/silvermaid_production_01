@@ -8,10 +8,12 @@ import { doc, getDoc } from 'firebase/firestore'
 
 export default function Quote() {
   const [profileData, setProfileData] = useState({
-    email: 'info@silvermaid.ae',
-    phone: '80046639675',
-    whatsapp: '+971 50 717 7059' // Default WhatsApp number
+    email: 'Info@silvermaidsdubai.com',
+    phone: '+96105 888 44 151',
+    whatsapp: '+96105 888 44 151'
   })
+
+  const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
 
   // Fetch profile data from Firebase
   useEffect(() => {
@@ -24,9 +26,9 @@ export default function Quote() {
           const data = docSnap.data()
           if (data.profile) {
             setProfileData({
-              email: data.profile.email || 'info@silvermaid.ae',
-              phone: data.profile.phone || '80046639675',
-              whatsapp: data.profile.whatsapp || '+971 50 717 7059' // Fetch WhatsApp from Firebase
+              email: data.profile.email || 'Info@silvermaidsdubai.com',
+              phone: data.profile.phone || '+96105 888 44 151',
+              whatsapp: data.profile.whatsapp || '+96105 888 44 151'
             })
           }
         }
@@ -99,7 +101,7 @@ export default function Quote() {
 
             {/* Phone */}
             <motion.a
-              href={`tel:${profileData.phone}`}
+              href={`tel:${normalizeTelNumber(profileData.phone)}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -118,7 +120,7 @@ export default function Quote() {
 
             {/* Email */}
             <motion.a
-              href={`mailto:${profileData.email}`}
+              href={`mailto:${profileData.email.toLowerCase()}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
