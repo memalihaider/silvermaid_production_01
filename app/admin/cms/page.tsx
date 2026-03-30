@@ -42,7 +42,6 @@ type BlogPost = {
   name: string;
   description: string;
   seoTitle?: string;
-  seoDescription?: string;
   canonicalUrl?: string;
   content: string;
   p1: string;
@@ -121,7 +120,6 @@ export default function CMS() {
     name: '',
     description: '',
     seoTitle: '',
-    seoDescription: '',
     canonicalUrl: '',
     p1: '',
     h2: '',
@@ -220,7 +218,6 @@ You have the right to request access to the personal data we hold about you, to 
           name: data.name || 'Admin',
           description: data.description || '',
           seoTitle: data.seoTitle || '',
-          seoDescription: data.seoDescription || '',
           canonicalUrl: data.canonicalUrl || '',
           content: data.content || '',
           p1: data.p1 || '',
@@ -371,7 +368,6 @@ You have the right to request access to the personal data we hold about you, to 
         name: post.name || '',
         description: post.description,
         seoTitle: post.seoTitle || '',
-        seoDescription: post.seoDescription || '',
         canonicalUrl: post.canonicalUrl || '',
         p1: post.p1 || '',
         h2: post.h2 || '',
@@ -392,7 +388,6 @@ You have the right to request access to the personal data we hold about you, to 
         name: '',
         description: '',
         seoTitle: '',
-        seoDescription: '',
         canonicalUrl: '',
         p1: '',
         h2: '',
@@ -588,7 +583,6 @@ You have the right to request access to the personal data we hold about you, to 
         name: formData.name,
         description: formData.description,
         seoTitle: formData.seoTitle.trim(),
-        seoDescription: formData.seoDescription.trim(),
         canonicalUrl: formData.canonicalUrl.trim(),
         content: combinedContent,
         p1: formData.p1,
@@ -1428,17 +1422,17 @@ You have the right to request access to the personal data we hold about you, to 
                 />
               </div>
 
-              {/* Short Description */}
+              {/* Meta Description (SERP) */}
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Short Description
+                  Meta Description (SERP)
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
-                  placeholder="Enter short description (shown in previews)"
+                  placeholder="Shown in Google search results"
                   rows={3}
                 />
               </div>
@@ -1446,7 +1440,7 @@ You have the right to request access to the personal data we hold about you, to 
               {/* SEO Settings */}
               <div className="border rounded-xl p-4 space-y-4 bg-amber-50/30">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-amber-600">
-                  SEO Metadata
+                  SERP Settings
                 </h3>
                 <div>
                   <label className="block text-sm font-medium mb-2">
@@ -1459,19 +1453,6 @@ You have the right to request access to the personal data we hold about you, to 
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="Custom title for search engines (optional)"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    SEO Description
-                  </label>
-                  <textarea
-                    name="seoDescription"
-                    value={formData.seoDescription}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-card border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
-                    placeholder="Short meta description for search results (optional)"
-                    rows={3}
                   />
                 </div>
                 <div>

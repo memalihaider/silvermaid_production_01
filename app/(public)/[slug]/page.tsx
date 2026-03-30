@@ -33,7 +33,6 @@ type BlogPost = {
   promotionalImages?: string[]
   ctaImage?: string
   seoTitle?: string
-  seoDescription?: string
   canonicalUrl?: string
 }
 
@@ -42,7 +41,8 @@ function toSlug(title: string, id: string) {
 }
 
 function splitContentAtH2(content: string) {
-  const paragraphs = content.split('\n\n').filter(p => p.trim())
+  const decoded = decodeMaybeUrlEncoded(content)
+  const paragraphs = decoded.split('\n\n').filter(p => p.trim())
   const h2Index = paragraphs.findIndex(p => /^##\s/.test(p))
   if (h2Index <= 0) {
     const splitAt = Math.max(1, Math.floor(paragraphs.length / 3))
@@ -53,6 +53,22 @@ function splitContentAtH2(content: string) {
     h2: paragraphs[h2Index].replace(/^#+\s/, ''),
     p2: paragraphs.slice(h2Index + 1),
   }
+}
+
+function decodeMaybeUrlEncoded(value: string) {
+  if (!value) return value
+  if (!/%[0-9A-Fa-f]{2}/.test(value)) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function sanitizeInlineHtml(value: string) {
+  return value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
 }
 
 async function fetchAllPosts() {
@@ -85,7 +101,6 @@ async function fetchAllPosts() {
       promotionalImages: d.promotionalImages || [],
       ctaImage: d.ctaImage || '',
       seoTitle: d.seoTitle || '',
-      seoDescription: d.seoDescription || '',
       canonicalUrl: d.canonicalUrl || '',
     }
   })
@@ -106,7 +121,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 
     const metaTitle = post.seoTitle?.trim() || `${post.title} | Silver Maid Blog`
-    const metaDescription = post.seoDescription?.trim() || post.excerpt || `Read "${post.title}" on the Silver Maid blog.`
+    const metaDescription = post.excerpt || `Read "${post.title}" on the Silver Maid blog.`
     const canonicalUrl = post.canonicalUrl?.trim() || `${SITE_URL}/${post.slug}`
 
     return {
@@ -139,8 +154,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 // --- Render helpers ---
 function renderParagraph(paragraph: string, index: number) {
-  if (paragraph.startsWith('- ')) {
-    const items = paragraph.split('\n').filter(item => item.startsWith('- '))
+  const decoded = decodeMaybeUrlEncoded(paragraph)
+  if (decoded.startsWith('- ')) {
+    const items = decoded.split('\n').filter(item => item.startsWith('- '))
     return (
       <ul key={index} className="list-disc list-inside space-y-2 my-6 text-slate-700">
         {items.map((item, j) => (
@@ -149,24 +165,34 @@ function renderParagraph(paragraph: string, index: number) {
       </ul>
     )
   }
-  if (paragraph.match(/^\d+\./)) {
+  if (decoded.match(/^\d+\./)) {
     return (
       <ol key={index} className="list-decimal list-inside space-y-2 my-6 text-slate-700">
-        {paragraph.split('\n').filter(l => l.trim()).map((line, j) => (
+        {decoded.split('\n').filter(l => l.trim()).map((line, j) => (
           <li key={j} className="font-medium">{line.replace(/^\d+\.\s/, '')}</li>
         ))}
       </ol>
     )
   }
-  if (paragraph.match(/^#{1,3}\s/)) {
-    const level = paragraph.match(/^#+/)?.[0].length || 1
-    const text = paragraph.replace(/^#+\s/, '')
+  if (decoded.match(/^#{1,3}\s/)) {
+    const level = decoded.match(/^#+/)?.[0].length || 1
+    const text = decoded.replace(/^#+\s/, '')
     const cls = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
     return <h2 key={index} className={`${cls} font-black text-slate-900 mt-8 mb-4`}>{text}</h2>
   }
+  const html = sanitizeInlineHtml(decoded)
+  if (/<\w[\s\S]*?>/.test(html)) {
+    return (
+      <p
+        key={index}
+        className="text-slate-700 font-medium leading-relaxed text-lg mb-6"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    )
+  }
   return (
     <p key={index} className="text-slate-700 font-medium leading-relaxed text-lg mb-6">
-      {paragraph}
+      {decoded}
     </p>
   )
 }
@@ -219,7 +245,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: post.seoDescription?.trim() || post.excerpt,
+    description: post.excerpt,
     image: post.image || undefined,
     datePublished: post.publishedAt,
     author: { '@type': 'Person', name: post.author },

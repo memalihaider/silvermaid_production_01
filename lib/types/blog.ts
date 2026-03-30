@@ -1,9 +1,15 @@
 export interface BlogPost {
   id: string
   title: string
+  seoTitle?: string
+  canonicalUrl?: string
   slug: string
   excerpt: string
   content: string
+  p1?: string
+  h2?: string
+  p2?: string
+  tags?: string[]
   author: string
   authorImage?: string
   category: 'cleaning-tips' | 'industry-news' | 'customer-stories' | 'how-to' | 'seasonal'

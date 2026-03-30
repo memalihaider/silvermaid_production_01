@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Save, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { INITIAL_BLOG_POSTS } from '@/lib/blog-data'
 import { BlogPost } from '@/lib/types/blog'
+import { db } from '@/lib/firebase'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 
 const generateSlug = (title: string) => {
   return title
@@ -18,21 +19,27 @@ const generateSlug = (title: string) => {
 
 export default function EditBlogPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const post = INITIAL_BLOG_POSTS.find(p => p.id === params.id)
-  
-  const [formData, setFormData] = useState<Partial<BlogPost>>(post || {
+  const [isLoading, setIsLoading] = useState(true)
+  const [formData, setFormData] = useState<Partial<BlogPost>>({
     title: '',
+    seoTitle: '',
     excerpt: '',
     content: '',
+    p1: '',
+    h2: '',
+    p2: '',
     author: '',
     category: 'cleaning-tips',
     image: '',
     featured: false,
     readTime: 5,
+    canonicalUrl: '',
+    tags: [],
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [tagInput, setTagInput] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -42,20 +49,117 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const normalizeTag = (value: string) => value.trim().replace(/^#/, '')
+
+  const handleAddTag = (value: string) => {
+    const tag = normalizeTag(value)
+    if (!tag) return
+
+    setFormData(prev => {
+      const tags = prev.tags || []
+      const exists = tags.some(t => t.toLowerCase() === tag.toLowerCase())
+      return exists ? prev : { ...prev, tags: [...tags, tag] }
+    })
+    setTagInput('')
+  }
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      handleAddTag(tagInput)
+      return
+    }
+
+    if (e.key === 'Backspace' && !tagInput) {
+      setFormData(prev => ({ ...prev, tags: (prev.tags || []).slice(0, -1) }))
+    }
+  }
+
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const postRef = doc(db, 'blog-post', params.id)
+        const snapshot = await getDoc(postRef)
+
+        if (!snapshot.exists()) {
+          setIsLoading(false)
+          return
+        }
+
+        const data = snapshot.data()
+        setFormData({
+          title: data.title || '',
+          seoTitle: data.seoTitle || '',
+          excerpt: data.description || '',
+          content: data.content || '',
+          p1: data.p1 || '',
+          h2: data.h2 || '',
+          p2: data.p2 || '',
+          author: data.name || '',
+          category: data.category || 'cleaning-tips',
+          image: data.imageURL || '',
+          featured: !!data.featured,
+          readTime: data.readTime || 5,
+          canonicalUrl: data.canonicalUrl || '',
+          tags: data.tags || [],
+        })
+      } catch (error) {
+        console.error('Error loading blog post:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPost()
+  }, [params.id])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
-    setTimeout(() => {
+
+    try {
+      const structuredContent = [
+        formData.p1?.trim(),
+        formData.h2?.trim() ? `## ${formData.h2.trim()}` : '',
+        formData.p2?.trim(),
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
+      const contentValue = formData.content?.trim() ? formData.content : structuredContent
+
+      const payload = {
+        title: formData.title?.trim() || '',
+        name: formData.author?.trim() || 'Admin',
+        description: formData.excerpt?.trim() || '',
+        seoTitle: formData.seoTitle?.trim() || '',
+        canonicalUrl: formData.canonicalUrl?.trim() || '',
+        content: contentValue || '',
+        p1: formData.p1?.trim() || '',
+        h2: formData.h2?.trim() || '',
+        p2: formData.p2?.trim() || '',
+        readTime: Number(formData.readTime) || 5,
+        imageURL: formData.image || '',
+        featured: !!formData.featured,
+        category: formData.category || '',
+        tags: formData.tags || [],
+        updatedAt: serverTimestamp(),
+      }
+
+      await setDoc(doc(db, 'blog-post', params.id), payload, { merge: true })
       alert('Blog post updated successfully!')
-      setIsSubmitting(false)
       router.push('/admin/blog')
-    }, 1500)
+    } catch (error) {
+      console.error('Error updating blog post:', error)
+      alert('Error updating blog post!')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const slug = generateSlug(formData.title || 'untitled')
 
-  if (!post) {
+  if (!isLoading && !formData.title) {
     return (
       <div className="min-h-screen pt-20 bg-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -108,19 +212,45 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
               <p className="text-xs text-slate-500 mt-2">Slug: {slug}</p>
             </div>
 
-            {/* Excerpt */}
+            {/* SEO Title */}
             <div className="bg-white p-8 rounded-2xl border-2 border-slate-200">
-              <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Excerpt *</label>
+              <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">SEO Title</label>
+              <input
+                type="text"
+                name="seoTitle"
+                value={formData.seoTitle}
+                onChange={handleInputChange}
+                placeholder="Custom title for Google SERP (optional)"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors"
+              />
+            </div>
+
+            {/* Meta Description */}
+            <div className="bg-white p-8 rounded-2xl border-2 border-slate-200">
+              <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Meta Description (SERP) *</label>
               <textarea
                 name="excerpt"
                 value={formData.excerpt}
                 onChange={handleInputChange}
-                placeholder="Brief summary of the post (shown in listings)"
+                placeholder="Shown in Google search results"
                 required
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors resize-none"
               />
               <p className="text-xs text-slate-500 mt-2">{formData.excerpt?.length || 0}/300 characters</p>
+            </div>
+
+            {/* Canonical URL */}
+            <div className="bg-white p-8 rounded-2xl border-2 border-slate-200">
+              <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Canonical URL</label>
+              <input
+                type="url"
+                name="canonicalUrl"
+                value={formData.canonicalUrl}
+                onChange={handleInputChange}
+                placeholder="https://www.silvermaidsdubai.com/your-post"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors"
+              />
             </div>
 
             {/* Content */}
@@ -136,6 +266,43 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
                 className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors resize-none font-mono text-sm"
               />
               <p className="text-xs text-slate-500 mt-2">{formData.content?.length || 0} characters</p>
+            </div>
+
+            {/* Structured Content */}
+            <div className="bg-white p-8 rounded-2xl border-2 border-slate-200 space-y-5">
+              <div>
+                <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Paragraph 1 (P1)</label>
+                <textarea
+                  name="p1"
+                  value={formData.p1}
+                  onChange={handleInputChange}
+                  placeholder="Opening paragraph(s)"
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors resize-none"
+                />
+              </div>
+              <div>
+                <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Section Heading (H2)</label>
+                <input
+                  type="text"
+                  name="h2"
+                  value={formData.h2}
+                  onChange={handleInputChange}
+                  placeholder="Optional section heading"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Paragraph 2 (P2)</label>
+                <textarea
+                  name="p2"
+                  value={formData.p2}
+                  onChange={handleInputChange}
+                  placeholder="Follow-up paragraph(s)"
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors resize-none"
+                />
+              </div>
             </div>
 
             {/* Category & Read Time */}
@@ -168,6 +335,38 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
                   className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors"
                 />
               </div>
+            </div>
+
+            {/* Tags */}
+            <div className="bg-white p-8 rounded-2xl border-2 border-slate-200">
+              <label className="block font-black text-slate-900 mb-3 uppercase tracking-widest text-sm">Tags</label>
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => handleAddTag(tagInput)}
+                placeholder="Type a tag and press Enter"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-primary outline-none transition-colors"
+              />
+              {(formData.tags || []).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {(formData.tags || []).map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        tags: (prev.tags || []).filter(t => t !== tag)
+                      }))}
+                      className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      title="Remove"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Author & Featured */}
