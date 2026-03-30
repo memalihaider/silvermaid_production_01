@@ -26,6 +26,21 @@ import {
 import { db } from '@/lib/firebase'
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore'
 
+const decodeMaybeUrlEncoded = (value: string) => {
+  if (!value) return value
+  if (!/%[0-9A-Fa-f]{2}/.test(value)) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+const sanitizeInlineHtml = (value: string) =>
+  value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+
 // Blog Category Type
 type BlogCategory = {
   id: string;
@@ -1075,13 +1090,15 @@ You have the right to request access to the personal data we hold about you, to 
                     </div>
                   )}
 
-                  <h4 className="font-bold text-lg mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {post.title}
-                  </h4>
+                  <h4
+                    className="font-bold text-lg mb-2 group-hover:text-blue-600 transition-colors line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
+                  />
                   
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {post.description}
-                  </p>
+                  <p
+                    className="text-sm text-muted-foreground mb-3 line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.description)) }}
+                  />
 
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
                     <Clock className="h-3 w-3" />

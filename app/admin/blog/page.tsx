@@ -6,6 +6,21 @@ import { Plus, Edit2, Trash2, Search, ChevronDown } from 'lucide-react'
 import { INITIAL_BLOG_POSTS } from '@/lib/blog-data'
 import Link from 'next/link'
 
+const decodeMaybeUrlEncoded = (value: string) => {
+  if (!value) return value
+  if (!/%[0-9A-Fa-f]{2}/.test(value)) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+const sanitizeInlineHtml = (value: string) =>
+  value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState(INITIAL_BLOG_POSTS)
   const [searchTerm, setSearchTerm] = useState('')
@@ -116,7 +131,10 @@ export default function AdminBlogPage() {
                     }`}
                   >
                     <td className="px-6 py-4">
-                      <div className="font-bold text-slate-900 text-sm truncate max-w-xs">{post.title}</div>
+                      <div
+                        className="font-bold text-slate-900 text-sm truncate max-w-xs"
+                        dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
+                      />
                       <div className="text-xs text-slate-500 mt-1">{post.slug}</div>
                     </td>
                     <td className="px-6 py-4">

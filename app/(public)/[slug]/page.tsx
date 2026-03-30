@@ -71,6 +71,10 @@ function sanitizeInlineHtml(value: string) {
     .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
 }
 
+function stripTags(value: string) {
+  return value.replace(/<[^>]*>/g, '').trim()
+}
+
 async function fetchAllPosts() {
   const catSnap = await getDocs(collection(db, 'blog-categories'))
   const cats: BlogCategory[] = catSnap.docs.map(doc => ({
@@ -120,8 +124,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       return { title: 'Post Not Found | Silver Maid' }
     }
 
-    const metaTitle = post.seoTitle?.trim() || `${post.title} | Silver Maid Blog`
-    const metaDescription = post.excerpt || `Read "${post.title}" on the Silver Maid blog.`
+    const rawTitle = post.seoTitle?.trim() || post.title
+    const safeTitle = stripTags(decodeMaybeUrlEncoded(rawTitle))
+    const metaTitle = post.seoTitle?.trim()
+      ? safeTitle
+      : `${safeTitle} | Silver Maid Blog`
+    const rawDescription = post.excerpt || `Read "${post.title}" on the Silver Maid blog.`
+    const metaDescription = stripTags(decodeMaybeUrlEncoded(rawDescription))
     const canonicalUrl = post.canonicalUrl?.trim() || `${SITE_URL}/${post.slug}`
 
     return {
@@ -244,8 +253,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
-    headline: post.title,
-    description: post.excerpt,
+    headline: stripTags(decodeMaybeUrlEncoded(post.title)),
+    description: stripTags(decodeMaybeUrlEncoded(post.excerpt || '')),
     image: post.image || undefined,
     datePublished: post.publishedAt,
     author: { '@type': 'Person', name: post.author },
@@ -282,9 +291,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <span className={`inline-block px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6 ${categoryColor}`}>
                 {post.category.replace(/-/g, ' ')}
               </span>
-              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-tight mb-8">
-                {post.title}
-              </h1>
+              <h1
+                className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-tight mb-8"
+                dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
+              />
               <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -320,7 +330,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 <div className="w-full rounded-2xl overflow-hidden mb-10 aspect-video">
                   <img
                     src={post.image}
-                    alt={post.title}
+                    alt={stripTags(decodeMaybeUrlEncoded(post.title))}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -344,9 +354,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
               {/* H2 Section Heading */}
               {h2Text && (
-                <h2 className="text-3xl font-black text-slate-900 mt-4 mb-8 pb-4 border-b-2 border-primary/20">
-                  {h2Text}
-                </h2>
+                <h2
+                  className="text-3xl font-black text-slate-900 mt-4 mb-8 pb-4 border-b-2 border-primary/20"
+                  dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(h2Text)) }}
+                />
               )}
 
               {/* CTA Image */}
@@ -396,14 +407,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                         {related.image && (
                           <img
                             src={related.image}
-                            alt={related.title}
+                            alt={stripTags(decodeMaybeUrlEncoded(related.title))}
                             className="h-16 w-16 rounded-lg object-cover shrink-0 group-hover:scale-105 transition-transform"
                           />
                         )}
                         <div className="flex-1">
-                          <h4 className="font-bold text-sm text-slate-900 group-hover:text-primary transition-colors line-clamp-2">
-                            {related.title}
-                          </h4>
+                          <h4
+                            className="font-bold text-sm text-slate-900 group-hover:text-primary transition-colors line-clamp-2"
+                            dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(related.title)) }}
+                          />
                           <p className="text-xs text-slate-500 mt-1">{related.readTime} min read</p>
                         </div>
                         <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors mt-1 shrink-0" />

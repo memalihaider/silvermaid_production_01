@@ -32,6 +32,23 @@ type FirebaseBlogPost = {
   image?: string;
 }
 
+const decodeMaybeUrlEncoded = (value: string) => {
+  if (!value) return value
+  if (!/%[0-9A-Fa-f]{2}/.test(value)) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+const sanitizeInlineHtml = (value: string) =>
+  value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+
+const stripTags = (value: string) => value.replace(/<[^>]*>/g, '').trim()
+
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -212,7 +229,7 @@ export default function BlogPage() {
                   <Link href={`/${post.slug}`} className="flex flex-col h-full">
                     <img 
                       src={post.image} 
-                      alt={post.title}
+                      alt={stripTags(decodeMaybeUrlEncoded(post.title))}
                       className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="p-8 flex-1 flex flex-col justify-between bg-white">
@@ -229,12 +246,14 @@ export default function BlogPage() {
                           </span>
                           <span className="text-xs text-slate-500 font-bold">⭐ Featured</span>
                         </div>
-                        <h3 className="text-2xl font-black text-slate-900 mb-3 group-hover:text-primary transition-colors leading-tight">
-                          {post.title}
-                        </h3>
-                        <p className="text-slate-600 font-medium leading-relaxed mb-4">
-                          {post.excerpt}
-                        </p>
+                        <h3
+                          className="text-2xl font-black text-slate-900 mb-3 group-hover:text-primary transition-colors leading-tight"
+                          dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
+                        />
+                        <p
+                          className="text-slate-600 font-medium leading-relaxed mb-4"
+                          dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.excerpt)) }}
+                        />
                       </div>
                       <div className="flex items-center justify-between pt-4 border-t border-slate-200">
                         <div className="flex items-center gap-4 text-sm text-slate-500">
@@ -329,7 +348,7 @@ export default function BlogPage() {
                     <Link href={`/${post.slug}`} className="flex flex-col h-full">
                       <img 
                         src={post.image} 
-                        alt={post.title}
+                        alt={stripTags(decodeMaybeUrlEncoded(post.title))}
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="p-6 flex-1 flex flex-col justify-between bg-white">
@@ -343,12 +362,14 @@ export default function BlogPage() {
                           }`}>
                             {post.category.replace(/-/g, ' ')}
                           </span>
-                          <h3 className="text-lg font-black text-slate-900 mt-3 mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                            {post.title}
-                          </h3>
-                          <p className="text-sm text-slate-600 font-medium line-clamp-2 mb-4">
-                            {post.excerpt}
-                          </p>
+                          <h3
+                            className="text-lg font-black text-slate-900 mt-3 mb-2 group-hover:text-primary transition-colors line-clamp-2"
+                            dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
+                          />
+                          <p
+                            className="text-sm text-slate-600 font-medium line-clamp-2 mb-4"
+                            dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.excerpt)) }}
+                          />
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-slate-200 text-xs text-slate-500">
                           <span className="flex items-center gap-1">

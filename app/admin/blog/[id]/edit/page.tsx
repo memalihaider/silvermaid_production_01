@@ -17,6 +17,21 @@ const generateSlug = (title: string) => {
     .replace(/-+/g, '-')
 }
 
+const decodeMaybeUrlEncoded = (value: string) => {
+  if (!value) return value
+  if (!/%[0-9A-Fa-f]{2}/.test(value)) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+const sanitizeInlineHtml = (value: string) =>
+  value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+
 export default function EditBlogPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
@@ -451,8 +466,14 @@ export default function EditBlogPostPage({ params }: { params: { id: string } })
                       {formData.category}
                     </span>
                   </div>
-                  <h3 className="font-black text-lg text-slate-900 mb-2 line-clamp-2">{formData.title || 'Post Title'}</h3>
-                  <p className="text-sm text-slate-600 mb-4 line-clamp-3">{formData.excerpt}</p>
+                  <h3
+                    className="font-black text-lg text-slate-900 mb-2 line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(formData.title || 'Post Title')) }}
+                  />
+                  <p
+                    className="text-sm text-slate-600 mb-4 line-clamp-3"
+                    dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(formData.excerpt || '')) }}
+                  />
                   <div className="text-xs text-slate-500 space-y-1">
                     <p>By {formData.author || 'Author Name'}</p>
                     <p>{formData.readTime} min read</p>
