@@ -80,7 +80,7 @@ function formatInlineRichText(value: string) {
   const decoded = decodeMaybeUrlEncoded(value)
   const withMarkdownFormatting = decoded
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline">$1</a>')
+    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline hover:text-blue-800">$1</a>')
 
   return sanitizeInlineHtml(withMarkdownFormatting)
 }
@@ -177,7 +177,7 @@ function renderParagraph(paragraph: string, index: number) {
   if (decoded.startsWith('- ')) {
     const items = decoded.split('\n').filter(item => item.startsWith('- '))
     return (
-      <ul key={index} className="list-disc list-inside space-y-2 my-6 text-slate-700">
+      <ul key={index} className="list-disc list-inside space-y-2 my-6 text-slate-700 [&_a]:text-blue-700 [&_a]:underline [&_a:hover]:text-blue-800">
         {items.map((item, j) => (
           <li
             key={j}
@@ -190,7 +190,7 @@ function renderParagraph(paragraph: string, index: number) {
   }
   if (decoded.match(/^\d+\./)) {
     return (
-      <ol key={index} className="list-decimal list-inside space-y-2 my-6 text-slate-700">
+      <ol key={index} className="list-decimal list-inside space-y-2 my-6 text-slate-700 [&_a]:text-blue-700 [&_a]:underline [&_a:hover]:text-blue-800">
         {decoded.split('\n').filter(l => l.trim()).map((line, j) => (
           <li
             key={j}
@@ -212,7 +212,7 @@ function renderParagraph(paragraph: string, index: number) {
     return (
       <p
         key={index}
-        className="text-slate-700 font-medium leading-relaxed text-lg mb-6"
+        className="text-slate-700 font-medium leading-relaxed text-lg mb-6 [&_a]:text-blue-700 [&_a]:underline [&_a:hover]:text-blue-800"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     )

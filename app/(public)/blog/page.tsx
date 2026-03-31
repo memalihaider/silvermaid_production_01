@@ -247,7 +247,7 @@ export default function BlogPage() {
                           <span className="text-xs text-slate-500 font-bold">⭐ Featured</span>
                         </div>
                         <h3
-                          className="text-2xl font-black text-slate-900 mb-3 group-hover:text-primary transition-colors leading-tight"
+                          className="text-2xl font-black text-blue-700 mb-3 group-hover:text-blue-800 transition-colors leading-tight"
                           dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
                         />
                         <p
@@ -363,7 +363,7 @@ export default function BlogPage() {
                             {post.category.replace(/-/g, ' ')}
                           </span>
                           <h3
-                            className="text-lg font-black text-slate-900 mt-3 mb-2 group-hover:text-primary transition-colors line-clamp-2"
+                            className="text-lg font-black text-blue-700 mt-3 mb-2 group-hover:text-blue-800 transition-colors line-clamp-2"
                             dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(post.title)) }}
                           />
                           <p
