@@ -69,10 +69,20 @@ function sanitizeInlineHtml(value: string) {
   return value
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src)=("|')\s*javascript:[^"']*\2/gi, '')
 }
 
 function stripTags(value: string) {
   return value.replace(/<[^>]*>/g, '').trim()
+}
+
+function formatInlineRichText(value: string) {
+  const decoded = decodeMaybeUrlEncoded(value)
+  const withMarkdownFormatting = decoded
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline">$1</a>')
+
+  return sanitizeInlineHtml(withMarkdownFormatting)
 }
 
 async function fetchAllPosts() {
@@ -169,7 +179,11 @@ function renderParagraph(paragraph: string, index: number) {
     return (
       <ul key={index} className="list-disc list-inside space-y-2 my-6 text-slate-700">
         {items.map((item, j) => (
-          <li key={j} className="font-medium">{item.replace('- ', '')}</li>
+          <li
+            key={j}
+            className="font-medium"
+            dangerouslySetInnerHTML={{ __html: formatInlineRichText(item.replace('- ', '')) }}
+          />
         ))}
       </ul>
     )
@@ -178,7 +192,11 @@ function renderParagraph(paragraph: string, index: number) {
     return (
       <ol key={index} className="list-decimal list-inside space-y-2 my-6 text-slate-700">
         {decoded.split('\n').filter(l => l.trim()).map((line, j) => (
-          <li key={j} className="font-medium">{line.replace(/^\d+\.\s/, '')}</li>
+          <li
+            key={j}
+            className="font-medium"
+            dangerouslySetInnerHTML={{ __html: formatInlineRichText(line.replace(/^\d+\.\s/, '')) }}
+          />
         ))}
       </ol>
     )
@@ -189,7 +207,7 @@ function renderParagraph(paragraph: string, index: number) {
     const cls = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
     return <h2 key={index} className={`${cls} font-black text-slate-900 mt-8 mb-4`}>{text}</h2>
   }
-  const html = sanitizeInlineHtml(decoded)
+  const html = formatInlineRichText(decoded)
   if (/<\w[\s\S]*?>/.test(html)) {
     return (
       <p
@@ -356,7 +374,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               {h2Text && (
                 <h2
                   className="text-3xl font-black text-slate-900 mt-4 mb-8 pb-4 border-b-2 border-primary/20"
-                  dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(decodeMaybeUrlEncoded(h2Text)) }}
+                  dangerouslySetInnerHTML={{ __html: formatInlineRichText(h2Text) }}
                 />
               )}
 
