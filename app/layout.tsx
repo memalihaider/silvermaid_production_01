@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -51,6 +52,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content="#ea4c8c" />
         <meta name="description" content="UAE's trusted hygiene solution provider" />
+        <meta name="google-site-verification" content="3ICCi_T_3ifEKoLOLLpoGS9wuvCafKGU4swNRkKi4ic" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="prefetch" href="/" />
         <link rel="prefetch" href="/services" />
@@ -60,6 +62,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-2L0YZK075C"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-2L0YZK075C');
+          `}
+        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

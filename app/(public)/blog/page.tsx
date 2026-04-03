@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, ChevronRight, Clock, User, Zap } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Clock, User, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
@@ -48,6 +48,24 @@ const sanitizeInlineHtml = (value: string) =>
     .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
 
 const stripTags = (value: string) => value.replace(/<[^>]*>/g, '').trim()
+
+type PaginationItem = number | 'left-ellipsis' | 'right-ellipsis'
+
+const getPaginationItems = (currentPage: number, totalPages: number): PaginationItem[] => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 'right-ellipsis', totalPages]
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, 'left-ellipsis', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+
+  return [1, 'left-ellipsis', currentPage - 1, currentPage, currentPage + 1, 'right-ellipsis', totalPages]
+}
 
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -155,6 +173,7 @@ export default function BlogPage() {
     (currentPage - 1) * POSTS_PER_PAGE,
     currentPage * POSTS_PER_PAGE
   )
+  const paginationItems = useMemo(() => getPaginationItems(currentPage, totalPages), [currentPage, totalPages])
 
   // Get featured posts (from Firebase first, then dummy)
   const featuredPosts = useMemo(() => {
@@ -389,38 +408,50 @@ export default function BlogPage() {
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
-                  className="flex justify-center items-center gap-4"
+                  className="flex justify-center items-center gap-1 sm:gap-2 flex-wrap"
                 >
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="px-6 py-2 rounded-xl border-2 border-slate-200 font-bold uppercase tracking-wider hover:border-primary disabled:opacity-50 transition-colors"
+                    className="h-10 px-3 sm:px-5 rounded-xl border-2 border-slate-200 font-bold uppercase tracking-wider hover:border-primary disabled:opacity-50 transition-colors inline-flex items-center"
                   >
-                    Previous
+                    <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Previous</span>
                   </button>
 
-                  <div className="flex gap-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`h-10 w-10 rounded-lg font-bold transition-all ${
-                          currentPage === page
-                            ? 'bg-primary text-white'
-                            : 'border-2 border-slate-200 text-slate-600 hover:border-primary'
-                        }`}
-                      >
-                        {page}
-                      </button>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    {paginationItems.map((item, index) => (
+                      typeof item === 'number' ? (
+                        <button
+                          key={item}
+                          onClick={() => setCurrentPage(item)}
+                          className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-sm sm:text-base font-bold transition-all ${
+                            currentPage === item
+                              ? 'bg-primary text-white'
+                              : 'border-2 border-slate-200 text-slate-600 hover:border-primary'
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      ) : (
+                        <span
+                          key={`${item}-${index}`}
+                          className="w-7 sm:w-8 text-center text-slate-400 font-bold"
+                          aria-hidden="true"
+                        >
+                          ...
+                        </span>
+                      )
                     ))}
                   </div>
 
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-6 py-2 rounded-xl border-2 border-slate-200 font-bold uppercase tracking-wider hover:border-primary disabled:opacity-50 transition-colors"
+                    className="h-10 px-3 sm:px-5 rounded-xl border-2 border-slate-200 font-bold uppercase tracking-wider hover:border-primary disabled:opacity-50 transition-colors inline-flex items-center"
                   >
-                    Next
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-4 w-4 sm:ml-1" />
                   </button>
                 </motion.div>
               )}
