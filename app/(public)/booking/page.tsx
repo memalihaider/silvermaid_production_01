@@ -41,7 +41,10 @@ interface FormData {
   propertyType: string
   frequency: string
   area: string
+  serviceHours: number
 }
+
+const EXTRA_HOURLY_RATE_AED = 35
 
 function BookingPageContent() {
   const searchParams = useSearchParams()
@@ -61,7 +64,8 @@ function BookingPageContent() {
     notes: '',
     propertyType: 'apartment',
     frequency: 'once',
-    area: ''
+    area: '',
+    serviceHours: 1
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -155,6 +159,9 @@ function BookingPageContent() {
       if (!formData.bookingTime) {
         newErrors.bookingTime = 'Please select a time'
       }
+      if (!formData.serviceHours || formData.serviceHours < 1) {
+        newErrors.serviceHours = 'Please select at least 1 hour'
+      }
     }
 
     setErrors(newErrors)
@@ -177,7 +184,7 @@ function BookingPageContent() {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'serviceHours' ? Math.max(1, Number(value) || 1) : value
     }))
     // Clear error for this field
     if (errors[name]) {
@@ -188,6 +195,9 @@ function BookingPageContent() {
       })
     }
   }
+
+  const additionalHoursAmount = formData.serviceHours * EXTRA_HOURLY_RATE_AED
+  const estimatedTotalAmount = (selectedService?.price || 0) + additionalHoursAmount
 
   const saveBookingToFirebase = async (bookingData: any) => {
     try {
@@ -248,6 +258,9 @@ function BookingPageContent() {
       // Prepare booking data for Firebase
       const bookingData = {
         service: formData.serviceId,
+        serviceId: formData.serviceId,
+        serviceHours: formData.serviceHours,
+        serviceDuration: formData.serviceHours,
         name: formData.clientName,
         email: formData.clientEmail,
         phone: formData.clientPhone,
@@ -257,7 +270,10 @@ function BookingPageContent() {
         date: formData.bookingDate,
         time: formData.bookingTime,
         message: formData.notes,
-        clientAddress: formData.clientAddress
+        clientAddress: formData.clientAddress,
+        baseAmount: selectedService?.price || 0,
+        hourlyRate: EXTRA_HOURLY_RATE_AED,
+        totalAmount: estimatedTotalAmount
       }
 
       // Save to Firebase
@@ -279,7 +295,8 @@ function BookingPageContent() {
           notes: '',
           propertyType: 'apartment',
           frequency: 'once',
-          area: ''
+          area: '',
+          serviceHours: 1
         })
         setSelectedService(null)
         setCurrentStep(1)
@@ -616,6 +633,28 @@ function BookingPageContent() {
 
               <div>
                 <label className="flex text-sm font-bold text-foreground mb-2 items-center gap-2">
+                  Service Hours
+                </label>
+                <select
+                  name="serviceHours"
+                  value={formData.serviceHours}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 rounded-xl border-2 bg-slate-50 dark:bg-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 ${
+                    errors.serviceHours ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                    <option key={h} value={h}>{h} {h === 1 ? 'Hour' : 'Hours'}</option>
+                  ))}
+                </select>
+                {errors.serviceHours && (
+                  <p className="text-red-600 dark:text-red-400 text-sm font-bold mt-1">{errors.serviceHours}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">AED {EXTRA_HOURLY_RATE_AED} will be added per selected hour</p>
+              </div>
+
+              <div>
+                <label className="flex text-sm font-bold text-foreground mb-2 items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Special Notes (Optional)
                 </label>
@@ -683,8 +722,18 @@ function BookingPageContent() {
                 </div>
                 <div className="h-px bg-blue-200 dark:bg-blue-900"></div>
                 <div className="flex justify-between items-start">
+                  <p className="text-sm text-muted-foreground font-bold">Service Hours</p>
+                  <p className="font-bold text-foreground text-right">{formData.serviceHours} {formData.serviceHours === 1 ? 'Hour' : 'Hours'}</p>
+                </div>
+                <div className="h-px bg-blue-200 dark:bg-blue-900"></div>
+                <div className="flex justify-between items-start">
+                  <p className="text-sm text-muted-foreground font-bold">Hours Charge</p>
+                  <p className="font-bold text-foreground text-right">AED {additionalHoursAmount}</p>
+                </div>
+                <div className="h-px bg-blue-200 dark:bg-blue-900"></div>
+                <div className="flex justify-between items-start">
                   <p className="text-sm text-muted-foreground font-bold">Estimated Price</p>
-                  <p className="font-black text-blue-600 text-lg">AED {selectedService.price}</p>
+                  <p className="font-black text-blue-600 text-lg">AED {estimatedTotalAmount}</p>
                 </div>
               </div>
 

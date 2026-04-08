@@ -83,7 +83,7 @@ export function ContactWhatsAppLink({ className = '' }: { className?: string }) 
 
 export function getContactPhone() {
   // This is for use in non-client components or static generation
-  return '+96105 888 44 151';
+  return '+971588844151';
 }
 
 export function getContactEmail() {

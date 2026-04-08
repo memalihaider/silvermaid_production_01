@@ -906,7 +906,7 @@ export const generateQuotationPDF = (quotation: QuotationData): { pdf: jsPDF, fi
   doc.text('near Bus station - Al Satwa - Dubai', margin + 4, fromY);
   fromY += 4;
   doc.setTextColor(0, 0, 0);
-  doc.text('+96105 888 44 151', margin + 4, fromY);
+  doc.text('+971588844151', margin + 4, fromY);
   fromY += 3;
   doc.text('Info@silvermaidsdubai.com', margin + 4, fromY);
 

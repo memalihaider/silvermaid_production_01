@@ -83,7 +83,7 @@ const companyInfo = {
 };
 
 const contactInfo = {
-  phone: '+96105 888 44 151',
+  phone: '+971588844151',
   email: 'Info@silvermaidsdubai.com',
   address: "Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai",
   hours: 'Sun - Thu: 8:00 AM - 6:00 PM'
@@ -174,7 +174,7 @@ export default function GuestDashboard() {
             <div className="pt-4 mt-4 border-t border-slate-700">
               <p className="text-xs text-slate-500 px-3 mb-2">Quick Links</p>
               <a
-                href="tel:+9610588844151"
+                href="tel:+971588844151"
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:bg-slate-700/50 hover:text-white transition-colors"
               >
                 <Phone className="w-5 h-5" />

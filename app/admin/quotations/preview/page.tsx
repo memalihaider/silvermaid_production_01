@@ -433,7 +433,7 @@ export default function QuotationPreview() {
                       selectedTemplate === 'modern' ? 'text-slate-400' : 'text-slate-500'
                     }`}>
                       <p>📧 Info@silvermaidsdubai.com</p>
-                      <p>📱 +96105 888 44 151</p>
+                      <p>📱 +971588844151</p>
                       <p>🏢 Same Oman Trading building, Apt G - 01 Al Badaa' St - near Bus station - Al Satwa - Dubai</p>
                       <p>🌐 www.silvermaid.ae</p>
                     </div>

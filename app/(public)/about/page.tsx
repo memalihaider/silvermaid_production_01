@@ -218,7 +218,7 @@ export default function About() {
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Toll Free</div>
-                    <div className="text-lg font-bold">+96105 888 44 151</div>
+                    <div className="text-lg font-bold">+971588844151</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 group">

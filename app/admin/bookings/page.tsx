@@ -15,9 +15,9 @@ import {
 import { db } from '@/lib/firebase'
 import {
   collection, query, orderBy, deleteDoc, doc, updateDoc, where,
-  Timestamp, onSnapshot, getDocs
+  Timestamp, onSnapshot, getDocs, addDoc
 } from 'firebase/firestore'
-import { format, addDays, isSameDay, parseISO } from 'date-fns'
+import { format, addDays, isSameDay, parseISO, startOfDay } from 'date-fns'
 
 interface Booking {
   id: string
@@ -74,6 +74,25 @@ interface Employee {
   rating: number
 }
 
+interface ManualBookingFormData {
+  serviceId: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  clientAddress: string
+  bookingDate: string
+  bookingTime: string
+  notes: string
+  propertyType: string
+  frequency: string
+  area: string
+  serviceHours: number
+  staffId: string
+  staffName: string
+}
+
+const EXTRA_HOURLY_RATE_AED = 35
+
 const STATUS_CONFIG = {
   pending:     { label: 'Pending',     color: 'bg-amber-100 text-amber-700 border-amber-200',    dot: 'bg-amber-500',   icon: AlertCircle },
   accepted:    { label: 'Accepted',    color: 'bg-teal-100 text-teal-700 border-teal-200',       dot: 'bg-teal-500',    icon: ThumbsUp },
@@ -87,6 +106,16 @@ const STATUS_CONFIG = {
 const calendarDotColors: Record<string, string> = {
   pending: 'bg-amber-500', accepted: 'bg-teal-500', confirmed: 'bg-blue-500',
   'in-progress': 'bg-violet-500', completed: 'bg-emerald-500', cancelled: 'bg-red-500', rejected: 'bg-rose-500',
+}
+
+const calendarCardColors: Record<string, string> = {
+  pending: 'bg-amber-900/90 border-amber-500 text-amber-50',
+  accepted: 'bg-teal-900/90 border-teal-500 text-teal-50',
+  confirmed: 'bg-blue-900/90 border-blue-500 text-blue-50',
+  'in-progress': 'bg-violet-900/90 border-violet-500 text-violet-50',
+  completed: 'bg-emerald-900/90 border-emerald-500 text-emerald-50',
+  cancelled: 'bg-red-900/90 border-red-500 text-red-50',
+  rejected: 'bg-rose-900/90 border-rose-500 text-rose-50',
 }
 
 const PAYMENT_STATUS_CONFIG = {
@@ -145,6 +174,25 @@ export default function AdminBookings() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [loadingBookings, setLoadingBookings] = useState(true)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [creatingBooking, setCreatingBooking] = useState(false)
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
+  const [createFormData, setCreateFormData] = useState<ManualBookingFormData>({
+    serviceId: '',
+    clientName: '',
+    clientEmail: '',
+    clientPhone: '',
+    clientAddress: '',
+    bookingDate: '',
+    bookingTime: '',
+    notes: '',
+    propertyType: 'apartment',
+    frequency: 'once',
+    area: '',
+    serviceHours: 1,
+    staffId: '',
+    staffName: '',
+  })
 
   // Calendar states
   const [showCalendar, setShowCalendar] = useState(false)
@@ -179,11 +227,156 @@ export default function AdminBookings() {
     return ts
   }
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email)
+  }
+
+  const validatePhone = (phone: string) => phone.replace(/\D/g, '').length >= 10
+
+  const resetCreateForm = () => {
+    setCreateFormData({
+      serviceId: '',
+      clientName: '',
+      clientEmail: '',
+      clientPhone: '',
+      clientAddress: '',
+      bookingDate: '',
+      bookingTime: '',
+      notes: '',
+      propertyType: 'apartment',
+      frequency: 'once',
+      area: '',
+      serviceHours: 1,
+      staffId: '',
+      staffName: '',
+    })
+    setCreateErrors({})
+  }
+
+  const handleCreateInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setCreateFormData(prev => ({
+      ...prev,
+      [name]: name === 'serviceHours' ? Math.max(1, Number(value) || 1) : value,
+    }))
+    if (createErrors[name]) {
+      setCreateErrors(prev => {
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+    }
+  }
+
+  const validateCreateForm = () => {
+    const errors: Record<string, string> = {}
+    if (!createFormData.serviceId) errors.serviceId = 'Please select a service'
+    if (!createFormData.clientName.trim()) errors.clientName = 'Name is required'
+    if (!createFormData.clientEmail.trim()) errors.clientEmail = 'Email is required'
+    else if (!validateEmail(createFormData.clientEmail)) errors.clientEmail = 'Please enter a valid email'
+    if (!createFormData.clientPhone.trim()) errors.clientPhone = 'Phone is required'
+    else if (!validatePhone(createFormData.clientPhone)) errors.clientPhone = 'Please enter a valid phone number'
+    if (!createFormData.clientAddress.trim()) errors.clientAddress = 'Address is required'
+    if (!createFormData.bookingDate) errors.bookingDate = 'Please select a date'
+    if (!createFormData.bookingTime) errors.bookingTime = 'Please select a time'
+    if (!createFormData.serviceHours || createFormData.serviceHours < 1) errors.serviceHours = 'Please select at least 1 hour'
+    return errors
+  }
+
+  const handleCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const errors = validateCreateForm()
+    setCreateErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    const selectedService = services.find(s => s.id === createFormData.serviceId)
+    if (!selectedService) {
+      setCreateErrors(prev => ({ ...prev, serviceId: 'Selected service is not available' }))
+      return
+    }
+
+    const selectedOrRandomStaff = createFormData.staffId
+      ? employees.find(emp => emp.id === createFormData.staffId)
+      : employees[Math.floor(Math.random() * employees.length)]
+
+    const calculatedTotalAmount = selectedService.price + (createFormData.serviceHours * EXTRA_HOURLY_RATE_AED)
+
+    setCreatingBooking(true)
+    try {
+      const bookingRef = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`
+      await addDoc(collection(db, 'bookings'), {
+        bookingId: bookingRef,
+        service: selectedService.name,
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        serviceHours: createFormData.serviceHours,
+        name: createFormData.clientName,
+        email: createFormData.clientEmail,
+        phone: createFormData.clientPhone,
+        propertyType: createFormData.propertyType,
+        area: createFormData.area,
+        frequency: createFormData.frequency,
+        date: createFormData.bookingDate,
+        time: createFormData.bookingTime,
+        message: createFormData.notes,
+        clientAddress: createFormData.clientAddress,
+        staffId: selectedOrRandomStaff?.id || '',
+        staffName: selectedOrRandomStaff?.name || '',
+        assignedStaff: selectedOrRandomStaff?.name || '',
+        assignedStaffName: selectedOrRandomStaff?.name || '',
+        baseAmount: selectedService.price,
+        hourlyRate: EXTRA_HOURLY_RATE_AED,
+        totalAmount: calculatedTotalAmount,
+        serviceDuration: createFormData.serviceHours,
+        paymentMethod: 'after-work',
+        paymentStatus: 'pending',
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      })
+
+      setShowCreateModal(false)
+      resetCreateForm()
+    } catch (err) {
+      console.error('Failed to create booking:', err)
+      alert('Failed to create booking. Please try again.')
+    } finally {
+      setCreatingBooking(false)
+    }
+  }
+
   const getServiceInfo = (name: string, svcs: Service[]) => {
     const s = svcs.find(x => x.name.toLowerCase() === name.toLowerCase())
       ?? svcs.find(x => name.toLowerCase().includes(x.name.toLowerCase()) || x.name.toLowerCase().includes(name.toLowerCase()))
     return s ? { id: s.id, name: s.name, price: s.price, duration: s.duration || 2 }
              : { id: '', name, price: 200, duration: 2 }
+  }
+
+  const parseBookingDate = (value: string) => {
+    if (!value) return null
+    try {
+      const isoParsed = parseISO(value)
+      if (!Number.isNaN(isoParsed.getTime())) return isoParsed
+    } catch {
+      // Fall through to native parsing fallback.
+    }
+
+    const nativeParsed = new Date(value)
+    if (!Number.isNaN(nativeParsed.getTime())) return nativeParsed
+    return null
+  }
+
+  const openCreateFromSlot = (slot: string, staff?: Employee) => {
+    setCreateErrors({})
+    setCreateFormData(prev => ({
+      ...prev,
+      bookingDate: format(selectedDate, 'yyyy-MM-dd'),
+      bookingTime: slot,
+      staffId: staff?.id || '',
+      staffName: staff?.name || '',
+    }))
+    setShowCreateModal(true)
   }
 
   // Fetch services & employees once
@@ -272,6 +465,42 @@ export default function AdminBookings() {
     return () => unsub()
   }, [services]) // re-subscribes if services load (for name mapping)
 
+  // Ensure every booking has an assigned staff member so calendar slots can render consistently.
+  useEffect(() => {
+    if (employees.length === 0 || bookings.length === 0) return
+
+    const unassigned = bookings.filter(b => !b.staffId && !b.staffName && !b.assignedStaff)
+    if (unassigned.length === 0) return
+
+    let cancelled = false
+
+    const assignMissingStaff = async () => {
+      for (const booking of unassigned) {
+        if (cancelled) return
+        const randomEmployee = employees[Math.floor(Math.random() * employees.length)]
+        if (!randomEmployee) return
+
+        try {
+          await updateDoc(doc(db, 'bookings', booking.id), {
+            staffId: randomEmployee.id,
+            staffName: randomEmployee.name,
+            assignedStaff: randomEmployee.name,
+            assignedStaffName: randomEmployee.name,
+            updatedAt: Timestamp.now(),
+          })
+        } catch (err) {
+          console.error('Failed to auto-assign staff for booking:', booking.id, err)
+        }
+      }
+    }
+
+    assignMissingStaff()
+
+    return () => {
+      cancelled = true
+    }
+  }, [bookings, employees])
+
   const stats = useMemo(() => ({
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'pending').length,
@@ -306,10 +535,28 @@ export default function AdminBookings() {
   // Calendar helpers
   const filteredAppointments = useMemo(() =>
     bookings.filter(b => {
-      try { return isSameDay(parseISO(b.bookingDate), selectedDate) } catch { return false }
+      const parsed = parseBookingDate(b.bookingDate)
+      if (!parsed) return false
+      return isSameDay(parsed, selectedDate)
     }),
     [bookings, selectedDate]
   )
+
+  const upcomingBookings = useMemo(() => {
+    const today = startOfDay(new Date())
+    return bookings
+      .filter(b => {
+        const parsed = parseBookingDate(b.bookingDate)
+        if (!parsed) return false
+        return parsed >= today && b.status !== 'cancelled' && b.status !== 'rejected'
+      })
+      .sort((a, b) => {
+        const aTime = parseBookingDate(a.bookingDate)?.getTime() || 0
+        const bTime = parseBookingDate(b.bookingDate)?.getTime() || 0
+        if (aTime !== bTime) return aTime - bTime
+        return (a.bookingTime || '').localeCompare(b.bookingTime || '')
+      })
+  }, [bookings])
 
   const filteredStaff = useMemo(() =>
     selectedEmployee === 'all' ? employees : employees.filter(e => e.name === selectedEmployee),
@@ -400,7 +647,7 @@ export default function AdminBookings() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-350 mx-auto p-6 space-y-6">
+      <div className={`mx-auto space-y-6 ${showCalendar ? 'w-full max-w-none p-3 sm:p-4 lg:p-6' : 'max-w-350 p-6'}`}>
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -419,6 +666,20 @@ export default function AdminBookings() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setCreateErrors({})
+                setCreateFormData(prev => ({
+                  ...prev,
+                  bookingDate: format(selectedDate, 'yyyy-MM-dd'),
+                }))
+                setShowCreateModal(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all border bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+            >
+              <Calendar className="h-4 w-4" />
+              Create Manual Booking
+            </button>
             <button
               onClick={() => setShowCalendar(!showCalendar)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all border ${
@@ -464,7 +725,9 @@ export default function AdminBookings() {
                 </div>
                 <div>
                   <h2 className="font-bold text-sm">Staff Booking Calendar</h2>
-                  <p className="text-xs text-muted-foreground">{filteredAppointments.length} bookings on {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {filteredAppointments.length} bookings on {format(selectedDate, 'MMMM dd, yyyy')} · {upcomingBookings.length} upcoming
+                  </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -525,58 +788,71 @@ export default function AdminBookings() {
 
             {/* Calendar grid */}
             {timeSlots.length > 0 && filteredStaff.length > 0 ? (
-              <div className="overflow-auto max-h-145">
+              <div className="overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-230px)]">
                 <table className="min-w-max border-collapse w-full">
                   <thead className="sticky top-0 z-30 bg-muted">
                     <tr>
-                      <th className="p-3 text-xs font-bold border-r border-b border-border text-left min-w-45 sticky left-0 bg-muted z-40">
-                        Staff
+                      <th className="p-3 text-xs font-bold border-r border-b border-border text-left min-w-28 sticky left-0 bg-muted z-40">
+                        Time
                       </th>
-                      {timeSlots.map((s, i) => (
-                        <th key={i} className="p-2 text-[11px] font-medium border-r border-b border-border last:border-r-0 min-w-22.5 text-center text-muted-foreground">
-                          {getSlotDisplay(s)}
+                      {filteredStaff.map((emp) => (
+                        <th key={emp.id} className="p-2 border-r border-b border-border last:border-r-0 min-w-44 text-left bg-muted">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-black text-xs shrink-0">
+                              {emp.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-foreground truncate max-w-32">{emp.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate max-w-32">{emp.role}</p>
+                            </div>
+                          </div>
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStaff.map(emp => {
-                      const empsApts = getEmpsForDate(emp)
+                    {timeSlots.map((slot, slotIndex) => {
                       return (
-                        <tr key={emp.id} className="group">
-                          <td className="sticky left-0 z-20 bg-card border-r border-b border-border p-3 group-hover:bg-muted/30 transition-colors">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-black text-xs shrink-0">
-                                {emp.name.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-sm leading-tight truncate max-w-30">{emp.name}</p>
-                                <p className="text-[10px] text-muted-foreground">{emp.role}</p>
-                              </div>
-                            </div>
+                        <tr key={`${slot}-${slotIndex}`} className="group">
+                          <td className="sticky left-0 z-20 bg-card border-r border-b border-border p-2.5 group-hover:bg-muted/30 transition-colors">
+                            <p className="text-xs font-semibold text-foreground">{getSlotDisplay(slot)}</p>
                           </td>
-                          {timeSlots.map((slot, si) => {
+                          {filteredStaff.map((emp) => {
+                            const empsApts = getEmpsForDate(emp)
                             const covering = empsApts.filter(a => doesCoverSlot(a, slot))
                             const starter = covering.find(a => isAptStart(a, slot))
                             if (starter) {
-                              const span = getSpan(starter, slot)
+                              const cardColor = calendarCardColors[starter.status] ?? 'bg-slate-900/90 border-slate-500 text-slate-50'
                               return (
-                                <td key={si} colSpan={span}
+                                <td key={`${slot}-${emp.id}`}
                                   className="p-1.5 border-b border-border cursor-pointer"
                                   onClick={() => handleViewDetails(starter)}>
-                                  <div className={`h-full p-2 rounded-xl border-l-4 ${
-                                    calendarDotColors[starter.status] ?? 'bg-muted-foreground'
-                                  } bg-opacity-10 hover:bg-opacity-20 transition-all`}
-                                    style={{ borderLeftColor: '', backgroundColor: 'rgb(var(--muted)/0.4)' }}>
+                                  <div className={`h-full p-2 rounded-xl border-l-4 ${cardColor} transition-all hover:brightness-110`}>
                                     <p className="font-bold text-xs truncate">{starter.clientName}</p>
-                                    <p className="text-[10px] text-muted-foreground truncate">{starter.serviceName}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{starter.bookingTime}</p>
+                                    <p className="text-[10px] text-white/85 truncate">{starter.serviceName}</p>
+                                    <p className="text-[10px] text-white/75 mt-0.5">{starter.bookingTime} · {starter.duration}h</p>
                                   </div>
                                 </td>
                               )
                             }
-                            if (covering.length > 0) return null
-                            return <td key={si} className="border-r border-b border-border/50 bg-muted/5 hover:bg-muted/20 transition-colors" />
+                            if (covering.length > 0) {
+                              return (
+                                <td
+                                  key={`${slot}-${emp.id}`}
+                                  className="border-r border-b border-border/50 bg-slate-200/40 dark:bg-slate-700/40 cursor-pointer"
+                                  onClick={() => handleViewDetails(covering[0])}
+                                  title={`${emp.name} is occupied at ${getSlotDisplay(slot)}`}
+                                />
+                              )
+                            }
+                            return (
+                              <td
+                                key={`${slot}-${emp.id}`}
+                                className="border-r border-b border-border/50 bg-muted/5 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                                onClick={() => openCreateFromSlot(slot, emp)}
+                                title={`Create booking for ${emp.name} at ${getSlotDisplay(slot)}`}
+                              />
+                            )
                           })}
                         </tr>
                       )
@@ -600,6 +876,32 @@ export default function AdminBookings() {
                   {v.label}
                 </div>
               ))}
+            </div>
+
+            {/* Upcoming bookings */}
+            <div className="p-4 border-t border-border bg-muted/20">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Upcoming Bookings</h3>
+                <span className="text-xs text-muted-foreground">{upcomingBookings.length} total</span>
+              </div>
+              {upcomingBookings.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No upcoming bookings yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  {upcomingBookings.slice(0, 10).map((booking) => (
+                    <button
+                      key={booking.id}
+                      onClick={() => handleViewDetails(booking)}
+                      className="w-full text-left p-2 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors"
+                    >
+                      <p className="text-xs font-semibold text-foreground truncate">{booking.clientName} · {booking.serviceName}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {booking.bookingDate} {booking.bookingTime} · {booking.staffName || booking.assignedStaff || 'Unassigned'}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -788,6 +1090,200 @@ export default function AdminBookings() {
               </div>
             )}
           </>
+        )}
+
+        {/* ── Create Booking Modal ── */}
+        {showCreateModal && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => {
+              setShowCreateModal(false)
+              resetCreateForm()
+            }}
+          >
+            <div className="bg-card rounded-2xl shadow-2xl border border-border w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <div>
+                  <h2 className="font-black text-base">Create Manual Booking</h2>
+                  <p className="text-xs text-muted-foreground mt-1">Use the same options available in the public booking form.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    resetCreateForm()
+                  }}
+                  className="p-2 hover:bg-muted rounded-xl transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateBooking} className="overflow-y-auto flex-1 p-6 space-y-5">
+                <div>
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Service</h3>
+                  <select
+                    name="serviceId"
+                    value={createFormData.serviceId}
+                    onChange={handleCreateInputChange}
+                    className={INPUT_CLS}
+                  >
+                    <option value="">Select a service...</option>
+                    {services.map(service => (
+                      <option key={service.id} value={service.id}>
+                        {service.name} - AED {service.price}
+                      </option>
+                    ))}
+                  </select>
+                  {createErrors.serviceId && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.serviceId}</p>}
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Client Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className={LABEL_CLS}>Full Name</label>
+                      <input name="clientName" value={createFormData.clientName} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      {createErrors.clientName && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.clientName}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Phone</label>
+                      <input name="clientPhone" value={createFormData.clientPhone} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      {createErrors.clientPhone && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.clientPhone}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Email</label>
+                      <input name="clientEmail" type="email" value={createFormData.clientEmail} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      {createErrors.clientEmail && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.clientEmail}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Property Type</label>
+                      <select name="propertyType" value={createFormData.propertyType} onChange={handleCreateInputChange} className={INPUT_CLS}>
+                        <option value="apartment">Apartment</option>
+                        <option value="villa">Villa</option>
+                        <option value="office">Office</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={LABEL_CLS}>Service Address</label>
+                      <input name="clientAddress" value={createFormData.clientAddress} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      {createErrors.clientAddress && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.clientAddress}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Frequency</label>
+                      <select name="frequency" value={createFormData.frequency} onChange={handleCreateInputChange} className={INPUT_CLS}>
+                        <option value="once">One-Time</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Bi-Weekly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>General Area / Location</label>
+                      <input name="area" value={createFormData.area} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Assign Staff (Optional)</label>
+                      <select
+                        name="staffId"
+                        value={createFormData.staffId}
+                        onChange={(e) => {
+                          const selectedId = e.target.value
+                          const selectedEmployee = employees.find(emp => emp.id === selectedId)
+                          setCreateFormData(prev => ({
+                            ...prev,
+                            staffId: selectedId,
+                            staffName: selectedEmployee?.name || '',
+                          }))
+                        }}
+                        className={INPUT_CLS}
+                      >
+                        <option value="">Auto assign random staff</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name} - {emp.role}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Schedule</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className={LABEL_CLS}>Date</label>
+                      <input name="bookingDate" type="date" value={createFormData.bookingDate} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      {createErrors.bookingDate && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.bookingDate}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Preferred Time</label>
+                      <select name="bookingTime" value={createFormData.bookingTime} onChange={handleCreateInputChange} className={INPUT_CLS}>
+                        <option value="">Select a time...</option>
+                        <option value="08:00">08:00 AM</option>
+                        <option value="09:00">09:00 AM</option>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="14:00">02:00 PM</option>
+                        <option value="15:00">03:00 PM</option>
+                        <option value="16:00">04:00 PM</option>
+                        <option value="17:00">05:00 PM</option>
+                        <option value="18:00">06:00 PM</option>
+                      </select>
+                      {createErrors.bookingTime && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.bookingTime}</p>}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Service Hours</label>
+                      <select name="serviceHours" value={createFormData.serviceHours} onChange={handleCreateInputChange} className={INPUT_CLS}>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                          <option key={h} value={h}>{h} {h === 1 ? 'Hour' : 'Hours'}</option>
+                        ))}
+                      </select>
+                      {createErrors.serviceHours && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.serviceHours}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">AED {EXTRA_HOURLY_RATE_AED} added per selected hour</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={LABEL_CLS}>Special Notes (Optional)</label>
+                  <textarea
+                    name="notes"
+                    value={createFormData.notes}
+                    onChange={handleCreateInputChange}
+                    rows={4}
+                    className={`${INPUT_CLS} resize-none`}
+                    placeholder="Any specific instructions or priorities for the team?"
+                  />
+                </div>
+
+                <div className="p-4 rounded-xl border border-border bg-muted/30 text-sm">
+                  <p className="font-semibold text-muted-foreground">Estimated Price</p>
+                  <p className="text-lg font-black text-emerald-600 mt-1">
+                    AED {((services.find(s => s.id === createFormData.serviceId)?.price || 0) + (createFormData.serviceHours * EXTRA_HOURLY_RATE_AED)).toLocaleString()}
+                  </p>
+                </div>
+              </form>
+
+              <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    resetCreateForm()
+                  }}
+                  className="px-4 py-2 border border-border rounded-xl font-semibold text-sm hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateBooking}
+                  disabled={creatingBooking}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-60"
+                >
+                  {creatingBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {creatingBooking ? 'Creating...' : 'Create Booking'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ── Details Modal ── */}

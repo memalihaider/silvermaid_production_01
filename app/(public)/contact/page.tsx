@@ -39,8 +39,8 @@ export default function Contact() {
   const [activeTab, setActiveTab] = useState('form')
   const [profileData, setProfileData] = useState({
     email: 'Info@silvermaidsdubai.com',
-    phone: '+96105 888 44 151',
-    whatsapp: '+96105 888 44 151'
+    phone: '+971588844151',
+    whatsapp: '+971588844151'
   })
   const normalizeTelNumber = (value: string) => value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
   const [services, setServices] = useState<FirebaseService[]>([])
@@ -65,8 +65,8 @@ export default function Contact() {
           if (data.profile) {
             setProfileData({
               email: data.profile.email || 'Info@silvermaidsdubai.com',
-              phone: data.profile.phone || '+96105 888 44 151',
-              whatsapp: data.profile.whatsapp || '+96105 888 44 151'
+              phone: data.profile.phone || '+971588844151',
+              whatsapp: data.profile.whatsapp || '+971588844151'
             })
           }
         }
