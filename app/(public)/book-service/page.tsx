@@ -1,1481 +1,1004 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react"
 import {
+  addDoc,
+  collection,
+  onSnapshot,
+  query,
+  serverTimestamp,
+} from "firebase/firestore"
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
+import {
+  AlertCircle,
   Calendar,
-  Clock,
-  User,
-  Mail,
-  Phone,
-  Sparkles,
   CheckCircle2,
-  ArrowRight,
-  ShieldCheck,
-  Zap,
   ChevronLeft,
-  MapPin,
-  ClipboardList,
-  Star,
-  X,
-  Check,
-  PhoneCall,
-  Users,
-  Award,
+  ChevronRight,
   CreditCard,
+  Loader2,
+  Phone,
+  Plus,
+  ShieldCheck,
+  ShoppingCart,
+  Trash2,
+  Upload,
   Wallet,
-} from "lucide-react";
-import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
-import { db } from '@/lib/firebase';
+  X,
+} from "lucide-react"
+import { db, storage } from "@/lib/firebase"
 
-// Firebase service type
-interface FirebaseService {
-  id: string;
-  name: string;
-  categoryName: string;
-  price: number;
-  description: string;
-  status: string;
+type BookingStep = 0 | 1 | 2 | 3 | 4
+
+type Category = {
+  id: string
+  name: string
+  description: string
+  image: string
+  isActive: boolean
 }
 
-// Employee type
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  rating: number;
-  status: string;
-  email?: string;
-  phone?: string;
+type Service = {
+  id: string
+  name: string
+  description: string
+  price: number
+  categoryId: string
+  categoryName: string
+  imageUrl: string
+  status: string
 }
 
-interface ScheduleEntry {
-  date: string;
-  time: string;
+type Employee = {
+  id: string
+  name: string
+  role: string
+  status: string
 }
 
-interface BookingFormData {
-  name: string;
-  email: string;
-  phone: string;
-  serviceId: string;
-  serviceName: string;
-  propertyType: string;
-  area: string;
-  frequency: string;
-  serviceDuration: string;
-  numberOfMaids: string;
-  date: string;
-  time: string;
-  message: string;
-  staffId: string;
-  staffName: string;
-  materialsOption: "with-materials" | "without-materials";
-  paymentMethod: "after-work" | "card" | "";
-  schedule: ScheduleEntry[];
+type CartItem = {
+  service: Service
+  quantity: number
 }
 
-const HOURLY_RATE_AED = 35;
-const MAX_SCHEDULE_DAYS = 3;
-const AVAILABLE_DAYS_COUNT = 7;
+const VAT_RATE = 0.05
 
-// Save booking to Firebase function
-const saveBookingToFirebase = async (bookingData: any) => {
-  try {
-    // Generate booking ID
-    const bookingId = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
+const defaultCategoryImage =
+  "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=1200"
+const defaultServiceImage =
+  "https://images.unsplash.com/photo-1581578731548-c64695cc6958?auto=format&fit=crop&q=80&w=1200"
 
-    // Prepare data with metadata - store both ID and name for service and staff
-    const bookingWithMeta = {
-      ...bookingData,
-      bookingId,
-      status: "pending",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      
-      // Ensure we have both serviceId and serviceName
-      serviceId: bookingData.serviceId || bookingData.service || "",
-      serviceName: bookingData.serviceName || "",
-      
-      // Ensure we have both staffId and staffName
-      staffId: bookingData.staffId || "",
-      staffName: bookingData.staffName || "",
-      
-      // New fields
-      serviceDuration: bookingData.serviceDuration || "2",
-      numberOfMaids: Number(bookingData.numberOfMaids) || 1,
-      frequency: bookingData.frequency || "once",
-      materialsOption: bookingData.materialsOption || "without-materials",
-      paymentMethod: bookingData.paymentMethod || "after-work",
-      paymentStatus: bookingData.paymentStatus || "after-work",
-      hourlyRate: bookingData.hourlyRate || HOURLY_RATE_AED,
-      totalAmount: bookingData.totalAmount || bookingData.estimatedPrice || 0,
-      estimatedPrice: bookingData.estimatedPrice || bookingData.totalAmount || 0,
-      schedule: bookingData.schedule || [],
-      
-      // Keep original fields for backward compatibility
-      service: bookingData.serviceName || bookingData.service || "",
-      selectedStaff: bookingData.staffName || "",
-    };
-
-    // Save to Firestore
-    const docRef = await addDoc(collection(db, "bookings"), bookingWithMeta);
-
+const makeDays = (count: number) => {
+  const now = new Date()
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(now)
+    d.setDate(now.getDate() + i)
     return {
-      success: true,
-      bookingId: docRef.id,
-      bookingRef: bookingId,
-    };
-  } catch (error: any) {
-    console.error("Firebase Error:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to save booking",
-    };
+      iso: d.toISOString().split("T")[0],
+      weekday: d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+      day: d.toLocaleDateString("en-US", { day: "2-digit" }),
+      month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+    }
+  })
+}
+
+const buildTimeSlots = () => {
+  const slots: string[] = []
+  const intervals = [0, 30]
+  for (let hour = 8; hour <= 18; hour++) {
+    for (const m of intervals) {
+      if (hour === 18 && m > 0) continue
+      const h = hour.toString().padStart(2, "0")
+      const mm = m.toString().padStart(2, "0")
+      const labelDate = new Date(2026, 0, 1, hour, m)
+      const label = labelDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      slots.push(`${h}:${mm}|${label}`)
+    }
   }
-};
+  return slots
+}
 
-// Fetch services from Firebase
-const fetchServicesFromFirebase = async (): Promise<FirebaseService[]> => {
-  try {
-    const servicesRef = collection(db, "services");
-    const querySnapshot = await getDocs(servicesRef);
-    
-    const services: FirebaseService[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      // Only include active services
-      if (data.status === "ACTIVE") {
-        services.push({
+const normalizePhone = (raw: string) => raw.replace(/\s+/g, "").trim()
+
+export default function BookServicePage() {
+  const [step, setStep] = useState<BookingStep>(0)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [cart, setCart] = useState<Record<string, CartItem>>({})
+  const [selectedDate, setSelectedDate] = useState("")
+  const [selectedTime, setSelectedTime] = useState("")
+  const [specialInstructions, setSpecialInstructions] = useState("")
+  const [propertyArea, setPropertyArea] = useState("")
+  const [professionalsCount, setProfessionalsCount] = useState(1)
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
+  const [showPhonePopup, setShowPhonePopup] = useState(false)
+  const [phoneInput, setPhoneInput] = useState("+971")
+  const [customerName, setCustomerName] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
+  const [paymentOption, setPaymentOption] = useState<"manual" | "stripe">("manual")
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const days = useMemo(() => makeDays(10), [])
+  const timeSlots = useMemo(() => buildTimeSlots(), [])
+
+  useEffect(() => {
+    const categoryQuery = query(collection(db, "categories"))
+    const serviceQuery = query(collection(db, "services"))
+    const employeeQuery = query(collection(db, "employees"))
+
+    const unsubCategories = onSnapshot(categoryQuery, (snap) => {
+      const rows: Category[] = snap.docs.map((doc) => {
+        const data = doc.data() as Record<string, any>
+        return {
           id: doc.id,
-          name: data.name || "",
-          categoryName: data.categoryName || "Uncategorized",
-          price: data.price || 0,
+          name: data.name || "Category",
           description: data.description || "",
-          status: data.status || "",
-        });
-      }
-    });
-    
-    return services;
-  } catch (error) {
-    console.error("Error fetching services:", error);
-    return [];
-  }
-};
+          image: data.image || defaultCategoryImage,
+          isActive: data.isActive !== false,
+        }
+      })
+      setCategories(rows.filter((c) => c.isActive))
+    })
 
-// Fetch employees from Firebase
-const fetchEmployeesFromFirebase = async (): Promise<Employee[]> => {
-  try {
-    const employeesRef = collection(db, "employees");
-    const querySnapshot = await getDocs(employeesRef);
-    
-    const employees: Employee[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      // Only include active cleaners/staff
-      if (data.status === "Active" && (data.role === "CLEANER" || data.role === "SUPERVISOR" || data.role === "TECHNICIAN")) {
-        employees.push({
-          id: doc.id,
-          name: data.name || "",
-          role: data.role || "CLEANER",
-          rating: data.rating || 4.0,
-          status: data.status || "Active",
-          email: data.email || "",
-          phone: data.phone || "",
-        });
-      }
-    });
-    
-    // Sort by rating (highest first)
-    return employees.sort((a, b) => b.rating - a.rating);
-  } catch (error) {
-    console.error("Error fetching employees:", error);
-    return [];
-  }
-};
+    const unsubServices = onSnapshot(serviceQuery, (snap) => {
+      const rows: Service[] = snap.docs
+        .map((doc) => {
+          const data = doc.data() as Record<string, any>
+          return {
+            id: doc.id,
+            name: data.name || "Service",
+            description: data.description || "",
+            price: Number(data.price || 0),
+            categoryId: data.categoryId || "",
+            categoryName: data.categoryName || "Uncategorized",
+            imageUrl: data.imageUrl || defaultServiceImage,
+            status: data.status || "ACTIVE",
+          }
+        })
+        .filter((item) => item.status === "ACTIVE")
+      setServices(rows)
+    })
 
-// Success Modal Component
-const SuccessPopup = ({
-  isOpen,
-  onClose,
-  bookingDetails,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  bookingDetails: any;
-}) => {
-  if (!isOpen) return null;
+    const unsubEmployees = onSnapshot(employeeQuery, (snap) => {
+      const rows: Employee[] = snap.docs
+        .map((doc) => {
+          const data = doc.data() as Record<string, any>
+          return {
+            id: doc.id,
+            name: data.name || "Professional",
+            role: data.role || "CLEANER",
+            status: data.status || "Active",
+          }
+        })
+        .filter((emp) => {
+          const status = emp.status.toLowerCase()
+          return status === "active"
+        })
+      setEmployees(rows)
+    })
+
+    return () => {
+      unsubCategories()
+      unsubServices()
+      unsubEmployees()
+    }
+  }, [])
+
+  useEffect(() => {
+    // Keep selected professionals count aligned when quantity changes.
+    setSelectedStaffIds((prev) => prev.slice(0, professionalsCount))
+  }, [professionalsCount])
+
+  useEffect(() => {
+    if (!selectedCategoryId && categories.length > 0) {
+      setSelectedCategoryId(categories[0].id)
+    }
+  }, [categories, selectedCategoryId])
+
+  const fallbackCategories = useMemo(() => {
+    if (categories.length > 0) return categories
+
+    const grouped = new Map<string, Category>()
+    for (const service of services) {
+      const key = service.categoryId || service.categoryName || "misc"
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          id: service.categoryId || key,
+          name: service.categoryName || "General",
+          description: "",
+          image: defaultCategoryImage,
+          isActive: true,
+        })
+      }
+    }
+
+    return Array.from(grouped.values())
+  }, [categories, services])
+
+  const filteredServices = useMemo(() => {
+    if (!selectedCategoryId) return services
+    return services.filter((s) => s.categoryId === selectedCategoryId || s.categoryName === selectedCategoryId)
+  }, [services, selectedCategoryId])
+
+  const cartItems = useMemo(() => Object.values(cart), [cart])
+  const cartCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems])
+  const subtotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.service.price * item.quantity, 0),
+    [cartItems],
+  )
+  const vatAmount = Number((subtotal * VAT_RATE).toFixed(2))
+  const total = Number((subtotal + vatAmount).toFixed(2))
+
+  const selectedDateLabel = useMemo(() => {
+    if (!selectedDate) return ""
+    const d = days.find((x) => x.iso === selectedDate)
+    if (!d) return selectedDate
+    return `${d.weekday} ${d.day} ${d.month}`
+  }, [days, selectedDate])
+
+  const addToCart = (service: Service) => {
+    setCart((prev) => {
+      const existing = prev[service.id]
+      const qty = existing ? existing.quantity + 1 : 1
+      return {
+        ...prev,
+        [service.id]: { service, quantity: qty },
+      }
+    })
+  }
+
+  const decrementCart = (serviceId: string) => {
+    setCart((prev) => {
+      const existing = prev[serviceId]
+      if (!existing) return prev
+      if (existing.quantity <= 1) {
+        const next = { ...prev }
+        delete next[serviceId]
+        return next
+      }
+      return {
+        ...prev,
+        [serviceId]: { ...existing, quantity: existing.quantity - 1 },
+      }
+    })
+  }
+
+  const clearItem = (serviceId: string) => {
+    setCart((prev) => {
+      const next = { ...prev }
+      delete next[serviceId]
+      return next
+    })
+  }
+
+  const toggleStaff = (staffId: string) => {
+    setSelectedStaffIds((prev) => {
+      if (prev.includes(staffId)) {
+        return prev.filter((id) => id !== staffId)
+      }
+      if (prev.length >= professionalsCount) {
+        setFormError(`You can select up to ${professionalsCount} professional(s).`)
+        return prev
+      }
+      setFormError("")
+      return [...prev, staffId]
+    })
+  }
+
+  const validateBeforeSchedule = () => {
+    if (cartItems.length === 0) {
+      setFormError("Please add at least one service to continue.")
+      return false
+    }
+    return true
+  }
+
+  const validateBeforeCheckout = () => {
+    if (!selectedDate || !selectedTime) {
+      setFormError("Please select a date and time.")
+      return false
+    }
+    return true
+  }
+
+  const handleScheduleNext = () => {
+    setFormError("")
+    if (!validateBeforeCheckout()) return
+    setShowPhonePopup(true)
+  }
+
+  const handlePhoneConfirm = () => {
+    const normalized = normalizePhone(phoneInput)
+    if (!normalized || normalized.length < 8) {
+      setFormError("Please enter a valid phone number to continue.")
+      return
+    }
+    setPhoneInput(normalized)
+    setShowPhonePopup(false)
+    setFormError("")
+    setStep(4)
+  }
+
+  const uploadReceiptIfNeeded = async () => {
+    if (paymentOption !== "manual") return ""
+    if (!receiptFile) {
+      throw new Error("Please upload payment receipt for manual payment.")
+    }
+
+    const path = `booking-receipts/${Date.now()}_${receiptFile.name.replace(/\s+/g, "_")}`
+    const storageRef = ref(storage, path)
+    await uploadBytes(storageRef, receiptFile)
+    return getDownloadURL(storageRef)
+  }
+
+  const handleSubmitBooking = async () => {
+    setFormError("")
+    setSuccessMessage("")
+
+    if (cartItems.length === 0) {
+      setFormError("Your cart is empty.")
+      return
+    }
+
+    if (!selectedDate || !selectedTime) {
+      setFormError("Please complete schedule details.")
+      return
+    }
+
+    if (!normalizePhone(phoneInput)) {
+      setFormError("Phone number is required.")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const receiptUrl = await uploadReceiptIfNeeded()
+      const bookingRef = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`
+      const firstItem = cartItems[0]
+      const selectedStaff = employees.filter((emp) => selectedStaffIds.includes(emp.id))
+      const selectedStaffNames = selectedStaff.map((emp) => emp.name)
+      const cartPayload = cartItems.map((item) => ({
+        serviceId: item.service.id,
+        serviceName: item.service.name,
+        categoryId: item.service.categoryId,
+        categoryName: item.service.categoryName,
+        quantity: item.quantity,
+        unitPrice: item.service.price,
+        lineTotal: item.service.price * item.quantity,
+      }))
+
+      const payload = {
+        bookingId: bookingRef,
+        status: "pending",
+        name: customerName || "Guest",
+        email: customerEmail || "",
+        phone: phoneInput,
+        clientName: customerName || "Guest",
+        clientEmail: customerEmail || "",
+        clientPhone: phoneInput,
+        clientAddress: propertyArea,
+        area: propertyArea,
+        service: firstItem?.service.name || "Service Booking",
+        serviceId: firstItem?.service.id || "",
+        serviceName: firstItem?.service.name || "Service Booking",
+        selectedServices: cartPayload,
+        date: selectedDate,
+        time: selectedTime,
+        bookingDate: selectedDate,
+        bookingTime: selectedTime,
+        schedule: [{ date: selectedDate, time: selectedTime }],
+        serviceDuration: String(Math.max(1, cartCount)),
+        numberOfMaids: professionalsCount,
+        message: specialInstructions,
+        propertyType: "apartment",
+        frequency: "once",
+        staffId: selectedStaff[0]?.id || "",
+        staffName: selectedStaffNames.join(", "),
+        assignedStaff: selectedStaffNames.join(", "),
+        assignedStaffIds: selectedStaff.map((emp) => emp.id),
+        assignedStaffNames: selectedStaffNames,
+        paymentMethod: paymentOption === "stripe" ? "card" : "after-work",
+        paymentStatus: paymentOption === "manual" ? "pending" : "pending",
+        paymentOption,
+        manualReceiptUrl: receiptUrl || "",
+        subtotal,
+        taxAmount: vatAmount,
+        totalAmount: total,
+        estimatedPrice: total,
+        currency: "AED",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      await addDoc(collection(db, "bookings"), payload)
+
+      // Fire and forget booking email notification
+      fetch("/api/send-booking-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: payload.clientName,
+          clientEmail: payload.clientEmail,
+          clientPhone: payload.clientPhone,
+          serviceName: cartItems.map((i) => i.service.name).join(", "),
+          bookingDate: payload.bookingDate,
+          bookingTime: payload.bookingTime,
+          message: payload.message,
+          bookingId: payload.bookingId,
+          area: payload.area,
+          propertyType: payload.propertyType,
+          frequency: payload.frequency,
+          staffId: payload.staffId,
+          staffName: payload.staffName,
+          source: "new-book-service-flow",
+        }),
+      }).catch(() => {
+        // no-op: booking should not fail if email fails
+      })
+
+      setSuccessMessage(`Booking submitted successfully. Reference: ${bookingRef}`)
+      setCart({})
+      setSelectedDate("")
+      setSelectedTime("")
+      setSpecialInstructions("")
+      setPropertyArea("")
+      setProfessionalsCount(1)
+      setSelectedStaffIds([])
+      setReceiptFile(null)
+      setPaymentOption("manual")
+      setStep(0)
+    } catch (error: any) {
+      setFormError(error?.message || "Failed to submit booking. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const summaryCard = (
+    <aside className="bg-white border border-slate-200 rounded-2xl p-5 sticky top-24 h-fit">
+      <h3 className="text-3xl font-semibold text-slate-900 mb-4">Booking Summary</h3>
+      {cartItems.length === 0 ? (
+        <p className="text-sm text-slate-500">No services added yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {cartItems.map((item) => (
+            <div key={item.service.id} className="border-b border-slate-100 pb-3">
+              <p className="text-sm font-semibold text-slate-900">{item.service.name}</p>
+              <p className="text-xs text-slate-500">{item.quantity} x AED {item.service.price.toFixed(2)}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => decrementCart(item.service.id)}
+                  className="h-7 w-7 rounded-lg bg-pink-100 text-primary text-sm font-bold"
+                >
+                  -
+                </button>
+                <span className="text-sm font-semibold">{item.quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => addToCart(item.service)}
+                  className="h-7 w-7 rounded-lg bg-pink-100 text-primary text-sm font-bold"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={() => clearItem(item.service.id)}
+                  className="ml-auto text-rose-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <div className="pt-3 space-y-2 text-sm">
+            <div className="flex justify-between text-slate-600">
+              <span>Service Fee</span>
+              <span>AED {subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Taxable Amount</span>
+              <span>AED {subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Total (inc VAT 5.0%)</span>
+              <span>AED {(subtotal + vatAmount).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sky-600 text-2xl font-bold border-t border-slate-200 pt-2">
+              <span>Total</span>
+              <span>AED {total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {selectedDate && selectedTime && (
+            <div className="pt-3 border-t border-slate-200 text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">Date & Time</p>
+              <p>{selectedDateLabel}</p>
+              <p>{selectedTime}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </aside>
+  )
+
+  const stepTitle =
+    step === 0
+      ? "Book Service"
+      : step === 1
+      ? "Select Category"
+      : step === 2
+        ? "Choose Services"
+        : step === 3
+          ? "Date & Time"
+          : "Checkout"
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
-          >
-            <X className="h-5 w-5 text-slate-600" />
-          </button>
+    <div className="min-h-screen bg-slate-100">
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-4xl font-semibold text-slate-900">{stepTitle}</h1>
+          {step > 0 && (
+            <p className="text-sm text-slate-600 mt-1">Step {step} of 4</p>
+          )}
+        </div>
 
-          {/* Background Pattern */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-primary via-pink-500 to-purple-500" />
+        {formError && (
+          <div className="mb-6 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
+            <AlertCircle className="h-4 w-4" />
+            <span>{formError}</span>
+          </div>
+        )}
 
-          {/* Content */}
-          <div className="pt-14 pb-5 px-5">
-            {/* Success Icon */}
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="h-28 w-28 rounded-full bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
-                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-200 to-green-200 flex items-center justify-center shadow-lg">
-                    <Check className="h-12 w-12 text-emerald-600" />
-                  </div>
-                </div>
-                <div className="absolute -top-2 -right-2">
-                  <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center animate-pulse">
-                    <Sparkles className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </div>
-            </div>
+        {successMessage && (
+          <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>{successMessage}</span>
+          </div>
+        )}
 
-            {/* Title */}
-            <div className="text-center mb-2">
-              <h3 className="text-4xl font-black text-slate-900 mb-2">
-                Booking Successful! 🎉
-              </h3>
-              <p className="text-slate-500 font-medium">
-                Your cleaning session has been scheduled successfully
+        {step === 0 && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 md:p-10">
+              <p className="inline-flex items-center rounded-full bg-sky-100 text-sky-700 px-3 py-1 text-xs font-semibold">
+                Silver Maid Cleaning
               </p>
-            </div>
-
-            {/* Booking Details Card */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 mb-8 border border-slate-200 shadow-inner">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-slate-400" />
-                    <span className="font-medium text-slate-600">Name</span>
-                  </div>
-                  <span className="font-bold text-slate-900">
-                    {bookingDetails.name}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-slate-400" />
-                    <span className="font-medium text-slate-600">Phone</span>
-                  </div>
-                  <span className="font-bold text-primary">
-                    {bookingDetails.phone}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <ClipboardList className="h-5 w-5 text-slate-400" />
-                    <span className="font-medium text-slate-600">Service</span>
-                  </div>
-                  <span className="font-bold text-slate-900">
-                    {bookingDetails.serviceName || bookingDetails.service}
-                  </span>
-                </div>
-
-                {bookingDetails.staffName && (
-                  <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <Award className="h-5 w-5 text-slate-400" />
-                      <span className="font-medium text-slate-600">Assigned Staff</span>
-                    </div>
-                    <span className="font-bold text-primary">
-                      {bookingDetails.staffName}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-slate-400" />
-                    <span className="font-medium text-slate-600">Date</span>
-                  </div>
-                  <span className="font-bold text-slate-900">
-                    {bookingDetails.date}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Next Steps */}
-            <div className="space-y-1 mb-1">
-              <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl">
-                <PhoneCall className="h-6 w-6 text-blue-500 shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <p className="font-bold text-slate-900">
-                    Expect our call within 15 minutes
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Our representative will call you shortly to confirm details
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
+              <h2 className="text-4xl md:text-5xl font-semibold text-slate-900 mt-4 leading-tight">
+                Ready to Schedule Your Cleaning?
+              </h2>
+              <p className="text-slate-600 mt-3">
+                Continue to choose category, select real-time services, pick your date and time, then complete checkout.
+              </p>
               <button
-                onClick={onClose}
-                className="flex-1 py-2 bg-gradient-to-r from-primary to-pink-500 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-primary/25"
+                type="button"
+                onClick={() => {
+                  setFormError("")
+                  setStep(1)
+                }}
+                className="mt-6 h-11 px-8 rounded-xl bg-primary text-white font-semibold hover:bg-pink-700 shadow-md shadow-primary/20"
               >
-                Done, Got It
+                Booking
               </button>
             </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
+            <div className="relative min-h-80">
+              <img
+                src={defaultCategoryImage}
+                alt="Booking"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-linear-to-r from-sky-500/50 to-transparent" />
+            </div>
+          </section>
+        )}
 
-export default function BookService() {
-  const [step, setStep] = useState(1);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [latestBooking, setLatestBooking] = useState<any>(null);
-  const [firebaseServices, setFirebaseServices] = useState<FirebaseService[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
-
-  const [scheduleError, setScheduleError] = useState("");
-  const [formData, setFormData] = useState<BookingFormData>({
-    name: "",
-    email: "",
-    phone: "",
-    serviceId: "", // Store service ID
-    serviceName: "", // Store service name
-    propertyType: "apartment",
-    area: "",
-    frequency: "once",
-    serviceDuration: "2", // Duration in hours
-    numberOfMaids: "1", // Number of maids needed
-    date: "",
-    time: "",
-    message: "",
-    staffId: "", // Store staff ID
-    staffName: "", // Store staff name
-    materialsOption: "without-materials",
-    paymentMethod: "",
-    schedule: [],
-  });
-
-  // Fetch services and employees from Firebase on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoadingServices(true);
-      setIsLoadingEmployees(true);
-      
-      try {
-        // Fetch services
-        const services = await fetchServicesFromFirebase();
-        setFirebaseServices(services);
-        
-        // Fetch employees
-        const staff = await fetchEmployeesFromFirebase();
-        setEmployees(staff);
-      } catch (error) {
-        console.error("Failed to load data:", error);
-      } finally {
-        setIsLoadingServices(false);
-        setIsLoadingEmployees(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-
-  const totalSteps = 4;
-
-  const availableDays = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: AVAILABLE_DAYS_COUNT }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() + index);
-      const iso = date.toISOString().split("T")[0];
-      const label = date.toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
-      return { date: iso, label };
-    });
-  }, []);
-
-  const serviceHours = Number(formData.serviceDuration || 0);
-  const totalAmount = useMemo(
-    () => Math.max(0, serviceHours * HOURLY_RATE_AED),
-    [serviceHours],
-  );
-
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps));
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validateStep = () => {
-      if (step === 2 && !formData.serviceId) {
-        alert("Please select a service");
-        return false;
-      }
-
-      if (step === 3) {
-        if (formData.schedule.length === 0) {
-          setScheduleError("Select up to 3 days for the service.");
-          return false;
-        }
-
-        const missingTime = formData.schedule.find((slot) => !slot.time);
-        if (missingTime) {
-          setScheduleError("Please select a time for each chosen day.");
-          return false;
-        }
-
-        setScheduleError("");
-      }
-
-      if (step === 4 && !formData.paymentMethod) {
-        alert("Please choose a payment method");
-        return false;
-      }
-
-      return true;
-    };
-
-    if (step < totalSteps) {
-      if (!validateStep()) {
-        return;
-      }
-      nextStep();
-    } else {
-      try {
-        const primarySchedule = formData.schedule[0];
-        const bookingDate = primarySchedule?.date || formData.date;
-        const bookingTime = primarySchedule?.time || formData.time;
-        const paymentStatus = formData.paymentMethod === "card" ? "pending" : "after-work";
-        const bookingPayload = {
-          ...formData,
-          date: bookingDate,
-          time: bookingTime,
-          paymentStatus,
-          totalAmount,
-          estimatedPrice: totalAmount,
-          hourlyRate: HOURLY_RATE_AED,
-        };
-
-        // Validate required fields
-        if (
-          !formData.name ||
-          !formData.email ||
-          !formData.phone ||
-          !formData.serviceId ||
-          !bookingDate ||
-          !formData.paymentMethod
-        ) {
-          alert("Please fill all required fields");
-          return;
-        }
-
-        // Save to Firebase
-        const result = await saveBookingToFirebase(bookingPayload);
-
-        if (result.success) {
-          if (formData.paymentMethod === "card") {
-            try {
-              const sessionResponse = await fetch(
-                "/api/stripe/create-checkout-session",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ bookingDocId: result.bookingId }),
-                },
-              );
-
-              const sessionData = await sessionResponse.json().catch(() => ({}));
-              if (!sessionResponse.ok) {
-                throw new Error(sessionData.error || "Failed to start payment.");
-              }
-
-              if (sessionData?.url) {
-                window.location.assign(sessionData.url);
-                return;
-              }
-
-              throw new Error("Stripe session URL missing.");
-            } catch (sessionError: any) {
-              console.error("Stripe checkout error:", sessionError);
-              alert("Unable to start Stripe checkout. Please try again.");
-              return;
-            }
-          }
-
-          // ============= 📧 EMAIL SEND KARO - FIXED VERSION =============
-          try {
-            console.log("📧 Sending email notification...");
-            
-            // DEBUG: Check values before sending
-            console.log("📧 formData.staffName:", formData.staffName);
-            console.log("📧 formData.staffId:", formData.staffId);
-            console.log("📧 formData.serviceName:", formData.serviceName);
-            
-            const emailResponse = await fetch('/api/send-booking-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                clientName: formData.name,
-                clientEmail: formData.email,
-                clientPhone: formData.phone,
-                serviceName: formData.serviceName,
-                bookingDate,
-                bookingTime,
-                message: formData.message,
-                bookingId: result.bookingRef,
-                propertyType: formData.propertyType,
-                area: formData.area,
-                frequency: formData.frequency,
-                // 👇 IMPORTANT - STAFF FIELDS
-                staffName: formData.staffName,  // YEH NULL NAHI HONA CHAHIYE
-                staffId: formData.staffId,      // YEH BHI BHEJO
-                source: 'book-service-page',
-              }),
-            });
-            
-            const emailResult = await emailResponse.json();
-            
-            if (emailResult.success) {
-              console.log("✅ Email sent successfully!");
-              console.log("📧 Email response staffName:", emailResult.staffName);
-            } else {
-              console.error("❌ Email failed:", emailResult.error);
-            }
-          } catch (emailError) {
-            console.error("❌ Email error:", emailError);
-          }
-          // =============================================================
-
-          // Store latest booking details for popup
-          setLatestBooking(bookingPayload);
-          setShowSuccessPopup(true);
-
-          // Reset form
-          setFormData({
-            name: "",
-            email: "",
-            phone: "",
-            serviceId: "",
-            serviceName: "",
-            propertyType: "apartment",
-            area: "",
-            frequency: "once",
-            serviceDuration: "2",
-            numberOfMaids: "1",
-            date: "",
-            time: "",
-            message: "",
-            staffId: "",
-            staffName: "",
-            materialsOption: "without-materials",
-            paymentMethod: "",
-            schedule: [],
-          });
-          setStep(1);
-        }
-      } catch (error: any) {
-        console.error("Booking error:", error);
-        alert("Booking failed. Please try again.");
-      }
-    }
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
-  ) => {
-    const { name, value } = e.target;
-    
-    // Special handling for service selection
-    if (name === "serviceId") {
-      const selectedService = firebaseServices.find(s => s.id === value);
-      setFormData((prev) => ({
-        ...prev,
-        serviceId: value,
-        serviceName: selectedService?.name || "",
-      }));
-    }
-    // Special handling for staff selection
-    else if (name === "staffId") {
-      const selectedStaff = employees.find(e => e.id === value);
-      setFormData((prev) => ({
-        ...prev,
-        staffId: value,
-        staffName: selectedStaff?.name || "",
-      }));
-    }
-    // Regular fields
-    else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
-  const normalizeSchedule = (schedule: ScheduleEntry[]) =>
-    [...schedule].sort((a, b) => a.date.localeCompare(b.date));
-
-  const handleToggleScheduleDate = (date: string) => {
-    setFormData((prev) => {
-      const exists = prev.schedule.find((slot) => slot.date === date);
-      if (!exists && prev.schedule.length >= MAX_SCHEDULE_DAYS) {
-        setScheduleError(`You can select up to ${MAX_SCHEDULE_DAYS} days.`);
-        return prev;
-      }
-
-      setScheduleError("");
-      const nextSchedule = normalizeSchedule(
-        exists
-          ? prev.schedule.filter((slot) => slot.date !== date)
-          : [...prev.schedule, { date, time: "" }],
-      );
-      const primary = nextSchedule[0];
-      return {
-        ...prev,
-        schedule: nextSchedule,
-        date: primary?.date || "",
-        time: primary?.time || "",
-      };
-    });
-  };
-
-  const handleScheduleTimeChange = (date: string, time: string) => {
-    setScheduleError("");
-    setFormData((prev) => {
-      const nextSchedule = normalizeSchedule(
-        prev.schedule.map((slot) =>
-          slot.date === date ? { ...slot, time } : slot,
-        ),
-      );
-      const primary = nextSchedule[0];
-      return {
-        ...prev,
-        schedule: nextSchedule,
-        date: primary?.date || "",
-        time: primary?.time || "",
-      };
-    });
-  };
-
-  // Group Firebase services by category
-  const groupServicesByCategory = () => {
-    const grouped: { [key: string]: FirebaseService[] } = {};
-    
-    firebaseServices.forEach((service) => {
-      const category = service.categoryName || "Other Services";
-      if (!grouped[category]) {
-        grouped[category] = [];
-      }
-      grouped[category].push(service);
-    });
-    
-    return grouped;
-  };
-
-  // Get role badge color
-  const getRoleBadgeColor = (role: string) => {
-    switch(role) {
-      case "CLEANER": return "bg-blue-100 text-blue-700";
-      case "SUPERVISOR": return "bg-purple-100 text-purple-700";
-      case "TECHNICIAN": return "bg-amber-100 text-amber-700";
-      default: return "bg-slate-100 text-slate-700";
-    }
-  };
-
-  return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* Success Popup */}
-      <SuccessPopup
-        isOpen={showSuccessPopup}
-        onClose={() => setShowSuccessPopup(false)}
-        bookingDetails={latestBooking}
-      />
-
-      {/* Hero Header */}
-      <section className="relative py-24 bg-slate-950 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
-          <img
-            src="https://images.unsplash.com/photo-1628177142898-93e36e4e3a40?auto=format&fit=crop&q=80&w=1600"
-            alt="Premium Booking"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-b from-slate-950 via-slate-950/20 to-slate-950" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="max-w-3xl mx-auto"
-          >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/20 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6">
-              Instant Scheduling
-            </span>
-            <h1 className="text-6xl md:text-7xl font-black tracking-tighter mb-8 leading-[0.9]">
-              SECURE YOUR <br />
-              <span className="text-primary italic lowercase">
-                premium session
-              </span>
-            </h1>
-            <p className="text-xl text-slate-300 font-bold uppercase tracking-tight italic">
-              UAE's most reliable hygiene booking system. Simple, fast,
-              professional.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Booking Form Section */}
-      <section className="py-24 -mt-20 relative z-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[700px]">
-              {/* Left Side: Progress & Info */}
-              <div className="bg-slate-900 md:w-80 p-12 text-white flex flex-col justify-between border-r border-white/5">
-                <div className="space-y-12">
-                  <div className="space-y-6">
-                    <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">
-                      Booking Steps
-                    </h3>
-                    <div className="space-y-8">
-                        {[
-                        { s: 1, label: "CONTACT INFO", icon: User },
-                        { s: 2, label: "SERVICE & STAFF", icon: ClipboardList },
-                        { s: 3, label: "AVAILABILITY", icon: Calendar },
-                        { s: 4, label: "PAYMENT", icon: CreditCard },
-                      ].map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`flex items-center gap-4 transition-all duration-500 ${step >= item.s ? "opacity-100" : "opacity-30"}`}
-                        >
-                          <div
-                            className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs ${step > item.s ? "bg-primary text-white" : step === item.s ? "bg-white text-slate-900 shadow-xl shadow-white/10" : "bg-white/5 text-white"}`}
-                          >
-                            {step > item.s ? (
-                              <CheckCircle2 className="h-5 w-5" />
-                            ) : (
-                              item.s
-                            )}
-                          </div>
-                          <span className="text-[11px] font-black tracking-widest uppercase">
-                            {item.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+        {step === 1 && (
+          <section>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {fallbackCategories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategoryId(category.id)
+                    setFormError("")
+                    setStep(2)
+                  }}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden text-left hover:border-sky-400 transition-colors"
+                >
+                  <img src={category.image || defaultCategoryImage} alt={category.name} className="h-36 w-full object-cover" />
+                  <div className="p-4">
+                    <h3 className="text-2xl font-semibold text-slate-900">{category.name}</h3>
+                    <p className="text-sm text-slate-600 mt-1 line-clamp-2">{category.description || "Live category from your admin panel."}</p>
                   </div>
+                </button>
+              ))}
+            </div>
 
-                  <div className="pt-12 border-t border-white/5 space-y-6">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">
-                      Why Us?
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="flex gap-3">
-                        <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-xs font-bold text-slate-300 italic">
-                          Vetted Professionals
-                        </p>
-                      </div>
-                      <div className="flex gap-3">
-                        <Zap className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-xs font-bold text-slate-300 italic">
-                          15-Min Response
-                        </p>
-                      </div>
-                      <div className="flex gap-3">
-                        <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-xs font-bold text-slate-300 italic">
-                          Satisfaction Guaranteed
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="mt-8 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setStep(0)}
+                className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            </div>
+          </section>
+        )}
 
-                <div className="mt-12 pt-12 border-t border-white/5">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                    Need instant help? <br />
-                    <a
-                      href="tel:+971588844151"
-                      className="text-white hover:text-primary transition-colors"
-                    >
-                      +971588844151
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              {/* Right Side: Form Content */}
-              <div className="flex-1 p-12 md:p-20 flex flex-col">
-                <form onSubmit={handleSubmit} className="flex flex-col h-full">
-                  <AnimatePresence mode="wait">
-                    {step === 1 && (
-                      <motion.div
-                        key="step1"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-8 flex-1"
-                      >
-                        <div className="space-y-2">
-                          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-                            Your Details
-                          </h2>
-                          <p className="text-slate-400 font-bold italic">
-                            Tell us who you are so we can reach you better.
-                          </p>
-                        </div>
-
-                        <div className="grid gap-6">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Full Identity *
-                            </label>
-                            <div className="relative group">
-                              <User className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
-                              <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Your Name"
-                                required
-                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Contact Phone *
-                            </label>
-                            <div className="relative group">
-                              <Phone className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
-                              <input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                placeholder="+971 -- --- ----"
-                                required
-                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Email Address *
-                            </label>
-                            <div className="relative group">
-                              <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
-                              <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="name@email.com"
-                                required
-                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {step === 2 && (
-                      <motion.div
-                        key="step2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-8 flex-1"
-                      >
-                        <div className="space-y-2">
-                          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-                            Services & Staff
-                          </h2>
-                          <p className="text-slate-400 font-bold italic">
-                            Select service and choose your preferred staff member.
-                          </p>
-                        </div>
-
-                        <div className="grid gap-6">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Required Service *
-                            </label>
-                            <select
-                              name="serviceId"
-                              value={formData.serviceId}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none relative z-10"
-                            >
-                              <option value="">Choose Service...</option>
-                              
-                              {/* Only Firebase Services - No Hardcoded */}
-                              {isLoadingServices ? (
-                                <option disabled>Loading services...</option>
-                              ) : (
-                                Object.entries(groupServicesByCategory()).map(([category, services]) => (
-                                  <optgroup key={`firebase-${category}`} label={category}>
-                                    {services.map((service) => (
-                                      <option key={`firebase-${service.id}`} value={service.id}>
-                                        {service.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ))
-                              )}
-                            </select>
-                            
-                            {isLoadingServices && (
-                              <p className="text-xs text-slate-500 mt-2 italic">
-                                Loading services from database...
-                              </p>
-                            )}
-                            
-                            {!isLoadingServices && firebaseServices.length === 0 && (
-                              <p className="text-xs text-amber-500 mt-2 italic">
-                                No services available at the moment.
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Staff Dropdown */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Select Staff Member (Optional)
-                            </label>
-                            <div className="relative group">
-                              <Users className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
-                              <select
-                                name="staffId"
-                                value={formData.staffId}
-                                onChange={handleChange}
-                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                              >
-                                <option value="">Auto-assign best available staff</option>
-                                
-                                {isLoadingEmployees ? (
-                                  <option disabled>Loading staff...</option>
-                                ) : (
-                                  employees.map((employee) => (
-                                    <option key={employee.id} value={employee.id}>
-                                      {employee.name} • {employee.role} • ⭐ {employee.rating}/5
-                                    </option>
-                                  ))
-                                )}
-                              </select>
-                            </div>
-                            
-                            {/* Staff Preview - Show selected staff details */}
-                            {formData.staffId && !isLoadingEmployees && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/10"
-                              >
-                                {(() => {
-                                  const selected = employees.find(emp => emp.id === formData.staffId);
-                                  if (!selected) return null;
-                                  
-                                  return (
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                          <Award className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div>
-                                          <p className="font-bold text-slate-900 text-sm">
-                                            {selected.name}
-                                          </p>
-                                          <div className="flex items-center gap-2">
-                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getRoleBadgeColor(selected.role)}`}>
-                                              {selected.role}
-                                            </span>
-                                            <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
-                                              <Star className="h-3 w-3 fill-current" />
-                                              {selected.rating}/5
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        {selected.phone && (
-                                          <p className="text-[10px] text-slate-400">
-                                            {selected.phone}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </motion.div>
-                            )}
-                            
-                            {isLoadingEmployees && (
-                              <p className="text-xs text-slate-500 mt-2 italic">
-                                Loading available staff...
-                              </p>
-                            )}
-                            
-                            {!isLoadingEmployees && employees.length === 0 && (
-                              <p className="text-xs text-amber-500 mt-2 italic">
-                                No staff members available at the moment.
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Property
-                              </label>
-                              <select
-                                name="propertyType"
-                                value={formData.propertyType}
-                                onChange={handleChange}
-                                className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                              >
-                                <option value="apartment">Apartment</option>
-                                <option value="villa">Villa</option>
-                                <option value="office">Office</option>
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Frequency
-                              </label>
-                              <select
-                                name="frequency"
-                                value={formData.frequency}
-                                onChange={handleChange}
-                                className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                              >
-                                <option value="once">One-Time</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="biweekly">Bi-Weekly</option>
-                                <option value="monthly">Monthly</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Service Duration
-                              </label>
-                              <div className="relative group">
-                                <Clock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
-                                <select
-                                  name="serviceDuration"
-                                  value={formData.serviceDuration}
-                                  onChange={handleChange}
-                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                                >
-                                  <option value="1">1 Hour</option>
-                                  <option value="2">2 Hours</option>
-                                  <option value="3">3 Hours</option>
-                                  <option value="4">4 Hours</option>
-                                  <option value="6">6 Hours</option>
-                                  <option value="8">8 Hours</option>
-                                </select>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                No. of Maids Needed
-                              </label>
-                              <div className="relative group">
-                                <Users className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none z-10" />
-                                <select
-                                  name="numberOfMaids"
-                                  value={formData.numberOfMaids}
-                                  onChange={handleChange}
-                                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                                >
-                                  <option value="1">1 Maid</option>
-                                  <option value="2">2 Maids</option>
-                                  <option value="3">3 Maids</option>
-                                  <option value="4">4 Maids</option>
-                                  <option value="5">5+ Maids</option>
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Materials Option
-                            </label>
-                            <select
-                              name="materialsOption"
-                              value={formData.materialsOption}
-                              onChange={handleChange}
-                              className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner appearance-none"
-                            >
-                              <option value="without-materials">Without Materials</option>
-                              <option value="with-materials">With Materials</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              General Area / Location
-                            </label>
-                            <div className="relative group">
-                              <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
-                              <input
-                                type="text"
-                                name="area"
-                                value={formData.area}
-                                onChange={handleChange}
-                                placeholder="Dubai Marina, Downtown, etc."
-                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                            <div className="flex items-center justify-between text-sm font-bold text-slate-600">
-                              <span>Hourly Rate</span>
-                              <span>AED {HOURLY_RATE_AED}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm font-bold text-slate-600 mt-2">
-                              <span>Selected Hours</span>
-                              <span>{serviceHours || 0} hrs</span>
-                            </div>
-                            <div className="flex items-center justify-between text-base font-black text-slate-900 mt-3 pt-3 border-t border-slate-200">
-                              <span>Total</span>
-                              <span>AED {totalAmount.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {step === 3 && (
-                      <motion.div
-                        key="step3"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-8 flex-1"
-                      >
-                        <div className="space-y-2">
-                          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-                            Availability
-                          </h2>
-                          <p className="text-slate-400 font-bold italic">
-                            When should we arrive for the restoration?
-                          </p>
-                        </div>
-
-                        <div className="grid gap-6">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                Select Up To {MAX_SCHEDULE_DAYS} Days (Next {AVAILABLE_DAYS_COUNT})
-                              </label>
-                              <span className="text-[11px] font-bold text-slate-500">
-                                {formData.schedule.length}/{MAX_SCHEDULE_DAYS} selected
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {availableDays.map((day) => {
-                                const selected = formData.schedule.find(
-                                  (slot) => slot.date === day.date,
-                                );
-                                return (
-                                  <div
-                                    key={day.date}
-                                    className={`rounded-2xl border p-4 transition-all ${
-                                      selected
-                                        ? "border-primary/40 bg-primary/5"
-                                        : "border-slate-100 bg-slate-50"
-                                    }`}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleScheduleDate(day.date)}
-                                      className="w-full flex items-center justify-between gap-3"
-                                    >
-                                      <div className="text-left">
-                                        <p className="text-sm font-black text-slate-900">
-                                          {day.label}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 font-semibold">
-                                          {selected ? "Selected" : "Tap to select"}
-                                        </p>
-                                      </div>
-                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${
-                                        selected
-                                          ? "bg-primary text-white"
-                                          : "bg-white text-slate-300"
-                                      }`}>
-                                        {selected ? (
-                                          <CheckCircle2 className="h-4 w-4" />
-                                        ) : (
-                                          <Calendar className="h-4 w-4" />
-                                        )}
-                                      </div>
-                                    </button>
-
-                                    {selected && (
-                                      <div className="mt-3">
-                                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                                          Time
-                                        </label>
-                                        <div className="relative group mt-2">
-                                          <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-primary transition-colors pointer-events-none" />
-                                          <input
-                                            type="time"
-                                            value={selected.time}
-                                            onChange={(e) =>
-                                              handleScheduleTimeChange(
-                                                day.date,
-                                                e.target.value,
-                                              )
-                                            }
-                                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-bold text-sm shadow-inner"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {scheduleError && (
-                              <p className="text-xs text-rose-500 font-semibold">
-                                {scheduleError}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest pl-1">
-                              Special Notes
-                            </label>
-                            <textarea
-                              name="message"
-                              value={formData.message}
-                              onChange={handleChange}
-                              placeholder="Any specific instructions or priorities for our team?"
-                              className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm shadow-inner resize-none min-h-[120px]"
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {step === 4 && (
-                      <motion.div
-                        key="step4"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-8 flex-1"
-                      >
-                        <div className="space-y-2">
-                          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-                            Payment
-                          </h2>
-                          <p className="text-slate-400 font-bold italic">
-                            Choose how you want to pay and review the total.
-                          </p>
-                        </div>
-
-                        <div className="space-y-6">
-                          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
-                            <div className="flex items-center justify-between text-sm font-bold text-slate-600">
-                              <span>Hourly Rate</span>
-                              <span>AED {HOURLY_RATE_AED}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm font-bold text-slate-600 mt-2">
-                              <span>Selected Hours</span>
-                              <span>{serviceHours || 0} hrs</span>
-                            </div>
-                            <div className="flex items-center justify-between text-base font-black text-slate-900 mt-4 pt-4 border-t border-slate-200">
-                              <span>Total Due</span>
-                              <span>AED {totalAmount.toLocaleString()}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-4">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  paymentMethod: "after-work",
-                                }))
-                              }
-                              className={`w-full text-left rounded-3xl border p-5 transition-all ${
-                                formData.paymentMethod === "after-work"
-                                  ? "border-primary bg-primary/5"
-                                  : "border-slate-100 bg-white"
-                              }`}
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
-                                  formData.paymentMethod === "after-work"
-                                    ? "bg-primary text-white"
-                                    : "bg-slate-100 text-slate-400"
-                                }`}>
-                                  <Wallet className="h-5 w-5" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-black text-slate-900">After Work (Onsite)</p>
-                                  <p className="text-xs text-slate-500 font-semibold">
-                                    Pay after the service is completed.
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  paymentMethod: "card",
-                                }))
-                              }
-                              className={`w-full text-left rounded-3xl border p-5 transition-all ${
-                                formData.paymentMethod === "card"
-                                  ? "border-primary bg-primary/5"
-                                  : "border-slate-100 bg-white"
-                              }`}
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
-                                  formData.paymentMethod === "card"
-                                    ? "bg-primary text-white"
-                                    : "bg-slate-100 text-slate-400"
-                                }`}>
-                                  <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-black text-slate-900">Card Payment (Stripe)</p>
-                                  <p className="text-xs text-slate-500 font-semibold">
-                                    Secure card payment and instant confirmation.
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Footer Navigation */}
-                  <div className="pt-12 flex items-center justify-between gap-6">
-                    {step > 1 ? (
-                      <button
-                        type="button"
-                        onClick={prevStep}
-                        className="h-16 px-8 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all flex items-center gap-3"
-                      >
-                        <ChevronLeft className="h-4 w-4" /> Back
-                      </button>
-                    ) : (
-                      <div />
-                    )}
-
+        {step === 2 && (
+          <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <div className="flex flex-wrap gap-2 mb-5">
+                {fallbackCategories.map((category) => {
+                  const active = selectedCategoryId === category.id
+                  return (
                     <button
-                      type="submit"
-                      className="h-16 px-12 bg-primary text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-primary/30 hover:bg-pink-600 transition-all flex items-center gap-4 active:scale-95 flex-1 md:flex-initial justify-center group"
+                      key={category.id}
+                      type="button"
+                      onClick={() => setSelectedCategoryId(category.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                        active ? "bg-primary text-white" : "bg-white border border-slate-300 text-slate-700"
+                      }`}
                     >
-                      {step === totalSteps ? "Complete Booking" : "Continue"}
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      {category.name}
                     </button>
-                  </div>
-                </form>
+                  )
+                })}
+              </div>
+
+              {filteredServices.length === 0 ? (
+                <p className="text-slate-500">No active services in this category.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredServices.map((service) => (
+                    <article key={service.id} className="rounded-xl border border-slate-200 p-3 bg-slate-50">
+                      <img src={service.imageUrl || defaultServiceImage} alt={service.name} className="h-32 w-full object-cover rounded-lg" />
+                      <h3 className="text-xl font-semibold text-slate-900 mt-3">{service.name}</h3>
+                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">{service.description || "Professional service"}</p>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xl font-bold text-slate-800">AED {service.price.toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(service)}
+                          className="h-9 px-3 rounded-lg bg-primary text-white text-xs font-semibold inline-flex items-center gap-1 hover:bg-pink-700"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormError("")
+                    if (!validateBeforeSchedule()) return
+                    setStep(3)
+                  }}
+                  className="h-11 px-6 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:bg-pink-700"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {/* Bottom Proof Section */}
-            <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-              <div className="space-y-4">
-                <div className="h-16 w-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto text-primary">
-                  <ShieldCheck className="h-8 w-8" />
-                </div>
-                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Fully Insured
-                </h4>
-                <p className="text-sm text-slate-500 font-bold italic">
-                  Your property is protected with our comprehensive public
-                  liability insurance.
-                </p>
+            {summaryCard}
+          </section>
+        )}
+
+        {step === 3 && (
+          <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h3 className="text-3xl font-semibold text-slate-900 mb-4">When would you like your service?</h3>
+
+              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 mb-5">
+                {days.map((day) => {
+                  const active = selectedDate === day.iso
+                  return (
+                    <button
+                      key={day.iso}
+                      type="button"
+                      onClick={() => setSelectedDate(day.iso)}
+                      className={`rounded-xl border p-2 text-center ${
+                        active
+                          ? "border-primary bg-pink-100 text-primary"
+                          : "border-slate-200 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      <p className="text-[10px] font-semibold">{day.weekday}</p>
+                      <p className="text-lg font-bold leading-tight">{day.day}</p>
+                      <p className="text-[10px]">{day.month}</p>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="space-y-4">
-                <div className="h-16 w-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto text-primary">
-                  <Star className="h-8 w-8" />
-                </div>
-                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  DM Approved
-                </h4>
-                <p className="text-sm text-slate-500 font-bold italic">
-                  Our technical services use only municipality-approved
-                  chemicals and processes.
-                </p>
+
+              <h4 className="text-2xl font-semibold text-slate-900 mb-3">What time would you like us to start?</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+                {timeSlots.map((slot) => {
+                  const [value, label] = slot.split("|")
+                  const active = selectedTime === value
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedTime(value)}
+                      className={`h-10 rounded-lg text-sm font-semibold ${
+                        active ? "bg-primary text-white" : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
-              <div className="space-y-4">
-                <div className="h-16 w-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto text-primary">
-                  <Phone className="h-8 w-8" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Number of professionals</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={professionalsCount}
+                    onChange={(e) => setProfessionalsCount(Math.max(1, Number(e.target.value || 1)))}
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  />
                 </div>
-                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  24/7 Support
-                </h4>
-                <p className="text-sm text-slate-500 font-bold italic">
-                  Our customer happiness team is always available for your
-                  inquiries.
-                </p>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Area / Address</label>
+                  <input
+                    value={propertyArea}
+                    onChange={(e) => setPropertyArea(e.target.value)}
+                    placeholder="Dubai Marina"
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Select professionals (optional, up to {professionalsCount})
+                </label>
+                {employees.length === 0 ? (
+                  <p className="text-sm text-slate-500">No active professionals available. Team will be auto-assigned.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {employees.map((emp) => {
+                      const selected = selectedStaffIds.includes(emp.id)
+                      return (
+                        <button
+                          key={emp.id}
+                          type="button"
+                          onClick={() => toggleStaff(emp.id)}
+                          className={`text-left rounded-xl border px-3 py-2 transition-colors ${
+                            selected
+                              ? "border-primary bg-pink-50"
+                              : "border-slate-200 bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-slate-900">{emp.name}</p>
+                          <p className="text-xs text-slate-500">{emp.role}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Specific cleaning instruction</label>
+                <textarea
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  rows={4}
+                  placeholder="Write here..."
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleScheduleNext}
+                  className="h-11 px-6 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:bg-pink-700"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
+
+            {summaryCard}
+          </section>
+        )}
+
+        {step === 4 && (
+          <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h3 className="text-3xl font-semibold text-slate-900 mb-4">Checkout</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Full name</label>
+                  <input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-5 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                <p className="text-sm text-slate-700 font-semibold">Phone</p>
+                <p className="text-lg text-slate-900 font-bold mt-1">{phoneInput}</p>
+              </div>
+
+              <h4 className="text-2xl font-semibold text-slate-900 mb-3">Payment Options</h4>
+              <div className="space-y-3 mb-5">
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption("manual")}
+                  className={`w-full rounded-xl border p-4 text-left ${
+                    paymentOption === "manual" ? "border-primary bg-pink-50" : "border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Wallet className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold text-slate-900">Manual Payment + Upload Receipt</p>
+                      <p className="text-xs text-slate-600">Upload payment proof and book service now.</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption("stripe")}
+                  className={`w-full rounded-xl border p-4 text-left ${
+                    paymentOption === "stripe" ? "border-primary bg-pink-50" : "border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold text-slate-900">Pay with Stripe (Integrate Later)</p>
+                      <p className="text-xs text-slate-600">Booking will be saved and payment can be connected in next phase.</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {paymentOption === "manual" && (
+                <div className="mb-5 rounded-xl border border-slate-200 p-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Receipt</label>
+                  <label className="h-11 px-4 rounded-lg bg-slate-900 text-white text-sm font-semibold inline-flex items-center gap-2 cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    Upload Receipt
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                  {receiptFile && <p className="text-xs text-emerald-700 mt-2">Selected: {receiptFile.name}</p>}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleSubmitBooking}
+                  className="h-11 px-6 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:bg-pink-700 disabled:opacity-60"
+                >
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                  Book Service
+                </button>
+              </div>
+            </div>
+
+            {summaryCard}
+          </section>
+        )}
+      </main>
+
+      {showPhonePopup && (
+        <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h4 className="text-2xl font-semibold text-slate-900">Verify Phone Number</h4>
+              <button type="button" onClick={() => setShowPhonePopup(false)} className="text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 mt-2">
+              Please confirm your phone number to continue your Silver Maid Cleaning booking.
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Phone number</label>
+              <div className="relative">
+                <Phone className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-slate-300 pl-9 pr-3"
+                  placeholder="+971"
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePhoneConfirm}
+              className="mt-4 w-full h-11 rounded-xl bg-primary text-white font-semibold hover:bg-pink-700"
+            >
+              Continue
+            </button>
           </div>
         </div>
-      </section>
+      )}
+
+      <footer className="border-t border-slate-200 mt-10">
+        <div className="max-w-6xl mx-auto px-4 py-4 text-xs text-slate-500 flex items-center justify-between">
+          <span>2026 Silver Maid Cleaning. All rights reserved.</span>
+          <span>Powered by Silver Maid Cleaning</span>
+        </div>
+      </footer>
     </div>
-  );
+  )
 }

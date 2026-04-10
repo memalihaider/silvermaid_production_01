@@ -137,7 +137,7 @@ useEffect(() => {
 
       try {
         response = await fetch(
-          'https://air-quality-api.open-meteo.com/v1/air_quality?latitude=25.2048&longitude=55.2708&current=us_aqi',
+          'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.2048&longitude=55.2708&current=us_aqi',
           {
             signal: controller.signal,
             cache: 'no-store',
