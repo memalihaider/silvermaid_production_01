@@ -121,6 +121,7 @@ interface Booking {
   area: string;
   propertyType: string;
   frequency: string;
+  serviceHours?: number;
   staffName?: string;
   totalAmount?: number;
   estimatedPrice?: number;
@@ -264,6 +265,7 @@ export default function FinanceAnalyticsPage() {
         const totalAmount = Number(data.totalAmount ?? data.estimatedPrice ?? 0);
         const paymentMethod = data.paymentMethod || data.payment_method || '';
         const paymentStatus = data.paymentStatus || data.payment_status || '';
+        const serviceHours = Number(data.serviceHours || data.serviceDuration || data.duration || 1);
 
         return {
           id: doc.id,
@@ -279,6 +281,7 @@ export default function FinanceAnalyticsPage() {
           area: data.area || data.clientAddress || '',
           propertyType: data.propertyType || '',
           frequency: data.frequency || 'once',
+          serviceHours,
           staffName: data.staffName || data.assignedStaffName || data.assignedStaff || '',
           totalAmount,
           estimatedPrice: Number(data.estimatedPrice ?? totalAmount),
@@ -2024,6 +2027,7 @@ export default function FinanceAnalyticsPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-gray-700">
                             <p className="text-gray-900 font-medium">{booking.serviceName || booking.service}</p>
                             <p className="text-xs text-gray-500 capitalize">{booking.frequency || 'once'}</p>
+                            <p className="text-xs text-gray-500">{booking.serviceHours || 1}h</p>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-700">
                             <p className="text-gray-900">{booking.date || '-'}</p>

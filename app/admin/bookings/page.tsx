@@ -14,7 +14,7 @@ import {
 
 import { db } from '@/lib/firebase'
 import {
-  collection, query, orderBy, deleteDoc, doc, updateDoc, where,
+  collection, query, deleteDoc, doc, updateDoc, where,
   Timestamp, onSnapshot, getDocs, addDoc
 } from 'firebase/firestore'
 import { format, addDays, isSameDay, parseISO, startOfDay } from 'date-fns'
@@ -32,6 +32,10 @@ interface Booking {
   bookingTime: string
   bookingNumber: string
   duration: number
+  serviceHours?: number
+  hourlyRate?: number
+  baseAmount?: number
+  hoursAmount?: number
   estimatedPrice: number
   status: 'pending' | 'accepted' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'rejected'
   paymentMethod?: string
@@ -41,11 +45,15 @@ interface Booking {
   notes?: string
   createdAt: string
   updatedAt: string
+  createdAtMillis?: number
   propertyType?: string
   frequency?: string
+  numberOfMaids?: number
   staffId?: string
   staffName?: string
   assignedStaff?: string
+  assignedStaffIds?: string[]
+  assignedStaffNames?: string[]
 }
 
 interface Service {
@@ -74,7 +82,16 @@ interface Employee {
   rating: number
 }
 
+interface ClientDirectoryItem {
+  id: string
+  name: string
+  email: string
+  phone: string
+  location: string
+}
+
 interface ManualBookingFormData {
+  clientId: string
   serviceId: string
   clientName: string
   clientEmail: string
@@ -92,6 +109,8 @@ interface ManualBookingFormData {
 }
 
 const EXTRA_HOURLY_RATE_AED = 35
+const getLocalSystemDate = () => format(new Date(), 'yyyy-MM-dd')
+const getLocalSystemTime = () => format(new Date(), 'HH:mm')
 
 const STATUS_CONFIG = {
   pending:     { label: 'Pending',     color: 'bg-amber-100 text-amber-700 border-amber-200',    dot: 'bg-amber-500',   icon: AlertCircle },
@@ -163,6 +182,7 @@ export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [clientsDirectory, setClientsDirectory] = useState<ClientDirectoryItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -178,6 +198,7 @@ export default function AdminBookings() {
   const [creatingBooking, setCreatingBooking] = useState(false)
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
   const [createFormData, setCreateFormData] = useState<ManualBookingFormData>({
+    clientId: '',
     serviceId: '',
     clientName: '',
     clientEmail: '',
@@ -221,10 +242,22 @@ export default function AdminBookings() {
   }
 
   const formatFirebaseTimestamp = (ts: any): string => {
-    if (!ts) return new Date().toISOString().split('T')[0]
-    if (ts.toDate) return ts.toDate().toISOString().split('T')[0]
-    if (ts.seconds) return new Date(ts.seconds * 1000).toISOString().split('T')[0]
+    if (!ts) return getLocalSystemDate()
+    if (ts.toDate) return format(ts.toDate(), 'yyyy-MM-dd')
+    if (ts.seconds) return format(new Date(ts.seconds * 1000), 'yyyy-MM-dd')
     return ts
+  }
+
+  const getTimestampMillis = (ts: any): number => {
+    if (!ts) return 0
+    if (typeof ts === 'number') return ts
+    if (typeof ts === 'string') {
+      const parsed = new Date(ts).getTime()
+      return Number.isNaN(parsed) ? 0 : parsed
+    }
+    if (ts?.toDate) return ts.toDate().getTime()
+    if (typeof ts?.seconds === 'number') return ts.seconds * 1000
+    return 0
   }
 
   const validateEmail = (email: string) => {
@@ -236,6 +269,7 @@ export default function AdminBookings() {
 
   const resetCreateForm = () => {
     setCreateFormData({
+      clientId: '',
       serviceId: '',
       clientName: '',
       clientEmail: '',
@@ -256,10 +290,37 @@ export default function AdminBookings() {
 
   const handleCreateInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setCreateFormData(prev => ({
-      ...prev,
-      [name]: name === 'serviceHours' ? Math.max(1, Number(value) || 1) : value,
-    }))
+    setCreateFormData(prev => {
+      const next = {
+        ...prev,
+        [name]: name === 'serviceHours' ? Math.max(1, Number(value) || 1) : value,
+      }
+
+      if (name === 'clientId') {
+        const byId = clientsDirectory.find(c => c.id.toLowerCase() === value.trim().toLowerCase())
+        if (byId) {
+          next.clientId = byId.id
+          next.clientName = byId.name || next.clientName
+          next.clientEmail = byId.email || next.clientEmail
+          next.clientPhone = byId.phone || next.clientPhone
+          next.clientAddress = byId.location || next.clientAddress
+          next.area = byId.location || next.area
+        }
+      }
+
+      if (name === 'clientName') {
+        const byName = clientsDirectory.find(c => c.name.toLowerCase() === value.trim().toLowerCase())
+        if (byName) {
+          next.clientId = byName.id
+          next.clientEmail = byName.email || next.clientEmail
+          next.clientPhone = byName.phone || next.clientPhone
+          next.clientAddress = byName.location || next.clientAddress
+          next.area = byName.location || next.area
+        }
+      }
+
+      return next
+    })
     if (createErrors[name]) {
       setCreateErrors(prev => {
         const next = { ...prev }
@@ -307,6 +368,7 @@ export default function AdminBookings() {
       const bookingRef = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`
       await addDoc(collection(db, 'bookings'), {
         bookingId: bookingRef,
+        clientId: createFormData.clientId || '',
         service: selectedService.name,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
@@ -367,6 +429,31 @@ export default function AdminBookings() {
     return null
   }
 
+  const normalizeDateValue = (value: any): string => {
+    if (!value) return ''
+    if (typeof value === 'string') return value
+    if (value?.toDate) return format(value.toDate(), 'yyyy-MM-dd')
+    if (typeof value?.seconds === 'number') return format(new Date(value.seconds * 1000), 'yyyy-MM-dd')
+    if (value instanceof Date) return format(value, 'yyyy-MM-dd')
+    return ''
+  }
+
+  const normalizeTimeValue = (value: any): string => {
+    if (!value) return ''
+    const text = String(value).trim()
+    if (/^\d{2}:\d{2}$/.test(text)) return text
+    const amPm = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (amPm) {
+      let hour = Number(amPm[1])
+      const minute = Number(amPm[2])
+      const period = amPm[3].toUpperCase()
+      if (period === 'PM' && hour !== 12) hour += 12
+      if (period === 'AM' && hour === 12) hour = 0
+      return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+    }
+    return text
+  }
+
   const openCreateFromSlot = (slot: string, staff?: Employee) => {
     setCreateErrors({})
     setCreateFormData(prev => ({
@@ -383,9 +470,10 @@ export default function AdminBookings() {
   useEffect(() => {
     const fetchStatic = async () => {
       try {
-        const [sSnap, eSnap] = await Promise.all([
+        const [sSnap, eSnap, cSnap] = await Promise.all([
           getDocs(query(collection(db, 'services'), where('status', '==', 'ACTIVE'))),
-          getDocs(query(collection(db, 'employees'), where('status', '==', 'Active'))),
+          getDocs(collection(db, 'employees')),
+          getDocs(collection(db, 'clients')),
         ])
         const svcs: Service[] = sSnap.docs.map(d => {
           const data = d.data()
@@ -399,9 +487,20 @@ export default function AdminBookings() {
           const data = d.data()
           return { id: d.id, name: data.name || '', email: data.email || '', phone: data.phone || '',
             role: data.role || 'CLEANER', department: data.department || '', status: data.status || '', rating: data.rating || 0 }
-        })
+        }).filter(emp => String(emp.status || '').toLowerCase() === 'active')
+        const clients: ClientDirectoryItem[] = cSnap.docs.map(d => {
+          const data = d.data() as Record<string, any>
+          return {
+            id: String(data.clientId || data.id || d.id),
+            name: String(data.name || ''),
+            email: String(data.email || ''),
+            phone: String(data.phone || ''),
+            location: String(data.location || data.address || ''),
+          }
+        }).filter(client => Boolean(client.name || client.id))
         setServices(svcs)
         setEmployees(emps)
+        setClientsDirectory(clients)
       } catch (e) { console.error(e) }
     }
     fetchStatic()
@@ -409,7 +508,7 @@ export default function AdminBookings() {
 
   // Real-time bookings via onSnapshot
   useEffect(() => {
-    const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))
+    const q = query(collection(db, 'bookings'))
     setLoadingBookings(true)
     const unsub = onSnapshot(q, (snap) => {
       const data: Booking[] = snap.docs.map(d => {
@@ -422,7 +521,30 @@ export default function AdminBookings() {
           : Array.isArray(r.selectedSchedule)
             ? r.selectedSchedule
             : []
-        const duration = Number(r.serviceDuration || r.duration || svc.duration || 2)
+        const normalizedSchedule = schedule
+          .map((slot: any) => ({
+            date: normalizeDateValue(slot?.date),
+            time: normalizeTimeValue(slot?.time),
+          }))
+          .filter((slot: { date: string; time: string }) => Boolean(slot.date && slot.time))
+        const normalizedDate = normalizeDateValue(r.date || r.bookingDate || normalizedSchedule[0]?.date)
+        const normalizedTime = normalizeTimeValue(r.time || r.bookingTime || normalizedSchedule[0]?.time)
+        const assignedStaffIds = Array.isArray(r.assignedStaffIds)
+          ? r.assignedStaffIds.map((id: any) => String(id))
+          : []
+        const assignedStaffNames = Array.isArray(r.assignedStaffNames)
+          ? r.assignedStaffNames.map((name: any) => String(name))
+          : []
+        const normalizedStaffName =
+          r.staffName ||
+          r.assignedStaffName ||
+          assignedStaffNames[0] ||
+          r.assignedStaff ||
+          ''
+        const duration = Number(r.serviceHours || r.serviceDuration || r.duration || svc.duration || 2)
+        const hourlyRate = Number(r.hourlyRate || EXTRA_HOURLY_RATE_AED)
+        const baseAmount = Number(r.baseAmount || 0)
+        const hoursAmount = Number(r.hoursAmount || (duration * hourlyRate))
         const estimatedPrice = Number(r.totalAmount ?? r.estimatedPrice ?? svc.price ?? 0)
         return {
           id: d.id,
@@ -433,26 +555,35 @@ export default function AdminBookings() {
           clientAddress: r.area || r.clientAddress || 'N/A',
           serviceName: svc.name,
           serviceId: r.serviceId || svc.id,
-          bookingDate: r.date || r.bookingDate || schedule[0]?.date || new Date().toISOString().split('T')[0],
-          bookingTime: r.time || r.bookingTime || schedule[0]?.time || '09:00',
+          bookingDate: normalizedDate || getLocalSystemDate(),
+          bookingTime: normalizedTime || getLocalSystemTime(),
           bookingNumber: r.bookingId || `BK${d.id.slice(-6).toUpperCase()}`,
           duration,
+          serviceHours: duration,
+          hourlyRate,
+          baseAmount,
+          hoursAmount,
           estimatedPrice,
           status: (r.status || 'pending') as Booking['status'],
           paymentMethod,
           paymentStatus,
           materialsOption: r.materialsOption || r.materialOption || '',
-          schedule,
+          schedule: normalizedSchedule,
           notes: r.message || r.notes || '',
           propertyType: r.propertyType || '',
           frequency: r.frequency || 'once',
-          staffId: r.staffId || r.assignedStaff || '',
-          staffName: r.staffName || r.assignedStaffName || '',
-          assignedStaff: r.assignedStaff || r.staffName || '',
+          numberOfMaids: Number(r.numberOfMaids || 1),
+          staffId: r.staffId || assignedStaffIds[0] || '',
+          staffName: normalizedStaffName,
+          assignedStaff: r.assignedStaff || normalizedStaffName,
+          assignedStaffIds,
+          assignedStaffNames,
           createdAt: formatFirebaseTimestamp(r.createdAt),
           updatedAt: formatFirebaseTimestamp(r.updatedAt),
+          createdAtMillis: getTimestampMillis(r.createdAt),
         }
       })
+      data.sort((a, b) => (b.createdAtMillis || 0) - (a.createdAtMillis || 0))
       setBookings(data)
       setLastUpdate(new Date())
       setIsLive(true)
@@ -521,8 +652,16 @@ export default function AdminBookings() {
       return matchSearch && matchStatus
     })
     list.sort((a, b) => {
-      if (sortBy === 'date-desc') return new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
-      if (sortBy === 'date-asc') return new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime()
+      if (sortBy === 'date-desc') {
+        const aTime = a.createdAtMillis || new Date(a.bookingDate).getTime()
+        const bTime = b.createdAtMillis || new Date(b.bookingDate).getTime()
+        return bTime - aTime
+      }
+      if (sortBy === 'date-asc') {
+        const aTime = a.createdAtMillis || new Date(a.bookingDate).getTime()
+        const bTime = b.createdAtMillis || new Date(b.bookingDate).getTime()
+        return aTime - bTime
+      }
       if (sortBy === 'price-desc') return b.estimatedPrice - a.estimatedPrice
       if (sortBy === 'price-asc') return a.estimatedPrice - b.estimatedPrice
       if (sortBy === 'name-asc') return a.clientName.localeCompare(b.clientName)
@@ -537,7 +676,8 @@ export default function AdminBookings() {
     bookings.filter(b => {
       const parsed = parseBookingDate(b.bookingDate)
       if (!parsed) return false
-      return isSameDay(parsed, selectedDate)
+      const isCalendarVisibleStatus = b.status === 'confirmed' || b.status === 'in-progress' || b.status === 'completed'
+      return isSameDay(parsed, selectedDate) && isCalendarVisibleStatus
     }),
     [bookings, selectedDate]
   )
@@ -564,7 +704,7 @@ export default function AdminBookings() {
   )
 
   const convertTo24 = (t: string) => {
-    if (!t) return '09:00'
+    if (!t) return getLocalSystemTime()
     if (t.includes(':') && !t.includes(' ')) return t
     const [time, period] = t.split(' ')
     if (!period) return t
@@ -599,13 +739,149 @@ export default function AdminBookings() {
     return Math.max(1, span)
   }
   const getEmpsForDate = (emp: Employee) =>
-    filteredAppointments.filter(a => a.staffName === emp.name || a.assignedStaff === emp.name)
+    filteredAppointments.filter((a) => {
+      const assignedNames = [
+        a.staffName,
+        a.assignedStaff,
+        ...(a.assignedStaffNames || []),
+      ]
+        .flatMap((name) => String(name || '').split(','))
+        .map((name) => name.trim().toLowerCase())
+        .filter(Boolean)
+
+      const assignedIds = [a.staffId, ...(a.assignedStaffIds || [])]
+        .map((id) => String(id || '').trim())
+        .filter(Boolean)
+
+      return assignedIds.includes(emp.id) || assignedNames.includes(emp.name.trim().toLowerCase())
+    })
+
+  const upsertClientFromBooking = async (booking: Booking) => {
+    const email = booking.clientEmail?.trim()
+    if (!email) return
+
+    const clientsQuery = query(collection(db, 'clients'), where('email', '==', email))
+    const snapshot = await getDocs(clientsQuery)
+
+    if (snapshot.empty) {
+      await addDoc(collection(db, 'clients'), {
+        name: booking.clientName || 'Client',
+        company: '',
+        email,
+        phone: booking.clientPhone || '',
+        location: booking.clientAddress || '',
+        joinDate: getLocalSystemDate(),
+        totalSpent: Number(booking.estimatedPrice || 0),
+        projects: 1,
+        lastService: booking.serviceName || 'Service Booking',
+        status: 'Active',
+        tier: 'Bronze',
+        notes: `Auto-created from booking ${booking.bookingNumber || booking.bookingId}`,
+        contracts: [],
+        lastConfirmedBookingId: booking.bookingId || booking.bookingNumber || booking.id,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      })
+      return
+    }
+
+    const clientDoc = snapshot.docs[0]
+    const clientData = clientDoc.data() as Record<string, any>
+    const bookingRef = booking.bookingId || booking.bookingNumber || booking.id
+    const alreadyCounted = clientData.lastConfirmedBookingId === bookingRef
+
+    await updateDoc(doc(db, 'clients', clientDoc.id), {
+      name: booking.clientName || clientData.name || 'Client',
+      phone: booking.clientPhone || clientData.phone || '',
+      location: booking.clientAddress || clientData.location || '',
+      lastService: booking.serviceName || clientData.lastService || 'Service Booking',
+      status: 'Active',
+      totalSpent: alreadyCounted
+        ? Number(clientData.totalSpent || 0)
+        : Number(clientData.totalSpent || 0) + Number(booking.estimatedPrice || 0),
+      projects: alreadyCounted
+        ? Number(clientData.projects || 0)
+        : Number(clientData.projects || 0) + 1,
+      lastConfirmedBookingId: bookingRef,
+      updatedAt: new Date().toISOString(),
+    })
+  }
 
   // Actions
   const handleStatusChange = async (id: string, status: Booking['status']) => {
     try {
-      await updateDoc(doc(db, 'bookings', id), { status, updatedAt: Timestamp.now() })
-      if (selectedBooking?.id === id) setSelectedBooking(prev => prev ? { ...prev, status } : null)
+      const booking = bookings.find(b => b.id === id)
+      if (!booking) {
+        await updateDoc(doc(db, 'bookings', id), { status, updatedAt: Timestamp.now() })
+        if (selectedBooking?.id === id) setSelectedBooking(prev => prev ? { ...prev, status } : null)
+        return
+      }
+
+      let assignedEmployee = employees.find(emp => emp.id === booking.staffId)
+      if (!assignedEmployee && booking.staffName) {
+        assignedEmployee = employees.find(emp => emp.name === booking.staffName)
+      }
+      if (!assignedEmployee && booking.assignedStaff) {
+        assignedEmployee = employees.find(emp => emp.name === booking.assignedStaff)
+      }
+
+      if (!assignedEmployee && status === 'confirmed' && employees.length > 0) {
+        assignedEmployee = employees[Math.floor(Math.random() * employees.length)]
+      }
+
+      const normalizedSchedule = Array.isArray(booking.schedule) && booking.schedule.length > 0
+        ? booking.schedule
+        : [{ date: booking.bookingDate, time: booking.bookingTime }]
+
+      const updatePayload: Record<string, any> = {
+        status,
+        updatedAt: Timestamp.now(),
+      }
+
+      if (status === 'confirmed') {
+        updatePayload.schedule = normalizedSchedule
+        updatePayload.date = booking.bookingDate
+        updatePayload.time = booking.bookingTime
+        if (assignedEmployee) {
+          updatePayload.staffId = assignedEmployee.id
+          updatePayload.staffName = assignedEmployee.name
+          updatePayload.assignedStaff = assignedEmployee.name
+          updatePayload.assignedStaffName = assignedEmployee.name
+        }
+      }
+
+      await updateDoc(doc(db, 'bookings', id), updatePayload)
+
+      if (status === 'confirmed') {
+        await upsertClientFromBooking({
+          ...booking,
+          status,
+          schedule: normalizedSchedule,
+          staffId: assignedEmployee?.id || booking.staffId,
+          staffName: assignedEmployee?.name || booking.staffName,
+          assignedStaff: assignedEmployee?.name || booking.assignedStaff,
+        })
+      }
+
+      if (selectedBooking?.id === id) {
+        setSelectedBooking(prev => prev ? {
+          ...prev,
+          status,
+          staffId: assignedEmployee?.id || prev.staffId,
+          staffName: assignedEmployee?.name || prev.staffName,
+          assignedStaff: assignedEmployee?.name || prev.assignedStaff,
+          schedule: normalizedSchedule,
+        } : null)
+      }
+
+      setEditFormData(prev => prev && prev.id === id ? {
+        ...prev,
+        status,
+        staffId: assignedEmployee?.id || prev.staffId,
+        staffName: assignedEmployee?.name || prev.staffName,
+        assignedStaff: assignedEmployee?.name || prev.assignedStaff,
+        schedule: normalizedSchedule,
+      } : prev)
     } catch (e) { console.error(e) }
   }
 
@@ -1005,7 +1281,9 @@ export default function AdminBookings() {
                         <div className="col-span-2 md:col-span-1">
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Service</p>
                           <p className="text-sm font-semibold text-foreground leading-snug">{b.serviceName}</p>
-                          <p className="text-xs text-muted-foreground">{b.duration}h session</p>
+                          <p className="text-xs text-muted-foreground">
+                            {b.serviceHours || b.duration}h session · {(b.frequency || 'once').replace('-', ' ')}
+                          </p>
                         </div>
 
                         {/* Date & Time */}
@@ -1141,8 +1419,36 @@ export default function AdminBookings() {
                   <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Client Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
+                      <label className={LABEL_CLS}>Client ID</label>
+                      <input
+                        name="clientId"
+                        value={createFormData.clientId}
+                        onChange={handleCreateInputChange}
+                        className={INPUT_CLS}
+                        list="manual-booking-client-id-list"
+                        placeholder="Select existing ID or type new"
+                      />
+                      <datalist id="manual-booking-client-id-list">
+                        {clientsDirectory.map(client => (
+                          <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
+                      </datalist>
+                    </div>
+                    <div>
                       <label className={LABEL_CLS}>Full Name</label>
-                      <input name="clientName" value={createFormData.clientName} onChange={handleCreateInputChange} className={INPUT_CLS} />
+                      <input
+                        name="clientName"
+                        value={createFormData.clientName}
+                        onChange={handleCreateInputChange}
+                        className={INPUT_CLS}
+                        list="manual-booking-client-name-list"
+                        placeholder="Search existing client or type new"
+                      />
+                      <datalist id="manual-booking-client-name-list">
+                        {clientsDirectory.map(client => (
+                          <option key={`${client.id}-${client.name}`} value={client.name}>{client.id}</option>
+                        ))}
+                      </datalist>
                       {createErrors.clientName && <p className="text-red-600 text-xs font-semibold mt-1">{createErrors.clientName}</p>}
                     </div>
                     <div>
@@ -1319,9 +1625,27 @@ export default function AdminBookings() {
                   <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Service</p>
                   <p className="font-black text-lg">{editFormData.serviceName}</p>
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {editFormData.duration}h</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {editFormData.serviceHours || editFormData.duration}h</span>
                     <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> AED {editFormData.estimatedPrice.toLocaleString()}</span>
-                    {editFormData.frequency && <span className="capitalize">{editFormData.frequency}</span>}
+                    {editFormData.frequency && <span className="capitalize">{editFormData.frequency.replace('-', ' ')}</span>}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs text-muted-foreground">
+                    <div className="bg-white/70 dark:bg-background/40 rounded-lg px-2 py-1.5">
+                      <p className="font-semibold">Hours</p>
+                      <p>{editFormData.serviceHours || editFormData.duration}</p>
+                    </div>
+                    <div className="bg-white/70 dark:bg-background/40 rounded-lg px-2 py-1.5">
+                      <p className="font-semibold">Hourly Rate</p>
+                      <p>AED {Number(editFormData.hourlyRate || EXTRA_HOURLY_RATE_AED).toLocaleString()}</p>
+                    </div>
+                    <div className="bg-white/70 dark:bg-background/40 rounded-lg px-2 py-1.5">
+                      <p className="font-semibold">Frequency</p>
+                      <p className="capitalize">{(editFormData.frequency || 'once').replace('-', ' ')}</p>
+                    </div>
+                    <div className="bg-white/70 dark:bg-background/40 rounded-lg px-2 py-1.5">
+                      <p className="font-semibold">Professionals</p>
+                      <p>{editFormData.numberOfMaids || 1}</p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-3 text-xs font-semibold text-muted-foreground">
                     <PaymentBadge status={editFormData.paymentStatus} method={editFormData.paymentMethod} />
@@ -1412,7 +1736,7 @@ export default function AdminBookings() {
                       </div>
                       <div className="bg-muted/40 rounded-lg p-3 text-center">
                         <p className="text-[11px] font-semibold text-muted-foreground mb-1">Duration</p>
-                        <p className="text-sm font-bold">{editFormData.duration}h</p>
+                        <p className="text-sm font-bold">{editFormData.serviceHours || editFormData.duration}h</p>
                       </div>
                       {!isEditingDetails && editFormData.schedule && editFormData.schedule.length > 1 && (
                         <div className="bg-muted/40 rounded-lg p-3 col-span-3">

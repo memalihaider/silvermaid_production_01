@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 
-const SITE_URL = 'https://silvermaid-production-01.vercel.app'
+const SITE_URL = 'https://www.silvermaidsdubai.com/'
 
 function toSlug(title: string, id: string) {
   return title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `post-${id}`

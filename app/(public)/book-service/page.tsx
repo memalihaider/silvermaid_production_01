@@ -62,6 +62,7 @@ type CartItem = {
 }
 
 const VAT_RATE = 0.05
+const HOURLY_RATE_AED = 35
 
 const defaultCategoryImage =
   "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=1200"
@@ -116,7 +117,11 @@ export default function BookServicePage() {
   const [specialInstructions, setSpecialInstructions] = useState("")
   const [propertyArea, setPropertyArea] = useState("")
   const [professionalsCount, setProfessionalsCount] = useState(1)
+  const [serviceFrequency, setServiceFrequency] = useState<"once" | "weekly" | "biweekly">("once")
+  const [serviceHours, setServiceHours] = useState(1)
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set())
+  const [systemNow, setSystemNow] = useState<Date>(() => new Date())
   const [showPhonePopup, setShowPhonePopup] = useState(false)
   const [phoneInput, setPhoneInput] = useState("+971")
   const [customerName, setCustomerName] = useState("")
@@ -131,9 +136,56 @@ export default function BookServicePage() {
   const timeSlots = useMemo(() => buildTimeSlots(), [])
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      setSystemNow(new Date())
+    }, 30000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  const normalizeBookingTime = (rawTime: string) => {
+    if (!rawTime) return ""
+
+    const plainValue = rawTime.includes("|") ? rawTime.split("|")[0] : rawTime.trim()
+    if (/^\d{2}:\d{2}$/.test(plainValue)) return plainValue
+
+    const match = plainValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (!match) return ""
+
+    let hour = Number(match[1])
+    const minute = Number(match[2])
+    const period = match[3].toUpperCase()
+
+    if (period === "PM" && hour !== 12) hour += 12
+    if (period === "AM" && hour === 12) hour = 0
+
+    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+  }
+
+  const isPastTimeForSelectedDay = (dateIso: string, timeValue: string) => {
+    if (!dateIso || !timeValue) return false
+
+    const todayIso = systemNow.toISOString().split("T")[0]
+    if (dateIso !== todayIso) return false
+
+    const [hour, minute] = timeValue.split(":").map(Number)
+    const slotDate = new Date(systemNow)
+    slotDate.setHours(hour, minute, 0, 0)
+
+    return slotDate.getTime() <= systemNow.getTime()
+  }
+
+  const isSlotUnavailable = (dateIso: string, timeValue: string) => {
+    if (!dateIso || !timeValue) return false
+    if (isPastTimeForSelectedDay(dateIso, timeValue)) return true
+    return bookedSlots.has(`${dateIso}|${timeValue}`)
+  }
+
+  useEffect(() => {
     const categoryQuery = query(collection(db, "categories"))
     const serviceQuery = query(collection(db, "services"))
     const employeeQuery = query(collection(db, "employees"))
+    const bookingQuery = query(collection(db, "bookings"))
 
     const unsubCategories = onSnapshot(categoryQuery, (snap) => {
       const rows: Category[] = snap.docs.map((doc) => {
@@ -186,10 +238,41 @@ export default function BookServicePage() {
       setEmployees(rows)
     })
 
+    const unsubBookings = onSnapshot(bookingQuery, (snap) => {
+      const blocked = new Set<string>()
+
+      for (const bookingDoc of snap.docs) {
+        const data = bookingDoc.data() as Record<string, any>
+        const status = String(data.status || "pending").toLowerCase()
+        if (status === "cancelled" || status === "rejected") continue
+
+        const rawDate = data.date || data.bookingDate || ""
+        const rawTime = data.time || data.bookingTime || ""
+        const normalizedTime = normalizeBookingTime(String(rawTime || ""))
+
+        if (rawDate && normalizedTime) {
+          blocked.add(`${rawDate}|${normalizedTime}`)
+        }
+
+        if (Array.isArray(data.schedule)) {
+          for (const slot of data.schedule) {
+            const slotDate = String(slot?.date || "")
+            const slotTime = normalizeBookingTime(String(slot?.time || ""))
+            if (slotDate && slotTime) {
+              blocked.add(`${slotDate}|${slotTime}`)
+            }
+          }
+        }
+      }
+
+      setBookedSlots(blocked)
+    })
+
     return () => {
       unsubCategories()
       unsubServices()
       unsubEmployees()
+      unsubBookings()
     }
   }, [])
 
@@ -203,6 +286,13 @@ export default function BookServicePage() {
       setSelectedCategoryId(categories[0].id)
     }
   }, [categories, selectedCategoryId])
+
+  useEffect(() => {
+    if (!selectedDate || !selectedTime) return
+    if (isSlotUnavailable(selectedDate, selectedTime)) {
+      setSelectedTime("")
+    }
+  }, [selectedDate, selectedTime, bookedSlots, systemNow])
 
   const fallbackCategories = useMemo(() => {
     if (categories.length > 0) return categories
@@ -231,10 +321,12 @@ export default function BookServicePage() {
 
   const cartItems = useMemo(() => Object.values(cart), [cart])
   const cartCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems])
-  const subtotal = useMemo(
+  const serviceSubtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.service.price * item.quantity, 0),
     [cartItems],
   )
+  const hoursSubtotal = useMemo(() => serviceHours * HOURLY_RATE_AED, [serviceHours])
+  const subtotal = useMemo(() => serviceSubtotal + hoursSubtotal, [serviceSubtotal, hoursSubtotal])
   const vatAmount = Number((subtotal * VAT_RATE).toFixed(2))
   const total = Number((subtotal + vatAmount).toFixed(2))
 
@@ -305,6 +397,14 @@ export default function BookServicePage() {
   const validateBeforeCheckout = () => {
     if (!selectedDate || !selectedTime) {
       setFormError("Please select a date and time.")
+      return false
+    }
+    if (!serviceFrequency) {
+      setFormError("Please select booking frequency.")
+      return false
+    }
+    if (!serviceHours || serviceHours < 1) {
+      setFormError("Please select number of hours.")
       return false
     }
     return true
@@ -396,11 +496,16 @@ export default function BookServicePage() {
         bookingDate: selectedDate,
         bookingTime: selectedTime,
         schedule: [{ date: selectedDate, time: selectedTime }],
-        serviceDuration: String(Math.max(1, cartCount)),
+        duration: serviceHours,
+        serviceHours,
+        serviceDuration: String(serviceHours),
+        hourlyRate: HOURLY_RATE_AED,
+        baseAmount: serviceSubtotal,
+        hoursAmount: hoursSubtotal,
         numberOfMaids: professionalsCount,
         message: specialInstructions,
         propertyType: "apartment",
-        frequency: "once",
+        frequency: serviceFrequency,
         staffId: selectedStaff[0]?.id || "",
         staffName: selectedStaffNames.join(", "),
         assignedStaff: selectedStaffNames.join(", "),
@@ -437,6 +542,8 @@ export default function BookServicePage() {
           area: payload.area,
           propertyType: payload.propertyType,
           frequency: payload.frequency,
+          serviceHours: payload.serviceHours,
+          numberOfMaids: payload.numberOfMaids,
           staffId: payload.staffId,
           staffName: payload.staffName,
           source: "new-book-service-flow",
@@ -452,6 +559,8 @@ export default function BookServicePage() {
       setSpecialInstructions("")
       setPropertyArea("")
       setProfessionalsCount(1)
+      setServiceFrequency("once")
+      setServiceHours(1)
       setSelectedStaffIds([])
       setReceiptFile(null)
       setPaymentOption("manual")
@@ -504,7 +613,11 @@ export default function BookServicePage() {
           <div className="pt-3 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600">
               <span>Service Fee</span>
-              <span>AED {subtotal.toFixed(2)}</span>
+                <span>AED {serviceSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Hours ({serviceHours} x AED {HOURLY_RATE_AED})</span>
+                <span>AED {hoursSubtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Taxable Amount</span>
@@ -587,7 +700,7 @@ export default function BookServicePage() {
                 }}
                 className="mt-6 h-11 px-8 rounded-xl bg-primary text-white font-semibold hover:bg-pink-700 shadow-md shadow-primary/20"
               >
-                Booking
+                Book Now
               </button>
             </div>
             <div className="relative min-h-80">
@@ -743,13 +856,22 @@ export default function BookServicePage() {
                 {timeSlots.map((slot) => {
                   const [value, label] = slot.split("|")
                   const active = selectedTime === value
+                  const unavailable = isSlotUnavailable(selectedDate, value)
                   return (
                     <button
                       key={slot}
                       type="button"
-                      onClick={() => setSelectedTime(value)}
+                      onClick={() => {
+                        if (unavailable) return
+                        setSelectedTime(value)
+                      }}
+                      disabled={unavailable || !selectedDate}
                       className={`h-10 rounded-lg text-sm font-semibold ${
-                        active ? "bg-primary text-white" : "bg-slate-100 text-slate-700"
+                        unavailable || !selectedDate
+                          ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          : active
+                            ? "bg-primary text-white"
+                            : "bg-slate-100 text-slate-700"
                       }`}
                     >
                       {label}
@@ -757,6 +879,9 @@ export default function BookServicePage() {
                   )
                 })}
               </div>
+              <p className="text-xs text-slate-500 mb-6">
+                Same-day past time slots are blocked using system time. Already booked slots stay blocked until the next day.
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -778,6 +903,40 @@ export default function BookServicePage() {
                     placeholder="Dubai Marina"
                     className="w-full h-11 rounded-xl border border-slate-300 px-3"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Service Frequency <span className="text-rose-600">*</span>
+                  </label>
+                  <select
+                    value={serviceFrequency}
+                    onChange={(e) => setServiceFrequency(e.target.value as "once" | "weekly" | "biweekly")}
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  >
+                    <option value="once">One Time</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi Weekly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Number of Hours <span className="text-rose-600">*</span>
+                  </label>
+                  <select
+                    value={serviceHours}
+                    onChange={(e) => setServiceHours(Math.max(1, Number(e.target.value || 1)))}
+                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
+                  >
+                    {Array.from({ length: 12 }, (_, idx) => idx + 1).map((hours) => (
+                      <option key={hours} value={hours}>
+                        {hours} {hours === 1 ? "Hour" : "Hours"}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">AED {HOURLY_RATE_AED} will be added for each selected hour.</p>
                 </div>
               </div>
 
