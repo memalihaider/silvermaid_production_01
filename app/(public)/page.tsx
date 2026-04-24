@@ -4,40 +4,15 @@ import {
   CheckCircle2, ArrowRight, Star, Shield, Clock, Users, Award, Sparkles, 
   ShieldCheck, Zap, ChevronLeft, ChevronRight,
   Home, Building2, Wind, ShieldAlert, Utensils, Construction,
-  Sofa, Layout, Waves, Dumbbell, Calendar, BookOpen, ArrowUpRight
+  Sofa, Layout, Waves, Dumbbell, Calendar, BookOpen, ArrowUpRight, HelpCircle
 } from 'lucide-react'
 import { motion, useScroll, useInView } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
 import { INITIAL_BLOG_POSTS } from '@/lib/blog-data'
 import { INITIAL_TESTIMONIALS } from '@/lib/testimonials-data'
-
-// Reusable CTA Button Component
-interface CTAButtonProps {
-  text: string
-  href: string
-  variant?: "primary" | "secondary" | "dark" 
-  icon?: React.ComponentType<{ className?: string }> | null
-  className?: string
-}
-
-const CTAButton = ({ text, href, variant = "primary", icon: Icon = null, className = "" }: CTAButtonProps) => {
-  const baseStyles = "px-8 py-3.5 rounded-full font-bold text-sm transition-all duration-200"
-  const variants = {
-    primary: "bg-primary text-white hover:bg-pink-700 shadow-md shadow-primary/20",
-    secondary: "bg-white text-primary hover:bg-slate-50 shadow-md",
-    dark: "bg-slate-900 text-white hover:bg-slate-800 shadow-md",
-  }
-  
-  return (
-    <a 
-      href={href}
-      className={`${baseStyles} ${variants[variant]} inline-flex items-center gap-2 hover:-translate-y-0.5 ${className}`}
-    >
-      {text}
-      {Icon && <Icon className="h-4 w-4" />}
-    </a>
-  )
-}
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -62,16 +37,6 @@ export default function HomePage() {
   const [airQualityStatus, setAirQualityStatus] = useState("Moderate")
   const [airQualityColor, setAirQualityColor] = useState("text-amber-500")
   const [loading, setLoading] = useState(true)
-  const [textIndex, setTextIndex] = useState(0)
-
-  const heroTexts = [
-    "We Clean\nYou Relax",
-    "Pure Air\nPure Health",
-    "Certified\nExcellence",
-    "Family\nSafe Always",
-    "Sparkle &\nShine Daily",
-    "Trust Our\nExpertise"
-  ]
 
   // Services data with Icons
   const services = [
@@ -223,18 +188,10 @@ useEffect(() => {
       fetchAirQualityData()
     }
   }, 10 * 60 * 1000)
-
-  // Hero text rotation (ye to chalta hi rahega)
-  const textInterval = setInterval(() => {
-    if (isMounted) {
-      setTextIndex((prev) => (prev + 1) % heroTexts.length)
-    }
-  }, 4000)
   
   return () => {
     isMounted = false
     clearInterval(airQualityInterval)
-    clearInterval(textInterval)
   }
 }, []) // Empty dependency array - sirf ek baar run hoga
 
@@ -283,10 +240,14 @@ useEffect(() => {
   return (
     <div ref={containerRef} className="flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
-      {/* Hero Section - Magazine Layout */}
-      <section className="relative py-6 px-4 md:px-8 bg-white overflow-hidden">
+      {/* Hero Section - Landing */}
+      <section className="relative py-10 px-4 md:px-8 bg-white overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-pink-500/10 blur-3xl" />
+        </div>
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-stretch min-h-130">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-stretch min-h-130 relative">
 
             {/* Left: Large Image Card */}
             <motion.div
@@ -308,22 +269,24 @@ useEffect(() => {
               <div className="absolute top-6 left-6 z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
                   <Sparkles className="h-3 w-3 text-white" />
-                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Premium Service</span>
+                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Same-day slots available</span>
                 </div>
               </div>
 
               {/* Main headline */}
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-10">
-                <motion.h1
-                  key={textIndex}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-4xl md:text-6xl font-black text-white leading-none tracking-tight mb-6"
-                >
-                  {heroTexts[textIndex].split('\n')[0]} <br />
-                  {heroTexts[textIndex].split('\n')[1]}
-                </motion.h1>
+                <h1 className="text-4xl md:text-6xl font-black text-white leading-none tracking-tight mb-4">
+                  Fast, reliable cleaning in Dubai
+                </h1>
+                <p className="text-white/80 text-base md:text-lg leading-relaxed max-w-2xl mb-6">
+                  Book move-in/move-out, sofa, or mattress cleaning in minutes. Transparent pricing, flexible slots, and a team you can trust.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Same-day slots</Badge>
+                  <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Trained staff</Badge>
+                  <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Secure payments</Badge>
+                </div>
 
                 {/* Stats row */}
                 <div className="flex flex-wrap items-center gap-1 mb-6">
@@ -347,14 +310,18 @@ useEffect(() => {
                   ))}
                 </div>
 
-                {/* CTA link */}
-                <a
-                  href="/booking"
-                  className="inline-flex items-center gap-2 text-white font-bold text-sm uppercase tracking-widest hover:gap-4 transition-all duration-200"
-                >
-                  Schedule Your Cleaning
-                  <ArrowRight className="h-4 w-4" />
-                </a>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button asChild size="lg" className="rounded-full font-bold">
+                    <a href="/book-service" className="inline-flex items-center gap-2">
+                      Book now <ArrowRight className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button asChild size="lg" variant="secondary" className="rounded-full font-bold">
+                    <a href="/quote" className="inline-flex items-center gap-2">
+                      Get a quick quote <ChevronRight className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
               </div>
             </motion.div>
 
@@ -447,163 +414,163 @@ useEffect(() => {
 
       {/* Trust Banner */}
       <section className="relative z-30 -mt-8 px-4">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-          className="max-w-5xl mx-auto bg-slate-900 rounded-2xl p-8 md:p-10 shadow-xl text-white"
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { label: "Satisfied Clients", value: "20,000+", icon: Users },
-              { label: "Service Rating", value: "4.9/5.0", icon: Star },
-              { label: "Expert Cleaners", value: "250+", icon: Award },
-              { label: "City Coverage", value: "100%", icon: Building2 },
-            ].map((stat, i) => (
-              <motion.div key={i} variants={fadeUp} custom={i} className="space-y-1.5">
-                <div className="flex items-center gap-2.5">
-                  <stat.icon className="h-4 w-4 text-[#ea4c8c]" />
-                  <span className="text-xl md:text-2xl font-black tracking-tight">{stat.value}</span>
-                </div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+        <Card className="max-w-5xl mx-auto rounded-2xl shadow-xl border-slate-200/70">
+          <CardContent className="p-7 md:p-9">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-7">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Trusted across Dubai</p>
+                <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mt-2">
+                  Consistent quality. Clear pricing. Fast booking.
+                </h2>
+              </div>
+              <div className="text-slate-500 text-sm">
+                Need help now? Use WhatsApp from the floating button.
+              </div>
+            </div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-60px' }}
+              variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            >
+              {[
+                { label: "Customers served", value: "500+", icon: Users },
+                { label: "Average rating", value: "4.5/5.0", icon: Star },
+                { label: "Trained cleaners", value: "10+", icon: Award },
+                { label: "Dubai coverage", value: "100%", icon: Building2 },
+              ].map((stat, i) => (
+                <motion.div key={i} variants={fadeUp} custom={i}>
+                  <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-4">
+                    <div className="flex items-center justify-between">
+                      <stat.icon className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Proof</span>
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 mt-3">{stat.value}</div>
+                    <div className="text-[11px] font-semibold text-slate-500 mt-1">{stat.label}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* Quick Service Icons */}
-      <section className="py-20 px-4 overflow-hidden bg-gradient-to-b from-white to-slate-50/50 relative">
-        <div className="container mx-auto relative z-10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-            className="text-center mb-14"
-          >
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-3">
-              <Sparkles className="h-3 w-3" />
-              Quick Services
-            </span>
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">Everything You Need</h2>
-            <p className="text-slate-500 max-w-xl mx-auto text-sm">Comprehensive cleaning solutions delivered with precision and care</p>
-          </motion.div>
-          
-          <style>{`
-            @keyframes scroll-left {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .service-slider {
-              display: flex;
-              gap: 1.5rem;
-              animation: scroll-left 60s linear infinite;
-              will-change: transform;
-            }
-            .service-slider:hover {
-              animation-play-state: paused;
-            }
-          `}</style>
-          <div className="relative flex overflow-x-hidden">
-            <div className="service-slider">
-              {[...services, ...services].map((service, i) => (
-                <a 
-                  key={i}
-                  href={service.href}
-                  className="flex flex-col items-center justify-center shrink-0 w-40 p-6 bg-white border border-slate-100 rounded-2xl hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group cursor-pointer"
-                >
-                  <div className="h-14 w-14 rounded-xl bg-primary/8 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 mb-4">
-                    {service.icon}
-                  </div>
-                  <span className="text-[11px] font-semibold text-center text-slate-700 leading-tight group-hover:text-primary transition-colors whitespace-normal">
-                    {service.title}
-                  </span>
-                </a>
-              ))}
+      {/* Featured Services */}
+      <section className="py-14 px-4 bg-white">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-3">
+                <Sparkles className="h-3 w-3" />
+                Popular right now
+              </span>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
+                Book in minutes. Get a cleaner home today.
+              </h2>
+              <p className="text-slate-500 text-sm md:text-base">
+                Value-focused cleaning for apartments, villas, and offices across Dubai.
+              </p>
             </div>
+            <Button asChild variant="outline" className="rounded-full font-bold">
+              <a href="/services" className="inline-flex items-center gap-2">
+                Browse all services <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {[
+              {
+                title: "Move-in / Move-out Cleaning",
+                desc: "A reset clean for handover day—kitchen, bathrooms, floors, and details.",
+                href: "/services/move-in-out-cleaning",
+                price: "From AED 249",
+                icon: <Building2 className="h-5 w-5" />,
+              },
+              {
+                title: "Sofa Deep Cleaning",
+                desc: "Lift stains, odors, and dust—safe for kids and pets. Faster drying options.",
+                href: "/services/sofa-deep-cleaning",
+                price: "From AED 149",
+                icon: <Sofa className="h-5 w-5" />,
+              },
+              {
+                title: "Mattress Cleaning",
+                desc: "Deep extraction for sweat, dust mites, and allergens—sleep cleaner tonight.",
+                href: "/services/mattress-deep-cleaning",
+                price: "From AED 129",
+                icon: <ShieldCheck className="h-5 w-5" />,
+              },
+            ].map((item) => (
+              <Card key={item.title} className="rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="h-11 w-11 rounded-xl bg-primary/8 text-primary flex items-center justify-center">
+                      {item.icon}
+                    </div>
+                    <span className="text-[11px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                      {item.price}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug">{item.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-5">{item.desc}</p>
+                  <div className="flex items-center gap-3">
+                    <Button asChild className="rounded-full font-bold">
+                      <a href="/book-service" className="inline-flex items-center gap-2">
+                        Book now <ArrowRight className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button asChild variant="ghost" className="rounded-full font-bold text-primary">
+                      <a href={item.href} className="inline-flex items-center gap-2">
+                        View details <ArrowUpRight className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Vision Mission Values */}
-      <section className="py-20 bg-white relative">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-4">
-              <Shield className="h-3 w-3" />
-              Our Foundation
+      {/* How it works */}
+      <section className="py-16 px-4 bg-slate-50/60 border-y border-slate-100">
+        <div className="container mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-3">
+              <Zap className="h-3 w-3" />
+              How it works
             </span>
-            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3">
-              Built on <span className="text-primary">Trust</span> & Excellence
-            </h3>
-            <p className="text-slate-500 text-base leading-relaxed">
-              Setting new standards in the cleaning industry with unwavering commitment to quality and transparency
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
+              Simple booking, professional results
+            </h2>
+            <p className="text-slate-500 text-sm md:text-base">
+              No back-and-forth. Choose a service, pick a time, and we handle the rest.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-60px' }}
-              variants={fadeUp}
-              custom={0}
-              className="group relative p-10 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg hover:border-primary/20 transition-all duration-300 flex flex-col"
-            >
-              <div className="h-14 w-14 rounded-xl bg-primary/8 flex items-center justify-center text-primary mb-5">
-                <Zap className="h-7 w-7" />
-              </div>
-              <h3 className="text-2xl font-black mb-3 text-slate-900">Our Vision</h3>
-              <p className="text-slate-500 leading-relaxed">
-                To be the first choice for customers, employees and suppliers in the region we operate
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-60px' }}
-              variants={fadeUp}
-              custom={1}
-              className="group relative p-10 bg-slate-900 rounded-2xl shadow-lg flex flex-col text-white"
-            >
-              <div className="h-14 w-14 rounded-xl bg-primary flex items-center justify-center text-white mb-5">
-                <Shield className="h-7 w-7" />
-              </div>
-              <h3 className="text-2xl font-black mb-3">Our Mission</h3>
-              <p className="text-slate-400 leading-relaxed">
-                To provide reliable, flexible and consistent solutions to our internal and external stakeholders in our hygiene business
-              </p>
-            </motion.div>
 
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-60px' }}
-              variants={fadeUp}
-              custom={2}
-              className="group relative p-10 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg hover:border-primary/20 transition-all duration-300 flex flex-col"
-            >
-              <div className="h-14 w-14 rounded-xl bg-primary/8 flex items-center justify-center text-primary mb-5">
-                <Award className="h-7 w-7" />
-              </div>
-              <h3 className="text-2xl font-black mb-5 text-slate-900">Core Values</h3>
-              <ul className="space-y-3">
-                {[
-                  "Honouring our words",
-                  "Trust",
-                  "Reliability",
-                  "Long term approach"
-                ].map((val, i) => (
-                  <li key={i} className="flex items-center gap-2.5 text-slate-600">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                    <span className="text-sm font-medium">{val}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+          <div className="grid gap-5 md:grid-cols-4">
+            {[
+              { title: "Choose your service", desc: "Move-out, sofa, mattress, or a full deep clean.", icon: Sparkles },
+              { title: "Pick a time slot", desc: "Select a time that fits your schedule—even urgent.", icon: Calendar },
+              { title: "Confirm in minutes", desc: "Clear pricing and quick details. Pay securely.", icon: ShieldCheck },
+              { title: "Enjoy the clean", desc: "We arrive on time and leave your space refreshed.", icon: CheckCircle2 },
+            ].map((step, i) => (
+              <Card key={step.title} className="rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-11 w-11 rounded-xl bg-primary/8 text-primary flex items-center justify-center">
+                      <step.icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-[11px] font-black text-slate-400">0{i + 1}</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 mb-1.5">{step.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
@@ -658,7 +625,7 @@ useEffect(() => {
                       alt={service.title} 
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent" />
+                    <div className="absolute inset-0 bg-linear-to-t from-slate-900 via-slate-900/30 to-transparent" />
                     
                     <div className="absolute top-4 left-4 z-10">
                       <span className="px-3 py-1 rounded-full bg-primary/90 text-[10px] font-semibold uppercase tracking-wider text-white">
@@ -780,7 +747,7 @@ useEffect(() => {
                   </div>
                   <a 
                     href="https://wa.me/971588844151"
-                    className="block w-full h-12 bg-white text-slate-900 rounded-xl text-center leading-[3rem] font-bold text-sm hover:bg-slate-100 transition-colors"
+                    className="block w-full h-12 bg-white text-slate-900 rounded-xl text-center leading-12 font-bold text-sm hover:bg-slate-100 transition-colors"
                   >
                     Chat via WhatsApp
                   </a>
@@ -801,10 +768,10 @@ useEffect(() => {
                 Expert Insights
               </span>
               <h3 className="text-3xl lg:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-3">
-                Knowledge & <span className="text-primary">Expert Tips</span>
+                Cleaning tips that save you time (and money)
               </h3>
               <p className="text-slate-500 text-base leading-relaxed">
-                Stay informed with professional cleaning insights and maintenance guides
+                Quick guides for homes and offices in Dubai—stains, hygiene, and maintenance made simple.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -833,38 +800,36 @@ useEffect(() => {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               {blogs.map((blog, i) => (
-                <article key={i} className="relative w-[360px] rounded-2xl overflow-hidden shadow-sm border border-slate-100 shrink-0 bg-white group hover:shadow-lg transition-shadow duration-300">
+                <Card key={i} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
                   <a href={blog.href} className="block cursor-pointer">
                     <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={blog.image} 
-                        alt={blog.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      <img
+                        src={blog.image}
+                        alt={blog.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute top-3 left-3">
-                        <span className="px-3 py-1 rounded-full bg-primary/90 text-[10px] font-semibold uppercase tracking-wider text-white">
-                          {blog.category}
-                        </span>
+                        <Badge className="bg-primary text-white hover:bg-primary">{blog.category}</Badge>
                       </div>
                     </div>
-                    
-                    <div className="p-6">
+
+                    <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-3 text-[11px] text-slate-400">
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{blog.date}</span>
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{blog.readTime}</span>
                       </div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                      <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                         {blog.title}
                       </h3>
                       <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">
                         {blog.excerpt}
                       </p>
-                      <span className="inline-flex items-center gap-1.5 text-primary text-[11px] font-semibold">
-                        Read Article <ArrowUpRight className="h-3 w-3" />
+                      <span className="inline-flex items-center gap-1.5 text-primary text-[11px] font-bold">
+                        Read article <ArrowUpRight className="h-3 w-3" />
                       </span>
-                    </div>
+                    </CardContent>
                   </a>
-                </article>
+                </Card>
               ))}
             </motion.div>
           </div>
@@ -883,14 +848,13 @@ useEffect(() => {
           </div>
 
           <div className="text-center mt-10">
-            <a
-              href="/blog"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm hover:bg-pink-700 transition-colors shadow-md shadow-primary/20"
-            >
-              <BookOpen className="h-4 w-4" />
-              View All Articles
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <Button asChild className="rounded-full font-bold">
+              <a href="/blog" className="inline-flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                View all articles
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
         </div>
       </section>
@@ -898,13 +862,15 @@ useEffect(() => {
       {/* Testimonials Section */}
       <section className="py-20 bg-slate-50/50 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-4">
               <Star className="h-3 w-3 fill-current" />
               Testimonials
             </span>
-            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">What Our Clients Say</h3>
-            <p className="text-slate-500 max-w-xl mx-auto text-sm">Real feedback from thousands across the UAE</p>
+            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">Reviews that feel real</h3>
+            <p className="text-slate-500 max-w-2xl mx-auto text-sm">
+              Short, specific feedback from move-out, sofa, and mattress cleanings—plus offices and villas across Dubai.
+            </p>
           </div>
 
           {/* Infinite Testimonials Carousel */}
@@ -920,34 +886,121 @@ useEffect(() => {
               }}
             >
               {[...testimonials, ...testimonials].map((testimonial, i) => (
-                <div
-                  key={i}
-                  className="w-[360px] rounded-2xl shrink-0 bg-white border border-slate-100 p-7 flex flex-col shadow-sm hover:shadow-md transition-shadow duration-300"
-                >
-                  <div className="flex text-primary mb-4 gap-0.5">
-                    {[...Array(testimonial.rating)].map((_, idx) => <Star key={idx} className="h-3.5 w-3.5 fill-current" />)}
-                  </div>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-6 grow">
-                    &ldquo;{testimonial.text}&rdquo;
-                  </p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-auto">
-                    <img 
-                      src={testimonial.image} 
-                      alt={testimonial.name} 
-                      className="w-10 h-10 rounded-lg object-cover" 
-                    />
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{testimonial.name}</h4>
-                      <p className="text-primary text-[11px] font-medium">{testimonial.role}</p>
+                <Card key={i} className="w-[340px] rounded-2xl shrink-0 border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex text-primary gap-0.5">
+                        {[...Array(testimonial.rating)].map((_, idx) => (
+                          <Star key={idx} className="h-3.5 w-3.5 fill-current" />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verified</span>
                     </div>
-                  </div>
-                </div>
+
+                    <p className="text-slate-700 text-sm leading-relaxed mb-6 grow">
+                      &ldquo;{testimonial.text}&rdquo;
+                    </p>
+
+                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 mt-auto">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={testimonial.image}
+                          alt={testimonial.name}
+                          className="w-10 h-10 rounded-xl object-cover"
+                        />
+                        <div className="min-w-0">
+                          <h4 className="font-black text-slate-900 text-sm truncate">{testimonial.name}</h4>
+                          <p className="text-primary text-[11px] font-semibold truncate">{testimonial.role}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Dubai, UAE
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </motion.div>
 
             {/* Edge Fades */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-50 to-transparent pointer-events-none z-10" />
-            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none z-10" />
+            <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-slate-50 to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-slate-50 to-transparent pointer-events-none z-10" />
+          </div>
+
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-4">
+              <HelpCircle className="h-3 w-3" />
+              FAQ
+            </span>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
+              Quick answers before you book
+            </h2>
+            <p className="text-slate-500 text-sm md:text-base">
+              Clear info on pricing, timing, supplies, and drying time.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {[
+              {
+                q: "Do you bring cleaning supplies and equipment?",
+                a: "Yes. Our team arrives with the required tools and supplies. If you have preferences (eco-friendly, fragrance-free), tell us during booking.",
+              },
+              {
+                q: "How long does move-in / move-out cleaning take?",
+                a: "It depends on the size and condition of the space. Most apartments take a few hours. We’ll confirm an estimated duration when you book.",
+              },
+              {
+                q: "How long does sofa or mattress take to dry?",
+                a: "Drying time varies by fabric and ventilation. Typically a few hours. We’ll advise the best way to speed up drying after the service.",
+              },
+              {
+                q: "Can I reschedule or cancel?",
+                a: "Yes. If your plans change, message us as early as possible so we can adjust your slot or offer alternatives.",
+              },
+              {
+                q: "Do you clean offices as well?",
+                a: "Yes. We cover offices and commercial spaces, including deep cleaning, sanitization, and scheduled maintenance options.",
+              },
+              {
+                q: "What areas do you cover in Dubai?",
+                a: "We cover most areas across Dubai. If you’re unsure, request a quote and we’ll confirm availability for your location.",
+              },
+              {
+                q: "How is pricing calculated?",
+                a: "Pricing depends on service type, size, and condition. For exact pricing, use the quick quote and we’ll confirm before we start.",
+              },
+              {
+                q: "Is your team trained and vetted?",
+                a: "Yes. Our team is trained for residential and commercial cleaning standards, with a focus on safety and quality checks.",
+              },
+            ].map((item) => (
+              <Card key={item.q} className="rounded-2xl">
+                <CardContent className="p-6">
+                  <h3 className="font-black text-slate-900 mb-2">{item.q}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{item.a}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button asChild size="lg" className="rounded-full font-bold">
+              <a href="/book-service" className="inline-flex items-center gap-2">
+                Book now <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="rounded-full font-bold">
+              <a href="/quote" className="inline-flex items-center gap-2">
+                Get a quick quote <ChevronRight className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
         </div>
       </section>
@@ -960,7 +1013,7 @@ useEffect(() => {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="bg-gradient-to-br from-primary to-pink-700 rounded-2xl p-12 md:p-16 relative overflow-hidden shadow-xl"
+            className="bg-linear-to-br from-primary to-pink-700 rounded-2xl p-12 md:p-16 relative overflow-hidden shadow-xl"
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1),transparent_70%)]" />
             
@@ -970,53 +1023,28 @@ useEffect(() => {
                   Experience the Gold Standard
                 </h2>
                 <p className="text-lg text-white/85 max-w-xl mx-auto leading-relaxed">
-                  Join 20,000+ satisfied clients across the UAE. Transform your space into a pristine, healthy environment.
+                  Join 500+ satisfied clients across the UAE. Transform your space into a pristine, healthy environment.
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-4">
-                <a 
-                  href="/book-service" 
-                  className="bg-white text-primary px-8 py-3.5 rounded-full font-bold text-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-2"
+                <Button asChild size="lg" className="rounded-full font-bold bg-white text-primary hover:bg-slate-50">
+                  <a href="/book-service" className="inline-flex items-center gap-2">
+                    Start booking now <ArrowRight className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="secondary"
+                  className="rounded-full font-bold bg-white/15 text-white border border-white/25 hover:bg-white/25"
                 >
-                  Start Booking Now <ArrowRight className="h-4 w-4" />
-                </a>
-                <a 
-                  href="/quote" 
-                  className="bg-white/15 text-white border border-white/25 px-8 py-3.5 rounded-full font-bold text-sm hover:bg-white/25 transition-colors inline-flex items-center gap-2"
-                >
-                  Check Availability <ChevronRight className="h-4 w-4" />
-                </a>
+                  <a href="/quote" className="inline-flex items-center gap-2">
+                    Check availability <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
               </div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Pre-Footer CTA */}
-      <section className="py-12 px-4 bg-slate-50 border-t border-slate-100">
-        <div className="container mx-auto">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="max-w-lg">
-              <h2 className="text-2xl lg:text-3xl font-black text-slate-900 mb-2 tracking-tight">Ready to Transform Your Space?</h2>
-              <p className="text-slate-500 text-sm">Join thousands of satisfied customers enjoying pristine, healthy environments across the UAE</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <a
-                href="/book-service"
-                className="px-7 py-3 rounded-full bg-primary text-white font-bold text-sm hover:bg-pink-700 transition-colors shadow-md shadow-primary/20 inline-flex items-center gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Schedule Now
-              </a>
-              <a
-                href="/quote"
-                className="px-7 py-3 rounded-full bg-white text-slate-700 font-bold text-sm hover:bg-slate-100 transition-colors border border-slate-200 inline-flex items-center gap-2"
-              >
-                <Clock className="h-4 w-4" />
-                Get Free Quote
-              </a>
-            </div>
-          </div>
         </div>
       </section>
     </div>

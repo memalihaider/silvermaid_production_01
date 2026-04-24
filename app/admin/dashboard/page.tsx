@@ -832,8 +832,8 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          <div className="h-87.5 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-87.5 w-full min-h-64">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={salesData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
@@ -859,8 +859,8 @@ export default function AdminDashboard() {
         <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
           <h3 className="text-xl font-black text-gray-900 mb-2">Lead Distribution</h3>
           <p className="text-sm text-gray-500 mb-8">Leads by pipeline stage</p>
-          <div className="h-75 w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-75 w-full min-h-56 relative">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie 
                   data={leadData} 

@@ -375,7 +375,7 @@ export default function EmployeeDashboard() {
                 className="flex items-center gap-3 p-2 hover:bg-slate-700 rounded-xl transition-colors"
               >
                 {/* User Avatar */}
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-violet-500/20">
+                <div className="w-10 h-10 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-violet-500/20">
                   {getUserInitials()}
                 </div>
                 
@@ -448,7 +448,7 @@ export default function EmployeeDashboard() {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-violet-900 to-violet-800 rounded-xl p-6 border border-violet-700">
+            <div className="bg-linear-to-br from-violet-900 to-violet-800 rounded-xl p-6 border border-violet-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-violet-300 text-sm font-medium">Active Jobs</p>
@@ -460,7 +460,7 @@ export default function EmployeeDashboard() {
               <p className="text-violet-300 text-xs mt-3">Currently assigned</p>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-900 to-amber-800 rounded-xl p-6 border border-amber-700">
+            <div className="bg-linear-to-br from-amber-900 to-amber-800 rounded-xl p-6 border border-amber-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-amber-300 text-sm font-medium">In Progress Tasks</p>
@@ -472,7 +472,7 @@ export default function EmployeeDashboard() {
               <p className="text-amber-300 text-xs mt-3">Need attention</p>
             </div>
 
-            <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-6 border border-green-700">
+            <div className="bg-linear-to-br from-green-900 to-green-800 rounded-xl p-6 border border-green-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-300 text-sm font-medium">Completed Jobs</p>
@@ -484,7 +484,7 @@ export default function EmployeeDashboard() {
               <p className="text-green-300 text-xs mt-3">Total completed</p>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 border border-blue-700">
+            <div className="bg-linear-to-br from-blue-900 to-blue-800 rounded-xl p-6 border border-blue-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-300 text-sm font-medium">Total Budget</p>
@@ -544,7 +544,7 @@ export default function EmployeeDashboard() {
                 <h3 className="text-lg font-semibold text-white">Daily Task Progress</h3>
                 <span className="text-xs text-slate-400">Real-time data</span>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                 <AreaChart data={dailyStatsData}>
                   <defs>
                     <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
@@ -585,7 +585,7 @@ export default function EmployeeDashboard() {
                 <h3 className="text-lg font-semibold text-white">Job Status Distribution</h3>
                 <span className="text-xs text-slate-400">Total: {jobs.length} jobs</span>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
                     data={jobStatusData}

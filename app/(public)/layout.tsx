@@ -7,7 +7,7 @@ import {
   Home, Briefcase, Maximize, Sun, Sofa, Layers, Bed, 
   Wind, Grid3X3, Warehouse, CookingPot, HardHat, Building, Truck, Brush,
   Fan, Pipette, Utensils, Waves, Dumbbell, PanelTop, ThermometerSnowflake,
-  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User, Lock,
+  Star, HelpCircle, ShieldCheck, Music2, Send, MapPin, ArrowRight, User,
   Users, Clock
 } from 'lucide-react'
 import Link from 'next/link'
@@ -24,38 +24,6 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* Top Bar - Premium */}
-      <div className="bg-linear-to-r from-[#ea4c8c] via-[#d43a7a] to-[#ea4c8c] text-white py-2.5 hidden md:block">
-        <div className="container mx-auto px-6 flex justify-between items-center text-xs font-semibold">
-          <div className="flex items-center gap-8">
-            <a 
-              href={phoneHref}
-              className="flex items-center gap-2 hover:text-white/90 transition-all group"
-            >
-              <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
-                <Phone className="h-3 w-3" />
-              </div>
-              <span className="tracking-wide">{contact.phone}</span>
-            </a>
-            <a 
-              href={emailHref}
-              className="flex items-center gap-2 hover:text-white/90 transition-all group"
-            >
-              <div className="h-6 w-6 rounded-md bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-all">
-                <Mail className="h-3 w-3" />
-              </div>
-              <span className="tracking-wide">{contact.email}</span>
-            </a>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-white/60 text-[9px] uppercase tracking-[0.2em] mr-2">Follow Us</span>
-            {[Facebook, Linkedin, MessageCircle, Instagram, Music2].map((Icon, i) => (
-              <a key={i} href="#" className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center hover:bg-white/25 transition-all"><Icon className="h-3 w-3" /></a>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Main Navbar - Premium Glass */}
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-2xl border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="container mx-auto flex h-18 items-center justify-between px-6">
@@ -106,25 +74,6 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                           {item.name}
                         </a>
                       ))}
-                      <div className="mt-2 pt-2 border-t border-slate-100 grid gap-0.5">
-                        {[
-                          { name: "Regular Residential", icon: Home },
-                          { name: "Regular Office", icon: Briefcase },
-                          { name: "Balcony Cleaning", icon: Sun },
-                          { name: "Sofa Cleaning", icon: Sofa },
-                          { name: "Carpets Cleaning", icon: Layers },
-                          { name: "Mattress Cleaning", icon: Bed },
-                        ].map((item) => (
-                          <div
-                            key={item.name}
-                            className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
-                          >
-                            <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                            <span>{item.name}</span>
-                            <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -147,27 +96,6 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                           {item.name}
                         </a>
                       ))}
-                      <div className="mt-2 pt-2 border-t border-slate-100 grid gap-0.5">
-                        {[
-                          { name: "Kitchen Deep Clean", icon: CookingPot },
-                          { name: "Post Construction", icon: HardHat },
-                          { name: "Office Deep Clean", icon: Briefcase },
-                          { name: "Apartment Deep", icon: Building },
-                          { name: "Move In/Out", icon: Truck },
-                          { name: "Villa Deep Clean", icon: Home },
-                          { name: "Floor Deep Clean", icon: Brush },
-                          { name: "Garage Deep Clean", icon: Warehouse },
-                        ].map((item) => (
-                          <div
-                            key={item.name}
-                            className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
-                          >
-                            <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                            <span>{item.name}</span>
-                            <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -176,27 +104,8 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 pb-2 border-b border-slate-100">
                       Technical Cleaning
                     </h4>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      {[
-                        { name: "AC Duct Cleaning", icon: Wind },
-                        { name: "AC Coil Cleaning", icon: ThermometerSnowflake },
-                        { name: "Kitchen Hood Clean", icon: Fan },
-                        { name: "Grease Trap Clean", icon: Pipette },
-                        { name: "Restaurant Clean", icon: Utensils },
-                        { name: "Water Tank Clean", icon: Waves },
-                        { name: "Swimming Pool", icon: Waves },
-                        { name: "Gym Deep Clean", icon: Dumbbell },
-                        { name: "Facade Cleaning", icon: PanelTop },
-                      ].map((item) => (
-                        <div
-                          key={item.name}
-                          className="flex items-center gap-2.5 text-[12.5px] font-medium text-slate-300 py-1.5 px-2 rounded-lg cursor-not-allowed"
-                        >
-                          <item.icon className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                          <span>{item.name}</span>
-                          <Lock className="h-3 w-3 text-slate-300 ml-auto shrink-0" />
-                        </div>
-                      ))}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-[12.5px] text-slate-500">
+                      Technical services are being updated. Please check back soon.
                     </div>
                   </div>
                 </div>
@@ -212,7 +121,6 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               <div className="absolute top-full -left-8 w-72 bg-white border border-slate-200/80 shadow-xl rounded-xl p-4 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
                 <div className="grid gap-1">
                   {[
-                    { name: "Testimonials", href: "/testimonials", icon: Star, desc: "Client reviews" },
                     { name: "FAQs", href: "/faqs", icon: HelpCircle, desc: "Common questions" },
                     { name: "Privacy Policy", href: "/privacy-policy", icon: ShieldCheck, desc: "Data protection" }
                   ].map((item) => (
@@ -314,7 +222,6 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
               <ul className="space-y-3 text-[13px] text-slate-400">
                 <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
                 <li><a href="/about" className="hover:text-white transition-colors">About us</a></li>
-                <li><a href="/testimonials" className="hover:text-white transition-colors">Testimonials</a></li>
                 <li><a href="/faqs" className="hover:text-white transition-colors">FAQs</a></li>
                 <li><a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a></li>
                 <li><a href="/contact" className="hover:text-white transition-colors">Contact us</a></li>

@@ -805,7 +805,7 @@ export default function JobProfitabilityAndCapacity() {
         {/* Profitability Trend */}
         <div className="bg-white border border-gray-300 rounded-2xl p-6">
           <h3 className="font-bold text-lg text-gray-900 mb-4">Profitability Trend (6 Months)</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
             <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="month" stroke="#6B7280" />
@@ -828,7 +828,7 @@ export default function JobProfitabilityAndCapacity() {
         {/* Department Profitability Breakdown */}
         <div className="bg-white border border-gray-300 rounded-2xl p-6">
           <h3 className="font-bold text-lg text-gray-900 mb-4">Profitability by Department</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
             <PieChart>
               <Pie
                 data={departmentProfitability}

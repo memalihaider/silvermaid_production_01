@@ -150,6 +150,7 @@ const getPaymentStatus = (status?: string, method?: string) => {
   return 'pending'
 }
 
+
 const getPaymentMethodLabel = (method?: string) => {
   if (method === 'card') return 'Card (Stripe)'
   if (method === 'after-work') return 'After Work (Onsite)'

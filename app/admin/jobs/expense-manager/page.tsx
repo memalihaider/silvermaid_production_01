@@ -638,7 +638,7 @@ export default function ExpenseManager() {
           <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-md">
             <h3 className="text-xl font-black text-gray-900 mb-6">📊 Expenses by Category</h3>
             {stats.byCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                 <RechartsPieChart>
                   <Pie
                     data={stats.byCategory}
@@ -666,7 +666,7 @@ export default function ExpenseManager() {
           <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-md">
             <h3 className="text-xl font-black text-gray-900 mb-6">📈 Expenses Over Time</h3>
             {stats.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                 <LineChart data={stats.chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="date" />
@@ -736,7 +736,7 @@ export default function ExpenseManager() {
           <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-md">
             <h3 className="text-xl font-black text-gray-900 mb-6">📊 Expense Distribution</h3>
             {stats.byCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
                 <BarChart data={stats.byCategory}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" />

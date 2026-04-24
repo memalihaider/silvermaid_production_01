@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   addDoc,
   collection,
@@ -19,6 +19,7 @@ import {
   Loader2,
   Phone,
   Plus,
+  RefreshCw,
   ShieldCheck,
   ShoppingCart,
   Trash2,
@@ -28,7 +29,7 @@ import {
 } from "lucide-react"
 import { db, storage } from "@/lib/firebase"
 
-type BookingStep = 0 | 1 | 2 | 3 | 4
+type BookingStep = 0 | 1 | 2 | 3
 
 type Category = {
   id: string
@@ -119,6 +120,8 @@ export default function BookServicePage() {
   const [professionalsCount, setProfessionalsCount] = useState(1)
   const [serviceFrequency, setServiceFrequency] = useState<"once" | "weekly" | "biweekly">("once")
   const [serviceHours, setServiceHours] = useState(1)
+  const [primaryServiceId, setPrimaryServiceId] = useState<string>("")
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false)
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
   const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set())
   const [systemNow, setSystemNow] = useState<Date>(() => new Date())
@@ -134,6 +137,7 @@ export default function BookServicePage() {
 
   const days = useMemo(() => makeDays(10), [])
   const timeSlots = useMemo(() => buildTimeSlots(), [])
+  const dayScrollerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -320,15 +324,44 @@ export default function BookServicePage() {
   }, [services, selectedCategoryId])
 
   const cartItems = useMemo(() => Object.values(cart), [cart])
+  const primaryCartItem = useMemo(() => {
+    if (primaryServiceId && cart[primaryServiceId]) return cart[primaryServiceId]
+    const first = cartItems[0]
+    if (first) return first
+    return undefined
+  }, [cart, cartItems, primaryServiceId])
+  const addonCartItems = useMemo(() => {
+    if (!primaryCartItem) return cartItems
+    return cartItems.filter((item) => item.service.id !== primaryCartItem.service.id)
+  }, [cartItems, primaryCartItem])
+
+  const hourlyRate = useMemo(() => {
+    // Primary service defines per-hour amount; fall back to legacy HOURLY_RATE_AED if not selected yet
+    return primaryCartItem?.service.price ?? HOURLY_RATE_AED
+  }, [primaryCartItem])
   const cartCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems])
-  const serviceSubtotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.service.price * item.quantity, 0),
-    [cartItems],
+  const addonsSubtotal = useMemo(
+    () => addonCartItems.reduce((sum, item) => sum + item.service.price * item.quantity, 0),
+    [addonCartItems],
   )
-  const hoursSubtotal = useMemo(() => serviceHours * HOURLY_RATE_AED, [serviceHours])
-  const subtotal = useMemo(() => serviceSubtotal + hoursSubtotal, [serviceSubtotal, hoursSubtotal])
-  const vatAmount = Number((subtotal * VAT_RATE).toFixed(2))
-  const total = Number((subtotal + vatAmount).toFixed(2))
+  const hoursSubtotal = useMemo(() => serviceHours * hourlyRate, [serviceHours, hourlyRate])
+  const discountRate = useMemo(() => {
+    if (serviceFrequency === "weekly") return 0.1
+    if (serviceFrequency === "biweekly") return 0.05
+    return 0
+  }, [serviceFrequency])
+
+  const preDiscountSubtotal = useMemo(() => addonsSubtotal + hoursSubtotal, [addonsSubtotal, hoursSubtotal])
+  const discountAmount = useMemo(
+    () => Number((preDiscountSubtotal * discountRate).toFixed(2)),
+    [discountRate, preDiscountSubtotal],
+  )
+  const subtotal = useMemo(
+    () => Number((preDiscountSubtotal - discountAmount).toFixed(2)),
+    [discountAmount, preDiscountSubtotal],
+  )
+  const vatAmount = useMemo(() => Number((subtotal * VAT_RATE).toFixed(2)), [subtotal])
+  const total = useMemo(() => Number((subtotal + vatAmount).toFixed(2)), [subtotal, vatAmount])
 
   const selectedDateLabel = useMemo(() => {
     if (!selectedDate) return ""
@@ -338,6 +371,7 @@ export default function BookServicePage() {
   }, [days, selectedDate])
 
   const addToCart = (service: Service) => {
+    setPrimaryServiceId((prev) => prev || service.id)
     setCart((prev) => {
       const existing = prev[service.id]
       const qty = existing ? existing.quantity + 1 : 1
@@ -370,6 +404,7 @@ export default function BookServicePage() {
       delete next[serviceId]
       return next
     })
+    setPrimaryServiceId((prev) => (prev === serviceId ? "" : prev))
   }
 
   const toggleStaff = (staffId: string) => {
@@ -386,14 +421,6 @@ export default function BookServicePage() {
     })
   }
 
-  const validateBeforeSchedule = () => {
-    if (cartItems.length === 0) {
-      setFormError("Please add at least one service to continue.")
-      return false
-    }
-    return true
-  }
-
   const validateBeforeCheckout = () => {
     if (!selectedDate || !selectedTime) {
       setFormError("Please select a date and time.")
@@ -405,6 +432,10 @@ export default function BookServicePage() {
     }
     if (!serviceHours || serviceHours < 1) {
       setFormError("Please select number of hours.")
+      return false
+    }
+    if (cartItems.length === 0) {
+      setFormError("Please add at least one service to continue.")
       return false
     }
     return true
@@ -425,7 +456,7 @@ export default function BookServicePage() {
     setPhoneInput(normalized)
     setShowPhonePopup(false)
     setFormError("")
-    setStep(4)
+    setStep(3)
   }
 
   const uploadReceiptIfNeeded = async () => {
@@ -499,8 +530,8 @@ export default function BookServicePage() {
         duration: serviceHours,
         serviceHours,
         serviceDuration: String(serviceHours),
-        hourlyRate: HOURLY_RATE_AED,
-        baseAmount: serviceSubtotal,
+        hourlyRate,
+        baseAmount: addonsSubtotal,
         hoursAmount: hoursSubtotal,
         numberOfMaids: professionalsCount,
         message: specialInstructions,
@@ -516,6 +547,8 @@ export default function BookServicePage() {
         paymentOption,
         manualReceiptUrl: receiptUrl || "",
         subtotal,
+        discountRate,
+        discountAmount,
         taxAmount: vatAmount,
         totalAmount: total,
         estimatedPrice: total,
@@ -612,20 +645,26 @@ export default function BookServicePage() {
 
           <div className="pt-3 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600">
-              <span>Service Fee</span>
-                <span>AED {serviceSubtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Hours ({serviceHours} x AED {HOURLY_RATE_AED})</span>
-                <span>AED {hoursSubtotal.toFixed(2)}</span>
+              <span>Add-ons</span>
+              <span>AED {addonsSubtotal.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Hours ({serviceHours} x AED {hourlyRate})</span>
+              <span>AED {hoursSubtotal.toFixed(2)}</span>
+            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Frequency discount ({Math.round(discountRate * 100)}%)</span>
+                <span>- AED {discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-slate-600">
               <span>Taxable Amount</span>
               <span>AED {subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Total (inc VAT 5.0%)</span>
-              <span>AED {(subtotal + vatAmount).toFixed(2)}</span>
+              <span>AED {total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sky-600 text-2xl font-bold border-t border-slate-200 pt-2">
               <span>Total</span>
@@ -651,10 +690,8 @@ export default function BookServicePage() {
       : step === 1
       ? "Select Category"
       : step === 2
-        ? "Choose Services"
-        : step === 3
-          ? "Date & Time"
-          : "Checkout"
+        ? "Date & Time"
+        : "Checkout"
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -662,7 +699,7 @@ export default function BookServicePage() {
         <div className="mb-6">
           <h1 className="text-4xl font-semibold text-slate-900">{stepTitle}</h1>
           {step > 0 && (
-            <p className="text-sm text-slate-600 mt-1">Step {step} of 4</p>
+            <p className="text-sm text-slate-600 mt-1">Step {step} of 3</p>
           )}
         </div>
 
@@ -752,150 +789,157 @@ export default function BookServicePage() {
 
         {step === 2 && (
           <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <div className="flex flex-wrap gap-2 mb-5">
-                {fallbackCategories.map((category) => {
-                  const active = selectedCategoryId === category.id
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => setSelectedCategoryId(category.id)}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                        active ? "bg-primary text-white" : "bg-white border border-slate-300 text-slate-700"
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  )
-                })}
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="bg-sky-50/70 px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-sky-100 flex items-center justify-center">
+                    <RefreshCw className="h-4 w-4 text-sky-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">Frequency</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {serviceFrequency === "once" ? "One Time" : serviceFrequency === "weekly" ? "Weekly" : "Bi Weekly"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFrequencyModal(true)}
+                  className="text-xs font-bold text-sky-700 hover:text-sky-900 underline underline-offset-4"
+                >
+                  CHANGE
+                </button>
               </div>
 
-              {filteredServices.length === 0 ? (
-                <p className="text-slate-500">No active services in this category.</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredServices.map((service) => (
-                    <article key={service.id} className="rounded-xl border border-slate-200 p-3 bg-slate-50">
-                      <img src={service.imageUrl || defaultServiceImage} alt={service.name} className="h-32 w-full object-cover rounded-lg" />
-                      <h3 className="text-xl font-semibold text-slate-900 mt-3">{service.name}</h3>
-                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">{service.description || "Professional service"}</p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xl font-bold text-slate-800">AED {service.price.toFixed(2)}</span>
-                        <button
-                          type="button"
-                          onClick={() => addToCart(service)}
-                          className="h-9 px-3 rounded-lg bg-primary text-white text-xs font-semibold inline-flex items-center gap-1 hover:bg-pink-700"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-slate-900 mb-3">When would you like your service?</h3>
 
-              <div className="mt-6 flex items-center justify-between">
+                <div className="flex items-center gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => dayScrollerRef.current?.scrollBy({ left: -260, behavior: "smooth" })}
+                    className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    aria-label="Scroll dates left"
+                  >
+                    <ChevronLeft className="h-4 w-4 mx-auto" />
+                  </button>
+
+                  <div
+                    ref={dayScrollerRef}
+                    className="flex-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none]"
+                  >
+                    <div className="flex gap-2 pr-2 [&::-webkit-scrollbar]:hidden">
+                      {days.map((day) => {
+                        const active = selectedDate === day.iso
+                        return (
+                          <button
+                            key={day.iso}
+                            type="button"
+                            onClick={() => setSelectedDate(day.iso)}
+                            className={`min-w-16 rounded-xl border px-2.5 py-2 text-center transition-colors ${
+                              active ? "border-sky-400 bg-sky-100 text-sky-900" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            <p className="text-[10px] font-semibold text-slate-500">{day.weekday}</p>
+                            <p className="text-base font-bold leading-tight">{day.day}</p>
+                            <p className="text-[10px] text-slate-400">{day.month}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => dayScrollerRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
+                    className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    aria-label="Scroll dates right"
+                  >
+                    <ChevronRight className="h-4 w-4 mx-auto" />
+                  </button>
+                </div>
+
+                <h4 className="text-lg font-semibold text-slate-900 mb-3">What time would you like us to start?</h4>
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-2 mb-6">
+                  {timeSlots.map((slot) => {
+                    const [value, label] = slot.split("|")
+                    const active = selectedTime === value
+                    const unavailable = isSlotUnavailable(selectedDate, value)
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => {
+                          if (unavailable) return
+                          setSelectedTime(value)
+                        }}
+                        disabled={unavailable || !selectedDate}
+                        className={`h-10 rounded-xl text-xs font-semibold transition-colors ${
+                          unavailable || !selectedDate
+                            ? "bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200"
+                            : active
+                              ? "bg-sky-200 text-sky-900 border border-sky-300"
+                              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <h4 className="text-lg font-semibold text-slate-900 mb-3">How many hours do you need the Housekeeper to stay?</h4>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {Array.from({ length: 10 }, (_, i) => i + 2).map((h) => {
+                    const active = serviceHours === h
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setServiceHours(h)}
+                        className={`h-10 w-10 rounded-xl text-xs font-bold border transition-colors ${
+                          active ? "bg-sky-200 border-sky-300 text-sky-900" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {h}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <h4 className="text-lg font-semibold text-slate-900 mb-3">How many Housekeepers do you need?</h4>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {[1, 2, 3, 4, 5].map((n) => {
+                    const active = professionalsCount === n
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setProfessionalsCount(n)}
+                        className={`h-10 w-10 rounded-xl text-xs font-bold border transition-colors ${
+                          active ? "bg-sky-200 border-sky-300 text-sky-900" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
-                  className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
+                  onClick={handleScheduleNext}
+                  className="w-full h-11 rounded-xl bg-sky-600 text-white font-bold text-sm hover:bg-sky-700 inline-flex items-center justify-between px-4"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormError("")
-                    if (!validateBeforeSchedule()) return
-                    setStep(3)
-                  }}
-                  className="h-11 px-6 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:bg-pink-700"
-                >
-                  Next
+                  NEXT
                   <ChevronRight className="h-4 w-4" />
                 </button>
-              </div>
-            </div>
 
-            {summaryCard}
-          </section>
-        )}
+                <p className="text-xs text-slate-500 mt-4">
+                  Hourly rate is based on your selected main service: AED {hourlyRate} / hour. Add-ons are charged separately.
+                </p>
 
-        {step === 3 && (
-          <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
-              <h3 className="text-3xl font-semibold text-slate-900 mb-4">When would you like your service?</h3>
-
-              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 mb-5">
-                {days.map((day) => {
-                  const active = selectedDate === day.iso
-                  return (
-                    <button
-                      key={day.iso}
-                      type="button"
-                      onClick={() => setSelectedDate(day.iso)}
-                      className={`rounded-xl border p-2 text-center ${
-                        active
-                          ? "border-primary bg-pink-100 text-primary"
-                          : "border-slate-200 bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      <p className="text-[10px] font-semibold">{day.weekday}</p>
-                      <p className="text-lg font-bold leading-tight">{day.day}</p>
-                      <p className="text-[10px]">{day.month}</p>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <h4 className="text-2xl font-semibold text-slate-900 mb-3">What time would you like us to start?</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
-                {timeSlots.map((slot) => {
-                  const [value, label] = slot.split("|")
-                  const active = selectedTime === value
-                  const unavailable = isSlotUnavailable(selectedDate, value)
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => {
-                        if (unavailable) return
-                        setSelectedTime(value)
-                      }}
-                      disabled={unavailable || !selectedDate}
-                      className={`h-10 rounded-lg text-sm font-semibold ${
-                        unavailable || !selectedDate
-                          ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                          : active
-                            ? "bg-primary text-white"
-                            : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-              <p className="text-xs text-slate-500 mb-6">
-                Same-day past time slots are blocked using system time. Already booked slots stay blocked until the next day.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Number of professionals</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={professionalsCount}
-                    onChange={(e) => setProfessionalsCount(Math.max(1, Number(e.target.value || 1)))}
-                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
-                  />
-                </div>
-                <div>
+                <div className="mt-6">
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Area / Address</label>
                   <input
                     value={propertyArea}
@@ -904,87 +948,81 @@ export default function BookServicePage() {
                     className="w-full h-11 rounded-xl border border-slate-300 px-3"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Service Frequency <span className="text-rose-600">*</span>
-                  </label>
-                  <select
-                    value={serviceFrequency}
-                    onChange={(e) => setServiceFrequency(e.target.value as "once" | "weekly" | "biweekly")}
-                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
-                  >
-                    <option value="once">One Time</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi Weekly</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Number of Hours <span className="text-rose-600">*</span>
-                  </label>
-                  <select
-                    value={serviceHours}
-                    onChange={(e) => setServiceHours(Math.max(1, Number(e.target.value || 1)))}
-                    className="w-full h-11 rounded-xl border border-slate-300 px-3"
-                  >
-                    {Array.from({ length: 12 }, (_, idx) => idx + 1).map((hours) => (
-                      <option key={hours} value={hours}>
-                        {hours} {hours === 1 ? "Hour" : "Hours"}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">AED {HOURLY_RATE_AED} will be added for each selected hour.</p>
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Specific cleaning instruction</label>
+                  <textarea
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    rows={4}
+                    placeholder="Write here..."
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                  />
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Select professionals (optional, up to {professionalsCount})
-                </label>
-                {employees.length === 0 ? (
-                  <p className="text-sm text-slate-500">No active professionals available. Team will be auto-assigned.</p>
+              <div className="mt-8">
+                <div className="flex items-end justify-between gap-4 mb-4">
+                  <div>
+                    <h4 className="text-2xl font-semibold text-slate-900">Related services</h4>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Select services from the category you chose. You can add more services as add-ons.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {fallbackCategories.map((category) => {
+                    const active = selectedCategoryId === category.id
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setSelectedCategoryId(category.id)}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                          active ? "bg-primary text-white" : "bg-white border border-slate-300 text-slate-700"
+                        }`}
+                      >
+                        {category.name}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {filteredServices.length === 0 ? (
+                  <p className="text-slate-500">No active services in this category.</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {employees.map((emp) => {
-                      const selected = selectedStaffIds.includes(emp.id)
-                      return (
-                        <button
-                          key={emp.id}
-                          type="button"
-                          onClick={() => toggleStaff(emp.id)}
-                          className={`text-left rounded-xl border px-3 py-2 transition-colors ${
-                            selected
-                              ? "border-primary bg-pink-50"
-                              : "border-slate-200 bg-white hover:bg-slate-50"
-                          }`}
-                        >
-                          <p className="text-sm font-semibold text-slate-900">{emp.name}</p>
-                          <p className="text-xs text-slate-500">{emp.role}</p>
-                        </button>
-                      )
-                    })}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredServices.map((service) => (
+                      <article key={service.id} className="rounded-xl border border-slate-200 p-3 bg-slate-50">
+                        <img
+                          src={service.imageUrl || defaultServiceImage}
+                          alt={service.name}
+                          className="h-32 w-full object-cover rounded-lg"
+                        />
+                        <h3 className="text-xl font-semibold text-slate-900 mt-3">{service.name}</h3>
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">{service.description || "Professional service"}</p>
+                        <div className="mt-3 flex items-center justify-between">
+                          <span className="text-xl font-bold text-slate-800">AED {service.price.toFixed(2)}</span>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(service)}
+                            className="h-9 px-3 rounded-lg bg-primary text-white text-xs font-semibold inline-flex items-center gap-1 hover:bg-pink-700"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add
+                          </button>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 )}
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Specific cleaning instruction</label>
-                <textarea
-                  value={specialInstructions}
-                  onChange={(e) => setSpecialInstructions(e.target.value)}
-                  rows={4}
-                  placeholder="Write here..."
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2"
-                />
               </div>
 
               <div className="mt-6 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -1005,7 +1043,82 @@ export default function BookServicePage() {
           </section>
         )}
 
-        {step === 4 && (
+        {showFrequencyModal && (
+          <div
+            className="fixed inset-0 z-50 bg-black/35 backdrop-blur-[2px] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose your frequency"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setShowFrequencyModal(false)
+            }}
+          >
+            <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h4 className="text-lg font-semibold text-slate-900">Choose Your Frequency</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowFrequencyModal(false)}
+                  className="h-9 w-9 rounded-xl hover:bg-slate-100 text-slate-500"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5 mx-auto" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-3">
+                {[
+                  { key: "once" as const, title: "One Time", desc: "One time service will not renew again.", badge: null },
+                  { key: "weekly" as const, title: "Weekly", desc: "Service for the same day every week.", badge: "10%" },
+                  { key: "biweekly" as const, title: "Every 2 Week", desc: "Service for every two weeks.", badge: "5%" },
+                ].map((opt) => {
+                  const active = serviceFrequency === opt.key
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setServiceFrequency(opt.key)}
+                      className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+                        active ? "border-sky-300 bg-sky-100/70" : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-1 h-5 w-5 rounded-full border flex items-center justify-center ${
+                            active ? "border-sky-600 bg-sky-600" : "border-slate-300 bg-white"
+                          }`}
+                          aria-hidden="true"
+                        >
+                          <div className={`h-2 w-2 rounded-full ${active ? "bg-white" : "bg-transparent"}`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-slate-900">{opt.title}</p>
+                            {opt.badge && (
+                              <span className="text-xs font-bold text-rose-600">{opt.badge}</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => setShowFrequencyModal(false)}
+                  className="mt-4 w-full h-11 rounded-xl bg-sky-600 text-white font-bold text-sm hover:bg-sky-700 inline-flex items-center justify-between px-4"
+                >
+                  NEXT
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
           <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
             <div className="bg-white rounded-2xl border border-slate-200 p-5">
               <h3 className="text-3xl font-semibold text-slate-900 mb-4">Checkout</h3>
@@ -1092,7 +1205,7 @@ export default function BookServicePage() {
               <div className="flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(2)}
                   className="h-11 px-6 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold inline-flex items-center gap-2 hover:bg-slate-50"
                 >
                   <ChevronLeft className="h-4 w-4" />

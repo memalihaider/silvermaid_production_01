@@ -2320,6 +2320,7 @@ interface ClientLead {
   company: string
   email: string
   phone: string
+  location?: string
   type: 'client' | 'lead'
   status?: string
 }
@@ -2328,6 +2329,13 @@ interface NewJobForm {
   title: string
   client: string
   clientId: string | null
+  clientEmail: string
+  clientPhone: string
+  clientAddress: string
+  propertyType: 'apartment' | 'villa' | 'office'
+  frequency: 'once' | 'weekly' | 'biweekly'
+  area: string
+  serviceHours: number
   priority: 'Low' | 'Medium' | 'High' | 'Critical'
   scheduledDate: string
   scheduledTime: string
@@ -2376,6 +2384,13 @@ export default function JobsPage() {
     title: '',
     client: '',
     clientId: null,
+    clientEmail: '',
+    clientPhone: '',
+    clientAddress: '',
+    propertyType: 'apartment',
+    frequency: 'once',
+    area: '',
+    serviceHours: 1,
     priority: 'Medium',
     scheduledDate: '',
     scheduledTime: '',
@@ -2483,6 +2498,7 @@ export default function JobsPage() {
             company: data.company || '',
             email: data.email || '',
             phone: data.phone || '',
+            location: data.location || data.address || '',
             type: 'client',
             status: data.status || 'Active'
           })
@@ -2503,6 +2519,7 @@ export default function JobsPage() {
             company: data.company || '',
             email: data.email || '',
             phone: data.phone || '',
+            location: data.location || data.address || '',
             type: 'lead',
             status: data.status || 'Won'
           })
@@ -2623,6 +2640,13 @@ export default function JobsPage() {
           title: jobData.title || '',
           client: jobData.client || '',
           clientId: jobData.clientId || null,
+          clientEmail: jobData.clientEmail || '',
+          clientPhone: jobData.clientPhone || '',
+          clientAddress: jobData.clientAddress || '',
+          propertyType: jobData.propertyType || 'apartment',
+          frequency: jobData.frequency || 'once',
+          area: jobData.area || '',
+          serviceHours: Number(jobData.serviceHours || 1),
           priority: jobData.priority || 'Medium',
           scheduledDate: jobData.scheduledDate || '',
           scheduledTime: jobData.scheduledTime || '',
@@ -2716,6 +2740,13 @@ export default function JobsPage() {
         title: newJobForm.title,
         client: newJobForm.client,
         clientId: newJobForm.clientId || '',
+        clientEmail: newJobForm.clientEmail,
+        clientPhone: newJobForm.clientPhone,
+        clientAddress: newJobForm.clientAddress,
+        propertyType: newJobForm.propertyType,
+        frequency: newJobForm.frequency,
+        area: newJobForm.area,
+        serviceHours: newJobForm.serviceHours,
         priority: newJobForm.priority,
         scheduledDate: newJobForm.scheduledDate || null,
         scheduledTime: newJobForm.scheduledTime,
@@ -2844,6 +2875,13 @@ export default function JobsPage() {
       title: '',
       client: '',
       clientId: null,
+      clientEmail: '',
+      clientPhone: '',
+      clientAddress: '',
+      propertyType: 'apartment',
+      frequency: 'once',
+      area: '',
+      serviceHours: 1,
       priority: 'Medium',
       scheduledDate: '',
       scheduledTime: '',
@@ -3462,7 +3500,7 @@ export default function JobsPage() {
           ></div>
           <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-linear-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold">{editingJobId ? 'Edit Job' : 'Create New Job'}</h2>
                 <p className="text-blue-100 text-sm mt-1">Complete all job details</p>
@@ -3493,45 +3531,148 @@ export default function JobsPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client *</label>
-                    <select
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client ID</label>
+                    <input
+                      type="text"
                       value={newJobForm.clientId || ''}
                       onChange={(e) => {
-                        const selected = clients.find(c => c.id === e.target.value)
+                        const value = e.target.value
+                        const matched = clients.find(c => c.id.toLowerCase() === value.trim().toLowerCase())
                         setNewJobForm({
                           ...newJobForm,
-                          clientId: selected?.id || null,
-                          client: selected?.name || ''
+                          clientId: value || null,
+                          client: matched?.name || newJobForm.client,
+                          clientEmail: matched?.email || newJobForm.clientEmail,
+                          clientPhone: matched?.phone || newJobForm.clientPhone,
+                          clientAddress: matched?.location || newJobForm.clientAddress,
+                          area: matched?.location || newJobForm.area,
+                          location: matched?.location || newJobForm.location,
                         })
                       }}
+                      list="job-client-id-suggestions"
+                      placeholder="Search by client ID or type new"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="">Select a client or lead...</option>
-                      
-                      {/* ✅ Clients Section */}
-                      <optgroup label="━━━━ Clients ━━━━" className="font-bold text-gray-700">
-                        {clients.filter(c => c.type === 'client').map((client) => (
-                          <option key={`client-${client.id}`} value={client.id}>
-                            {client.name} - {client.company} (Client)
-                          </option>
-                        ))}
-                      </optgroup>
-                      
-                      {/* ✅ Won & Qualified Leads Section */}
-                      <optgroup label="━━━━ Won/Qualified Leads ━━━━" className="font-bold text-gray-700">
-                        {clients.filter(c => c.type === 'lead').map((lead) => (
-                          <option key={`lead-${lead.id}`} value={lead.id}>
-                            {lead.name} - {lead.company} ({lead.status} Lead)
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
+                    />
+                    <datalist id="job-client-id-suggestions">
+                      {clients.map((client) => (
+                        <option key={`client-id-${client.id}`} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client Name *</label>
+                    <input
+                      type="text"
+                      value={newJobForm.client}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        const matched = clients.find(c => c.name.toLowerCase() === value.trim().toLowerCase())
+                        setNewJobForm({
+                          ...newJobForm,
+                          client: value,
+                          clientId: matched?.id || newJobForm.clientId,
+                          clientEmail: matched?.email || newJobForm.clientEmail,
+                          clientPhone: matched?.phone || newJobForm.clientPhone,
+                          clientAddress: matched?.location || newJobForm.clientAddress,
+                          area: matched?.location || newJobForm.area,
+                          location: matched?.location || newJobForm.location,
+                        })
+                      }}
+                      list="job-client-name-suggestions"
+                      placeholder="Search existing client/lead or type new"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <datalist id="job-client-name-suggestions">
+                      {clients.map((client) => (
+                        <option key={`client-name-${client.id}`} value={client.name}>
+                          {client.company} ({client.type === 'client' ? 'Client' : 'Lead'})
+                        </option>
+                      ))}
+                    </datalist>
                     {newJobForm.clientId === null && newJobForm.client && (
-                      <p className="text-sm text-gray-500 mt-1">Client will be saved as: {newJobForm.client}</p>
+                      <p className="text-sm text-gray-500 mt-1">New customer will be saved as: {newJobForm.client}</p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
                       {clients.filter(c => c.type === 'client').length} clients & {clients.filter(c => c.type === 'lead').length} qualified/won leads
                     </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client Email</label>
+                    <input
+                      type="email"
+                      value={newJobForm.clientEmail}
+                      onChange={(e) => setNewJobForm({...newJobForm, clientEmail: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="client@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client Phone</label>
+                    <input
+                      type="text"
+                      value={newJobForm.clientPhone}
+                      onChange={(e) => setNewJobForm({...newJobForm, clientPhone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="+971..."
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Client Address</label>
+                    <input
+                      type="text"
+                      value={newJobForm.clientAddress}
+                      onChange={(e) => setNewJobForm({...newJobForm, clientAddress: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Address"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Property Type</label>
+                    <select
+                      value={newJobForm.propertyType}
+                      onChange={(e) => setNewJobForm({...newJobForm, propertyType: e.target.value as 'apartment' | 'villa' | 'office'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="apartment">Apartment</option>
+                      <option value="villa">Villa</option>
+                      <option value="office">Office</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Frequency</label>
+                    <select
+                      value={newJobForm.frequency}
+                      onChange={(e) => setNewJobForm({...newJobForm, frequency: e.target.value as 'once' | 'weekly' | 'biweekly'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="once">One Time</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Bi Weekly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Area</label>
+                    <input
+                      type="text"
+                      value={newJobForm.area}
+                      onChange={(e) => setNewJobForm({...newJobForm, area: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Dubai Marina"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Service Hours</label>
+                    <select
+                      value={newJobForm.serviceHours}
+                      onChange={(e) => setNewJobForm({...newJobForm, serviceHours: Math.max(1, Number(e.target.value) || 1)})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      {Array.from({ length: 12 }, (_, idx) => idx + 1).map((h) => (
+                        <option key={h} value={h}>{h} {h === 1 ? 'Hour' : 'Hours'}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -3579,7 +3720,7 @@ export default function JobsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Selected Members</label>
-                    <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-[42px]">
+                    <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-10.5">
                       {getSelectedEmployeeNames().length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {getSelectedEmployeeNames().map((name, idx) => (
@@ -3786,7 +3927,7 @@ export default function JobsPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Selected Equipment</label>
-                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-[42px]">
+                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-10.5">
                     {getSelectedEquipmentNames().length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {getSelectedEquipmentNames().map((name, idx) => (
@@ -3853,7 +3994,7 @@ export default function JobsPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Selected Permits/Licenses</label>
-                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-[42px]">
+                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-10.5">
                     {getSelectedPermitNames().length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {getSelectedPermitNames().map((name, idx) => (
@@ -3932,7 +4073,7 @@ export default function JobsPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Selected Services</label>
-                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-[42px]">
+                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-300 min-h-10.5">
                     {getSelectedServiceNames().length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {getSelectedServiceNames().map((name, idx) => (

@@ -1427,7 +1427,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {revenueByCategory.length > 0 ? (
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <RePieChart>
 // Fix for the Pie Chart label
 <Pie
@@ -1471,7 +1471,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {profitByCategory.some(item => item.profit !== 0) ? (
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <BarChart data={profitByCategory}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="name" stroke="#6b7280" />
@@ -1503,7 +1503,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {monthlyTrendData.length > 0 ? (
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <AreaChart data={monthlyTrendData}>
                       <defs>
                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -1543,7 +1543,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {jobStatusData.length > 0 ? (
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <RePieChart>
                       <Pie
                         data={jobStatusData}
@@ -1583,7 +1583,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {bookingPaymentChart.length > 0 ? (
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <RePieChart>
                       <Pie
                         data={bookingPaymentChart}
@@ -1635,7 +1635,7 @@ export default function FinanceAnalyticsPage() {
               </h3>
               {materialsUsageChart.length > 0 ? (
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <BarChart data={materialsUsageChart}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="name" stroke="#6b7280" />

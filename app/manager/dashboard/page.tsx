@@ -416,8 +416,8 @@ export default function ManagerDashboard() {
                   </div>
                 </div>
               </div>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-80 w-full min-h-64">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <AreaChart data={teamPerformanceData}>
                     <defs>
                       <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
@@ -440,8 +440,8 @@ export default function ManagerDashboard() {
             <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-sm">
               <h3 className="text-xl font-black text-white mb-2">Team Status</h3>
               <p className="text-sm text-slate-400 mb-8">Team members by status</p>
-              <div className="h-64 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-64 w-full min-h-56 relative">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <PieChart>
                     <Pie data={teamStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                       {teamStatusData.map((entry, index) => (
