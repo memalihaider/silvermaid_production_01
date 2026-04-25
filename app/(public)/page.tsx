@@ -8,11 +8,26 @@ import {
 } from 'lucide-react'
 import { motion, useScroll, useInView } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
-import { INITIAL_BLOG_POSTS } from '@/lib/blog-data'
-import { INITIAL_TESTIMONIALS } from '@/lib/testimonials-data'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { db } from '@/lib/firebase'
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore'
+
+function blogPostSlug(title: string, docId: string) {
+  return title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `post-${docId}`
+}
+
+type HomeBlogCard = {
+  id: string
+  title: string
+  excerpt: string
+  image: string
+  category: string
+  date: string
+  readTime: string
+  href: string
+}
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -32,7 +47,8 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false)
   const [sliderIndex, setSliderIndex] = useState(0)
   const [blogSliderIndex, setBlogSliderIndex] = useState(0)
-  const [testimonialSliderIndex, setTestimonialSliderIndex] = useState(0)
+  const [blogs, setBlogs] = useState<HomeBlogCard[]>([])
+  const [blogsLoading, setBlogsLoading] = useState(true)
   const [airQuality, setAirQuality] = useState(72)
   const [airQualityStatus, setAirQualityStatus] = useState("Moderate")
   const [airQualityColor, setAirQualityColor] = useState("text-amber-500")
@@ -54,27 +70,6 @@ export default function HomePage() {
     { title: "Gym Deep Cleaning", href: "/services/gym-deep-cleaning", icon: <Dumbbell className="h-7 w-7" />, description: "Equipment and facility sanitization", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", tag: "Deep" }
   ]
 
-  // Blog posts data - using actual blog posts from database
-  const blogs = INITIAL_BLOG_POSTS.slice(0, 6).map(post => ({
-    title: post.title,
-    excerpt: post.excerpt,
-    image: post.image,
-    category: post.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    date: new Date(post.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    readTime: `${post.readTime} min read`,
-    href: `/blog/${post.slug}`
-  }))
-
-  // Testimonials data from database
-  const testimonials = INITIAL_TESTIMONIALS.slice(0, 8).map(testimonial => ({
-    id: testimonial.id,
-    name: testimonial.name,
-    role: testimonial.role,
-    image: testimonial.image,
-    text: testimonial.text,
-    rating: testimonial.rating
-  }))
-
   const getAirQualityStatus = (aqi: number) => {
     if (aqi <= 50) return { status: "Good", color: "text-green-500" }
     if (aqi <= 100) return { status: "Moderate", color: "text-yellow-500" }
@@ -83,6 +78,60 @@ export default function HomePage() {
     if (aqi <= 300) return { status: "Very Unhealthy", color: "text-red-700" }
     return { status: "Hazardous", color: "text-red-900" }
   }
+
+  useEffect(() => {
+    const q = query(collection(db, 'blog-post'), orderBy('createdAt', 'desc'), limit(6))
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const next: HomeBlogCard[] = snap.docs.map((docSnap) => {
+          const data = docSnap.data() as Record<string, unknown>
+          const title = String(data.title ?? '')
+          const slug = blogPostSlug(title, docSnap.id)
+          const description = String(data.description ?? '')
+          const excerptFromDesc =
+            description.length > 0 ? `${description.slice(0, 100)}${description.length > 100 ? '...' : ''}` : ''
+          const excerptRaw = typeof data.excerpt === 'string' ? data.excerpt.trim() : ''
+          const excerpt = excerptRaw || excerptFromDesc || 'No description available'
+          const image = String(data.imageURL ?? data.image ?? '') || '/api/placeholder/600/400'
+          const fromCategory = typeof data.category === 'string' ? data.category.trim() : ''
+          const fromTags =
+            Array.isArray(data.tags) && typeof data.tags[0] === 'string' ? data.tags[0].trim() : ''
+          const categoryRaw = fromCategory || fromTags || 'general'
+          const category = categoryRaw.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+          const publishedAtIso =
+            data.createdAt && typeof (data.createdAt as { toDate?: () => Date }).toDate === 'function'
+              ? (data.createdAt as { toDate: () => Date }).toDate().toISOString()
+              : new Date().toISOString()
+          const readMinutes = Number(data.readTime ?? 5) || 5
+
+          return {
+            id: docSnap.id,
+            title,
+            excerpt,
+            image,
+            category,
+            date: new Date(publishedAtIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            readTime: `${readMinutes} min read`,
+            href: `/${slug}`,
+          }
+        })
+
+        setBlogs(next)
+        setBlogSliderIndex(0)
+        setBlogsLoading(false)
+      },
+      (error) => {
+        console.error('Home blog slider: failed to subscribe to blog posts:', error)
+        setBlogs([])
+        setBlogsLoading(false)
+      },
+    )
+
+    return () => unsub()
+  }, [])
+
 useEffect(() => {
   setIsClient(true)
   let isMounted = true
@@ -215,11 +264,13 @@ useEffect(() => {
 
   // Auto-scroll blog slider to the right (slow speed)
   useEffect(() => {
+    if (blogs.length < 3) return
+
     let isMounted = true
+    const maxIndex = Math.max(0, blogs.length - 3)
     const interval = setInterval(() => {
       if (isMounted) {
         setBlogSliderIndex((prev) => {
-          const maxIndex = blogs.length - 3
           return prev <= 0 ? maxIndex : prev - 1
         })
       }
@@ -236,6 +287,9 @@ useEffect(() => {
     target: containerRef,
     offset: ["start start", "end start"]
   })
+
+  const blogSlidesMaxIndex = Math.max(0, blogs.length - 3)
+  const canSlideBlogs = !blogsLoading && blogs.length > 3
 
   return (
     <div ref={containerRef} className="flex flex-col overflow-hidden selection:bg-primary selection:text-white">
@@ -777,14 +831,14 @@ useEffect(() => {
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => setBlogSliderIndex(Math.max(0, blogSliderIndex - 1))}
-                disabled={blogSliderIndex === 0}
+                disabled={!canSlideBlogs || blogSliderIndex === 0}
                 className="h-10 w-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-primary hover:text-white hover:border-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button 
-                onClick={() => setBlogSliderIndex(Math.min(blogs.length - 3, blogSliderIndex + 1))}
-                disabled={blogSliderIndex >= blogs.length - 3}
+                onClick={() => setBlogSliderIndex(Math.min(blogSlidesMaxIndex, blogSliderIndex + 1))}
+                disabled={!canSlideBlogs || blogSliderIndex >= blogSlidesMaxIndex}
                 className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white hover:bg-pink-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -793,59 +847,94 @@ useEffect(() => {
           </div>
 
           {/* Blog Slider */}
-          <div className="relative overflow-hidden">
-            <motion.div 
-              className="flex gap-5"
-              animate={{ x: -blogSliderIndex * 380 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
-              {blogs.map((blog, i) => (
-                <Card key={i} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
-                  <a href={blog.href} className="block cursor-pointer">
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={blog.image}
-                        alt={blog.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-primary text-white hover:bg-primary">{blog.category}</Badge>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-3 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{blog.date}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{blog.readTime}</span>
-                      </div>
-                      <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                        {blog.title}
-                      </h3>
-                      <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">
-                        {blog.excerpt}
-                      </p>
-                      <span className="inline-flex items-center gap-1.5 text-primary text-[11px] font-bold">
-                        Read article <ArrowUpRight className="h-3 w-3" />
-                      </span>
+          {blogsLoading ? (
+            <div className="relative overflow-hidden">
+              <div className="flex gap-5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 border-slate-200">
+                    <div className="h-48 bg-slate-200 animate-pulse" />
+                    <CardContent className="p-6 space-y-3">
+                      <div className="h-3 w-40 bg-slate-200 rounded animate-pulse" />
+                      <div className="h-5 w-full bg-slate-200 rounded animate-pulse" />
+                      <div className="h-5 w-5/6 bg-slate-200 rounded animate-pulse" />
+                      <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+                      <div className="h-4 w-11/12 bg-slate-100 rounded animate-pulse" />
                     </CardContent>
-                  </a>
-                </Card>
-              ))}
-            </motion.div>
-          </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : blogs.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-12 text-center">
+              <p className="text-slate-600 font-medium mb-2">No blog posts yet</p>
+              <p className="text-slate-500 text-sm mb-6">Check back soon—or open the blog to see what we publish next.</p>
+              <Button asChild className="rounded-full font-bold">
+                <a href="/blog" className="inline-flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Go to blog
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="relative overflow-hidden">
+                <motion.div 
+                  className="flex gap-5"
+                  animate={{ x: -blogSliderIndex * 380 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
+                  {blogs.map((blog) => (
+                    <Card key={blog.id} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
+                      <a href={blog.href} className="block cursor-pointer">
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={blog.image}
+                            alt={blog.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-primary text-white hover:bg-primary">{blog.category}</Badge>
+                          </div>
+                        </div>
 
-          {/* Slider Indicators */}
-          <div className="flex items-center justify-center gap-1.5 mt-6">
-            {Array.from({ length: Math.ceil(blogs.length / 3) }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setBlogSliderIndex(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === blogSliderIndex ? 'w-6 bg-primary' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
-                }`}
-              />
-            ))}
-          </div>
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-3 mb-3 text-[11px] text-slate-400">
+                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{blog.date}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{blog.readTime}</span>
+                          </div>
+                          <h3 className="text-lg font-black text-slate-900 mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                            {blog.title}
+                          </h3>
+                          <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">
+                            {blog.excerpt}
+                          </p>
+                          <span className="inline-flex items-center gap-1.5 text-primary text-[11px] font-bold">
+                            Read article <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </CardContent>
+                      </a>
+                    </Card>
+                  ))}
+                </motion.div>
+              </div>
+
+              {blogs.length > 3 && (
+                <div className="flex items-center justify-center gap-1.5 mt-6">
+                  {Array.from({ length: Math.ceil(blogs.length / 3) }).map((_, i) => (
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => setBlogSliderIndex(i)}
+                      className={`h-1.5 rounded-full transition-all ${
+                        i === blogSliderIndex ? 'w-6 bg-primary' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           <div className="text-center mt-10">
             <Button asChild className="rounded-full font-bold">
@@ -856,77 +945,6 @@ useEffect(() => {
               </a>
             </Button>
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 bg-slate-50/50 relative overflow-hidden">
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-10">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-4">
-              <Star className="h-3 w-3 fill-current" />
-              Testimonials
-            </span>
-            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">Reviews that feel real</h3>
-            <p className="text-slate-500 max-w-2xl mx-auto text-sm">
-              Short, specific feedback from move-out, sofa, and mattress cleanings—plus offices and villas across Dubai.
-            </p>
-          </div>
-
-          {/* Infinite Testimonials Carousel */}
-          <div className="relative overflow-hidden">
-            <motion.div 
-              className="flex gap-5"
-              animate={{ x: [0, -testimonials.length * 380] }}
-              transition={{
-                duration: testimonials.length * 6,
-                repeat: Infinity,
-                ease: "linear",
-                repeatType: "loop"
-              }}
-            >
-              {[...testimonials, ...testimonials].map((testimonial, i) => (
-                <Card key={i} className="w-[340px] rounded-2xl shrink-0 border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex text-primary gap-0.5">
-                        {[...Array(testimonial.rating)].map((_, idx) => (
-                          <Star key={idx} className="h-3.5 w-3.5 fill-current" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verified</span>
-                    </div>
-
-                    <p className="text-slate-700 text-sm leading-relaxed mb-6 grow">
-                      &ldquo;{testimonial.text}&rdquo;
-                    </p>
-
-                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 mt-auto">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={testimonial.image}
-                          alt={testimonial.name}
-                          className="w-10 h-10 rounded-xl object-cover"
-                        />
-                        <div className="min-w-0">
-                          <h4 className="font-black text-slate-900 text-sm truncate">{testimonial.name}</h4>
-                          <p className="text-primary text-[11px] font-semibold truncate">{testimonial.role}</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Dubai, UAE
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </motion.div>
-
-            {/* Edge Fades */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-slate-50 to-transparent pointer-events-none z-10" />
-            <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-slate-50 to-transparent pointer-events-none z-10" />
-          </div>
-
         </div>
       </section>
 
