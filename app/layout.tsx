@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,8 +20,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Silver Maid - Professional Cleaning & Hygiene Services",
   description: "UAE's trusted hygiene solution provider, dedicated to creating fresh, clean, and productive environments for homes and offices.",
+  applicationName: SITE_NAME,
+  alternates: {
+    canonical: "./",
+  },
+  openGraph: {
+    title: "Silver Maid - Professional Cleaning & Hygiene Services",
+    description: "UAE's trusted hygiene solution provider, dedicated to creating fresh, clean, and productive environments for homes and offices.",
+    url: "./",
+    siteName: SITE_NAME,
+    type: "website",
+  },
   icons: {
     icon: "/favicon.svg",
     apple: "/logo.png",

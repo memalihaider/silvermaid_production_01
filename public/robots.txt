@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /manager/
+Disallow: /client/
+Disallow: /guest/
+Disallow: /login/
+Disallow: /debug/
+Disallow: /api/
+Disallow: /route
+
+Sitemap: https://www.silvermaidsdubai.com/sitemap.xml

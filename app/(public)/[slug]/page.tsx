@@ -3,10 +3,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { db } from '@/lib/firebase'
+import { SITE_NAME, SITE_URL } from '@/lib/seo'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { AnimatedDiv, AnimatedArticle, AnimatedAside, ShareButton } from './client-parts'
-
-const SITE_URL = 'https://silvermaid-production-01.vercel.app'
 
 type BlogCategory = {
   id: string
@@ -150,7 +149,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         title: metaTitle,
         description: metaDescription,
         url: canonicalUrl,
-        siteName: 'Silver Maid',
+        siteName: SITE_NAME,
         type: 'article',
         publishedTime: post.publishedAt,
         authors: [post.author],
@@ -278,7 +277,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     author: { '@type': 'Person', name: post.author },
     publisher: {
       '@type': 'Organization',
-      name: 'Silver Maid',
+      name: SITE_NAME,
       url: SITE_URL,
     },
     mainEntityOfPage: {

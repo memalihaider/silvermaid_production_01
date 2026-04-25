@@ -851,7 +851,7 @@ useEffect(() => {
             <div className="relative overflow-hidden">
               <div className="flex gap-5">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 border-slate-200">
+                  <Card key={i} className="relative w-90 rounded-2xl overflow-hidden shrink-0 border-slate-200">
                     <div className="h-48 bg-slate-200 animate-pulse" />
                     <CardContent className="p-6 space-y-3">
                       <div className="h-3 w-40 bg-slate-200 rounded animate-pulse" />
@@ -885,7 +885,7 @@ useEffect(() => {
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
                   {blogs.map((blog) => (
-                    <Card key={blog.id} className="relative w-[360px] rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
+                    <Card key={blog.id} className="relative w-90 rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
                       <a href={blog.href} className="block cursor-pointer">
                         <div className="relative h-48 overflow-hidden">
                           <img
