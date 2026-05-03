@@ -1,3 +1,9 @@
+/**
+ * Media upload endpoint (multipart or raw body).
+ *
+ * If clients see **413 Request Entity Too Large** with `nginx/...` in the body,
+ * the reverse proxy limit must be raised — see `deploy/nginx-client-max-body.conf`.
+ */
 import { NextResponse } from 'next/server'
 import { verifyBasicAuth } from '@/lib/api-basic-auth'
 import { getAdminStorageBucket } from '@/lib/firebase-admin'

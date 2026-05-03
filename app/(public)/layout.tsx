@@ -19,7 +19,9 @@ function PublicLayoutContent({ children }: { children: ReactNode }) {
   const normalizeWhatsAppNumber = (value: string) => value.replace(/[^\d]/g, '')
   const phoneHref = contact.phone ? `tel:${normalizeTelNumber(contact.phone)}` : '#'
   const emailHref = contact.email ? `mailto:${contact.email.toLowerCase()}` : '#'
-  const whatsappNumber = normalizeWhatsAppNumber(contact.whatsapp || contact.phone)
+  // WhatsApp must come from the WhatsApp field (do not fall back to phone,
+  // since the phone may be a landline like "800..." which is not a WhatsApp number).
+  const whatsappNumber = normalizeWhatsAppNumber(contact.whatsapp)
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#'
 
   return (

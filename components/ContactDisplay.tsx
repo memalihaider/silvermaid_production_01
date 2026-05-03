@@ -71,12 +71,14 @@ export function ContactEmailLink(props: ContactDisplayProps) {
 
 export function ContactWhatsAppLink({ className = '' }: { className?: string }) {
   const { contact } = useContactInfo();
-  const number = normalizeWhatsAppNumber(contact.whatsapp || contact.phone);
+  // Don't fall back to phone: the phone may be a landline (e.g. "800..."),
+  // which would create an incorrect wa.me link.
+  const number = normalizeWhatsAppNumber(contact.whatsapp);
   const href = number ? `https://wa.me/${number}` : '#';
 
   return (
     <a href={href} className={className} target="_blank" rel="noopener noreferrer">
-      {contact.whatsapp || contact.phone}
+      {contact.whatsapp}
     </a>
   );
 }
