@@ -1,6 +1,33 @@
 # Silver Maid - ERP System
 
 A comprehensive Enterprise Resource Planning (ERP) system for Silver Maid, a Dubai-based cleaning services company. This system integrates a public business website, content management system (CMS), and full-featured admin portal with role-based access control.
+## Development
+
+**API Basic Auth setup**
+
+ - The app enforces basic auth for some API routes. The middleware looks for one username env var and one password env var. Allowed names are:
+	 - Username: `BLOG_API_USER`, `BLOG_API_USERNAME`, `API_BASIC_AUTH_USER`, `API_BASIC_AUTH_USERNAME`, `BASIC_AUTH_USER`, `BASIC_AUTH_USERNAME`
+	 - Password: `BLOG_API_PASSWORD`, `BLOG_API_PASS`, `API_BASIC_AUTH_PASSWORD`, `API_BASIC_AUTH_PASS`, `BASIC_AUTH_PASSWORD`, `BASIC_AUTH_PASS`
+
+ - For local development copy `.env.example` to `.env.local` and set values. On hosting (Vercel, Netlify, etc.) add one username key and one password key using the host UI and redeploy.
+
+ - To test the endpoint locally or from your workstation, use the included script:
+
+```bash
+# make executable once
+chmod +x scripts/test-basic-auth.sh
+
+# simple GET test
+scripts/test-basic-auth.sh your_username your_password https://www.silvermaidsdubai.com/api/media
+
+# multipart file upload test
+scripts/test-basic-auth.sh your_username your_password https://www.silvermaidsdubai.com/api/media /path/to/image.png
+```
+
+ - If you're using n8n's HTTP Request node, set Authentication -> Basic Auth with the same username/password, and set Body Content Type to `multipart/form-data` for uploads.
+# Silver Maid - ERP System
+
+A comprehensive Enterprise Resource Planning (ERP) system for Silver Maid, a Dubai-based cleaning services company. This system integrates a public business website, content management system (CMS), and full-featured admin portal with role-based access control.
 
 ## Features
 
