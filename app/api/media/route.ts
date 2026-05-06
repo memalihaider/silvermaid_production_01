@@ -80,7 +80,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Expected a multipart file field (file, data, image, media, upload).',
+            error:
+              'Expected a multipart file field (file, data, image, media, upload). In n8n, set Input Data Field Name to your binary property (for example: data) and make sure the request uses multipart/form-data.',
           },
           { status: 400 }
         )
