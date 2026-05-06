@@ -20,6 +20,28 @@ function getFilenameFromContentDisposition(contentDisposition: string | null) {
   return simpleMatch?.[1] || ''
 }
 
+function getMediaApiErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+
+  if (/Could not load the default credentials/i.test(message)) {
+    return 'Firebase Admin credentials are not configured on the server. Set FIREBASE_SERVICE_ACCOUNT_JSON (or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).'
+  }
+
+  if (/bucket.*not exist|No such bucket|The specified bucket does not exist/i.test(message)) {
+    return 'Firebase Storage bucket is missing or misconfigured. Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET to your real bucket name.'
+  }
+
+  if (/PERMISSION_DENIED|insufficient permissions|Missing or insufficient permissions|unauthorized/i.test(message)) {
+    return 'Firebase Storage permission denied for the server credentials. Grant Storage access to the service account used in your hosting environment.'
+  }
+
+  if (/deadline exceeded|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|network/i.test(message)) {
+    return 'Unable to reach Firebase Storage from the server due to network or timeout issues. Check hosting logs and retry.'
+  }
+
+  return fallback
+}
+
 export async function POST(request: Request) {
   const authResult = verifyBasicAuth(request)
   if ('errorResponse' in authResult) return authResult.errorResponse
@@ -122,7 +144,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to upload media.',
+        error: getMediaApiErrorMessage(error, 'Failed to upload media.'),
         details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       },
       { status: 500 }
