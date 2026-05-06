@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       {
         success: false,
         error: getMediaApiErrorMessage(error, 'Failed to upload media.'),
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        details: errorMessage,
       },
       { status: 500 }
     )

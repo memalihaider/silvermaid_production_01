@@ -57,7 +57,7 @@ function resolveStorageBucket(projectId?: string): string | undefined {
   }
 
   if (!projectId?.trim()) return undefined
-  return `${projectId.trim()}.firebasestorage.app`
+  return `${projectId.trim()}.appspot.com`
 }
 
 function initFirebaseAdminApp(): App {
