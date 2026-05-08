@@ -295,20 +295,20 @@ useEffect(() => {
     <div ref={containerRef} className="flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
       {/* Hero Section - Landing */}
-      <section className="relative py-10 px-4 md:px-8 bg-white overflow-hidden">
+      <section className="relative py-8 px-4 sm:px-5 md:px-8 bg-white overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-pink-500/10 blur-3xl" />
         </div>
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-stretch min-h-130 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 lg:gap-6 items-stretch relative lg:min-h-130">
 
             {/* Left: Large Image Card */}
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="relative rounded-3xl overflow-hidden min-h-105 lg:min-h-130 shadow-2xl"
+              className="relative rounded-3xl overflow-hidden min-h-96 sm:min-h-105 lg:min-h-130 shadow-2xl"
             >
               {/* Background image */}
               <img
@@ -320,7 +320,7 @@ useEffect(() => {
               <div className="absolute inset-0 bg-linear-to-b from-slate-900/30 via-slate-900/20 to-slate-900/75" />
 
               {/* Premium badge */}
-              <div className="absolute top-6 left-6 z-10">
+              <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
                   <Sparkles className="h-3 w-3 text-white" />
                   <span className="text-[10px] font-bold text-white uppercase tracking-[0.15em]">Same-day slots available</span>
@@ -328,22 +328,22 @@ useEffect(() => {
               </div>
 
               {/* Main headline */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-10">
-                <h1 className="text-4xl md:text-6xl font-black text-white leading-none tracking-tight mb-4">
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 z-10">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-white leading-tight sm:leading-none tracking-tight mb-4">
                   Fast, reliable cleaning in Dubai
                 </h1>
-                <p className="text-white/80 text-base md:text-lg leading-relaxed max-w-2xl mb-6">
+                <p className="text-white/80 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mb-5 sm:mb-6">
                   Book move-in/move-out, sofa, or mattress cleaning in minutes. Transparent pricing, flexible slots, and a team you can trust.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-2 mb-6">
+                <div className="flex flex-wrap items-center gap-2 mb-5 sm:mb-6">
                   <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Same-day slots</Badge>
                   <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Trained staff</Badge>
                   <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">Secure payments</Badge>
                 </div>
 
                 {/* Stats row */}
-                <div className="flex flex-wrap items-center gap-1 mb-6">
+                <div className="flex flex-wrap items-center gap-1.5 mb-5 sm:mb-6">
                   {[
                     { value: "18K+", label: "Customers" },
                     { value: "4.9/5", label: "Rating" },
@@ -352,7 +352,7 @@ useEffect(() => {
                   ].map((stat, i) => (
                     <div
                       key={i}
-                      className="flex flex-col items-center justify-center px-4 py-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 min-w-17.5"
+                      className="flex flex-col items-center justify-center px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 min-w-18 sm:min-w-17.5"
                     >
                       {i === 0 && <Users className="h-4 w-4 text-white/70 mb-1" />}
                       {i === 1 && <Star className="h-4 w-4 text-white/70 mb-1" />}
@@ -387,7 +387,7 @@ useEffect(() => {
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
-                className="bg-white rounded-3xl p-6 shadow-lg border border-slate-100 flex-1"
+                className="bg-white rounded-3xl p-5 sm:p-6 shadow-lg border border-slate-100 flex-1"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -426,7 +426,7 @@ useEffect(() => {
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.35, ease: 'easeOut' }}
-                className="relative rounded-3xl overflow-hidden flex-1 min-h-50 shadow-lg group"
+                className="relative rounded-3xl overflow-hidden flex-1 min-h-56 sm:min-h-50 shadow-lg group"
               >
                 <img
                   src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800"
@@ -436,7 +436,7 @@ useEffect(() => {
                 <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-900/30 to-transparent" />
 
                 {/* Service tag */}
-                <div className="absolute top-5 left-5 z-10">
+                <div className="absolute top-4 left-4 sm:top-5 sm:left-5 z-10">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
                     <Sparkles className="h-3 w-3" />
                     Deep Clean
@@ -444,8 +444,8 @@ useEffect(() => {
                 </div>
 
                 {/* Content */}
-                <div className="absolute bottom-5 left-5 right-5 z-10">
-                  <p className="text-lg font-black text-white leading-tight">Villa Deep Cleaning</p>
+                <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5 z-10">
+                  <p className="text-base sm:text-lg font-black text-white leading-tight">Villa Deep Cleaning</p>
                   <p className="text-[11px] text-white/60 mt-1 mb-3">Full interior sanitization & sterilization</p>
                   <div className="flex items-center gap-3">
                     <div className="flex gap-0.5">
@@ -456,7 +456,7 @@ useEffect(() => {
                 </div>
 
                 {/* Arrow button */}
-                <div className="absolute top-5 right-5 z-10 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                <div className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
                   <ArrowRight className="h-4 w-4 text-white" />
                 </div>
               </motion.div>
@@ -467,9 +467,9 @@ useEffect(() => {
       </section>
 
       {/* Trust Banner */}
-      <section className="relative z-30 -mt-8 px-4">
+      <section className="relative z-30 -mt-8 px-4 sm:px-5">
         <Card className="max-w-5xl mx-auto rounded-2xl shadow-xl border-slate-200/70">
-          <CardContent className="p-7 md:p-9">
+          <CardContent className="p-5 sm:p-7 md:p-9">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-7">
               <div>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Trusted across Dubai</p>
@@ -512,7 +512,7 @@ useEffect(() => {
       </section>
 
       {/* Featured Services */}
-      <section className="py-14 px-4 bg-white">
+      <section className="py-14 px-4 sm:px-5 bg-white">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
             <div className="max-w-2xl">
@@ -590,7 +590,7 @@ useEffect(() => {
       </section>
 
       {/* How it works */}
-      <section className="py-16 px-4 bg-slate-50/60 border-y border-slate-100">
+      <section className="py-16 px-4 sm:px-5 bg-slate-50/60 border-y border-slate-100">
         <div className="container mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-3">
@@ -631,8 +631,8 @@ useEffect(() => {
 
       {/* Services Slider Section */}
       <section className="py-20 bg-slate-50/50 overflow-hidden relative">
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-6">
+        <div className="container mx-auto px-4 sm:px-5 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 sm:mb-14 gap-6">
             <div className="max-w-xl">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 text-primary font-semibold text-[11px] uppercase tracking-wider mb-4">
                 <Sparkles className="h-3 w-3" />
@@ -849,9 +849,9 @@ useEffect(() => {
           {/* Blog Slider */}
           {blogsLoading ? (
             <div className="relative overflow-hidden">
-              <div className="flex gap-5">
+              <div className="flex gap-4 sm:gap-5">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i} className="relative w-90 rounded-2xl overflow-hidden shrink-0 border-slate-200">
+                  <Card key={i} className="relative w-[calc(100vw-2rem)] sm:w-90 rounded-2xl overflow-hidden shrink-0 border-slate-200">
                     <div className="h-48 bg-slate-200 animate-pulse" />
                     <CardContent className="p-6 space-y-3">
                       <div className="h-3 w-40 bg-slate-200 rounded animate-pulse" />
@@ -880,12 +880,12 @@ useEffect(() => {
             <>
               <div className="relative overflow-hidden">
                 <motion.div 
-                  className="flex gap-5"
+                  className="flex gap-4 sm:gap-5"
                   animate={{ x: -blogSliderIndex * 380 }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
                   {blogs.map((blog) => (
-                    <Card key={blog.id} className="relative w-90 rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
+                    <Card key={blog.id} className="relative w-[calc(100vw-2rem)] sm:w-90 rounded-2xl overflow-hidden shrink-0 group hover:shadow-lg transition-shadow duration-300">
                       <a href={blog.href} className="block cursor-pointer">
                         <div className="relative h-48 overflow-hidden">
                           <img
