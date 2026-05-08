@@ -2,10 +2,15 @@ import { App, cert, getApp, getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getStorage as getAdminStorage } from 'firebase-admin/storage'
 
-function getPrivateKey(): string | undefined {
-  const value = process.env.FIREBASE_PRIVATE_KEY
+function normalizePrivateKey(value?: string | null): string | undefined {
   if (!value) return undefined
-  return value.replace(/\\n/g, '\n')
+  // Replace escaped newlines with real newlines
+  let key = value.replace(/\\n/g, '\n').trim()
+  // Remove surrounding single or double quotes if present
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim()
+  }
+  return key || undefined
 }
 
 type ServiceAccountLike = {
@@ -69,7 +74,7 @@ function initFirebaseAdminApp(): App {
   if (serviceAccount) {
     const projectId = (serviceAccount.projectId || serviceAccount.project_id || '').trim()
     const clientEmail = (serviceAccount.clientEmail || serviceAccount.client_email || '').trim()
-    const privateKey = (serviceAccount.privateKey || serviceAccount.private_key || '').replace(/\\n/g, '\n').trim()
+    const privateKey = normalizePrivateKey(serviceAccount.privateKey || serviceAccount.private_key)
 
     if (projectId && clientEmail && privateKey) {
       const storageBucket = resolveStorageBucket(projectId)
@@ -87,7 +92,7 @@ function initFirebaseAdminApp(): App {
 
   const projectId = process.env.FIREBASE_PROJECT_ID
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-  const privateKey = getPrivateKey()
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY)
 
   if (projectId && clientEmail && privateKey) {
     const storageBucket = resolveStorageBucket(projectId)
