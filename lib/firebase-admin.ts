@@ -65,6 +65,15 @@ function resolveStorageBucket(projectId?: string): string | undefined {
   return `${projectId.trim()}.appspot.com`
 }
 
+function getProjectIdFromApp(): string | undefined {
+  const appProjectId = adminApp.options.projectId
+  if (typeof appProjectId === 'string' && appProjectId.trim()) {
+    return appProjectId.trim()
+  }
+
+  return process.env.FIREBASE_PROJECT_ID?.trim() || undefined
+}
+
 function initFirebaseAdminApp(): App {
   if (getApps().length > 0) {
     return getApp()
@@ -131,6 +140,20 @@ export function getAdminStorageBucket() {
   }
 
   return getAdminStorage(adminApp).bucket()
+}
+
+export function getAdminStorageBucketCandidates() {
+  const candidates = [
+    process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    adminApp.options.storageBucket,
+    getProjectIdFromApp() ? `${getProjectIdFromApp()}.appspot.com` : undefined,
+  ]
+
+  return candidates
+    .map((bucketName) =>
+      typeof bucketName === 'string' ? normalizeBucketName(bucketName.trim()) : ''
+    )
+    .filter((bucketName, index, bucketNames) => Boolean(bucketName) && bucketNames.indexOf(bucketName) === index)
 }
 
 export function adminServerTimestamp() {

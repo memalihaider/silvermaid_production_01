@@ -25,6 +25,14 @@ scripts/test-basic-auth.sh your_username your_password https://www.silvermaidsdu
 ```
 
  - If you're using n8n's HTTP Request node, set Authentication -> Basic Auth with the same username/password, and set Body Content Type to `multipart/form-data` for uploads.
+
+**Firebase media uploads**
+
+- The `/api/media` endpoint requires a Firebase Storage bucket.
+- Set `FIREBASE_STORAGE_BUCKET` to your real bucket name, or let the app use the default bucket for your Firebase project.
+- If you use service account credentials, also set `FIREBASE_SERVICE_ACCOUNT_JSON` or the split Firebase credential variables.
+- **Complete setup guide**: See [FIREBASE_ENV_SETUP.md](FIREBASE_ENV_SETUP.md)
+- **Troubleshooting**: See [FIREBASE_STORAGE_ERROR_RESOLUTION.md](FIREBASE_STORAGE_ERROR_RESOLUTION.md)
 # Silver Maid - ERP System
 
 A comprehensive Enterprise Resource Planning (ERP) system for Silver Maid, a Dubai-based cleaning services company. This system integrates a public business website, content management system (CMS), and full-featured admin portal with role-based access control.

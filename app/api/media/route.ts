@@ -6,7 +6,8 @@
  */
 import { NextResponse } from 'next/server'
 import { verifyBasicAuth } from '@/lib/api-basic-auth'
-import { getAdminStorageBucket } from '@/lib/firebase-admin'
+import { adminApp, getAdminStorageBucketCandidates } from '@/lib/firebase-admin'
+import { getStorage as getAdminStorage } from 'firebase-admin/storage'
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -24,19 +25,19 @@ function getMediaApiErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : String(error ?? '')
 
   if (/Could not load the default credentials/i.test(message)) {
-    return 'Firebase Admin credentials are not configured on the server. Set FIREBASE_SERVICE_ACCOUNT_JSON (or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).'
+    return 'Firebase Admin SDK failed to initialize. On your hosting provider (e.g., Vercel), set FIREBASE_SERVICE_ACCOUNT_JSON or all three of: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY. See FIREBASE_ENV_SETUP.md for details.'
   }
 
   if (/bucket.*not exist|No such bucket|The specified bucket does not exist/i.test(message)) {
-    return 'Firebase Storage bucket is missing or misconfigured. Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET to your real bucket name.'
+    return 'Firebase Storage bucket not found. Set FIREBASE_STORAGE_BUCKET=silvermaid-94246.appspot.com and NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=silvermaid-94246.appspot.com in your hosting environment. See FIREBASE_ENV_SETUP.md for full setup.'
   }
 
   if (/PERMISSION_DENIED|insufficient permissions|Missing or insufficient permissions|unauthorized/i.test(message)) {
-    return 'Firebase Storage permission denied for the server credentials. Grant Storage access to the service account used in your hosting environment.'
+    return 'Firebase Storage permission denied. Verify the service account has Editor role in your Firebase project and was created before the app was deployed.'
   }
 
   if (/deadline exceeded|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|network/i.test(message)) {
-    return 'Unable to reach Firebase Storage from the server due to network or timeout issues. Check hosting logs and retry.'
+    return 'Network error reaching Firebase. This is usually transient; check your hosting logs. If persistent, verify firewall rules allow access to firebasestorage.googleapis.com.'
   }
 
   return fallback
@@ -107,34 +108,59 @@ export async function POST(request: Request) {
 
     const finalName = sanitizeFilename(fileName || `upload-${Date.now()}.bin`)
     const storagePath = `blog-media/${Date.now()}-${finalName}`
-    const bucket = getAdminStorageBucket()
-    const object = bucket.file(storagePath)
     const downloadToken = crypto.randomUUID()
 
-    await object.save(Buffer.from(bytes), {
-      contentType: uploadContentType,
-      resumable: false,
-      metadata: {
-        metadata: {
-          uploadedBy: authResult.username,
-          firebaseStorageDownloadTokens: downloadToken,
-        },
-      },
+    let lastError: unknown
+    const fallbackBucket = getAdminStorage(adminApp).bucket()
+    const bucketNames = [...getAdminStorageBucketCandidates(), fallbackBucket.name].filter(Boolean)
+
+    console.debug('POST /api/media: Attempting upload', {
+      uploadedBy: authResult.username,
+      storagePath,
+      bucketCandidates: bucketNames,
+      primaryBucket: bucketNames[0] || 'undefined',
     })
 
-    const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`
+    for (const bucketName of bucketNames) {
+      const bucket = bucketName ? getAdminStorage(adminApp).bucket(bucketName) : fallbackBucket
+      const object = bucket.file(storagePath)
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          url: imageUrl,
-          path: storagePath,
+      try {
+        await object.save(Buffer.from(bytes), {
           contentType: uploadContentType,
-        },
-      },
-      { status: 201 }
-    )
+          resumable: false,
+          metadata: {
+            metadata: {
+              uploadedBy: authResult.username,
+              firebaseStorageDownloadTokens: downloadToken,
+            },
+          },
+        })
+
+        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`
+
+        return NextResponse.json(
+          {
+            success: true,
+            data: {
+              url: imageUrl,
+              path: storagePath,
+              contentType: uploadContentType,
+            },
+          },
+          { status: 201 }
+        )
+      } catch (error) {
+        lastError = error
+        const message = error instanceof Error ? error.message : String(error ?? '')
+
+        if (!/bucket.*not exist|No such bucket|The specified bucket does not exist/i.test(message)) {
+          throw error
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Failed to resolve a valid Firebase Storage bucket.')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     const errorStack = error instanceof Error ? error.stack : undefined
