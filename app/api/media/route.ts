@@ -29,7 +29,7 @@ function getMediaApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   if (/bucket.*not exist|No such bucket|The specified bucket does not exist/i.test(message)) {
-    return 'Firebase Storage bucket not found. Set FIREBASE_STORAGE_BUCKET=silvermaid-94246.appspot.com and NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=silvermaid-94246.appspot.com in your hosting environment. See FIREBASE_ENV_SETUP.md for full setup.'
+    return 'Firebase Storage bucket not found. Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET to the exact bucket name from Firebase Storage settings, then redeploy. The app will also try bucket names derived from your Firebase project id. See FIREBASE_ENV_SETUP.md for full setup.'
   }
 
   if (/PERMISSION_DENIED|insufficient permissions|Missing or insufficient permissions|unauthorized/i.test(message)) {

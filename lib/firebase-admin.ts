@@ -65,6 +65,16 @@ function resolveStorageBucket(projectId?: string): string | undefined {
   return `${projectId.trim()}.appspot.com`
 }
 
+function getProjectBucketCandidates(projectId?: string): string[] {
+  if (!projectId?.trim()) return []
+
+  const trimmedProjectId = projectId.trim()
+  return [
+    `${trimmedProjectId}.appspot.com`,
+    `${trimmedProjectId}.firebasestorage.app`,
+  ]
+}
+
 function getProjectIdFromApp(): string | undefined {
   const appProjectId = adminApp.options.projectId
   if (typeof appProjectId === 'string' && appProjectId.trim()) {
@@ -146,7 +156,7 @@ export function getAdminStorageBucketCandidates() {
   const candidates = [
     process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     adminApp.options.storageBucket,
-    getProjectIdFromApp() ? `${getProjectIdFromApp()}.appspot.com` : undefined,
+    ...getProjectBucketCandidates(getProjectIdFromApp()),
   ]
 
   return candidates
